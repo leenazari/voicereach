@@ -6,16 +6,14 @@ export function buildScript(candidate: Candidate): string {
   const jobTitle = candidate.job_title || candidate.role_applied
 
   const expLine = candidate.years_experience > 0
-    ? `with your ${candidate.years_experience} years in ${candidate.role_applied}`
-    : `with your background in ${candidate.role_applied}`
+    ? `${candidate.years_experience} years in ${candidate.role_applied}`
+    : `your background in ${candidate.role_applied}`
 
   const salaryLine = candidate.job_salary
-    ? ` It is paying ${formatSalary(candidate.job_salary)} and`
-    : ' And'
+    ? `, paying ${formatSalary(candidate.job_salary)},`
+    : ','
 
-  // No full stops mid-sentence — use commas to keep it flowing and upbeat
-  // Exclamation marks signal upbeat energy to ElevenLabs
-  return `Hi ${firstName}, I hope you are well! We have just had a ${jobTitle} position come in and honestly, we think it is perfect for you. ${expLine}, you are exactly what this client is looking for,${salaryLine} we think you would absolutely nail it! I have created a personal interview link just for you, and if you click it, you can actually interview for this ${jobTitle} role right now. The interview takes less than ten minutes and you can do it straight away. Time is limited on this one though, so do not leave it too long. If now is not the right time, no problem at all, you can schedule the interview yourself for later today or tomorrow. But honestly ${firstName}, they are actively looking and you look perfect for this role. Click the link, do the interview, and let us get you this job!`
+  return `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role${salaryLine} and honestly, with your ${expLine}, you are exactly what this client is looking for. I think this could be a brilliant move for you. Now here is the exciting part... I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes, and you can fit it around your day. But do not leave it too long ${firstName}, this one is moving fast and they are ready to hire. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
 }
 
 export function formatSalary(salary: string): string {
@@ -99,9 +97,9 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
       text: script,
       model_id: 'eleven_flash_v2_5',
       voice_settings: {
-        stability: 0.25,
+        stability: 0.3,
         similarity_boost: 0.6,
-        style: 0.45,
+        style: 0.4,
         use_speaker_boost: false
       }
     })
