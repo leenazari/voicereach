@@ -61,17 +61,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Storage upload error:', uploadError)
     }
 
-    // Get public URL
     const { data: urlData } = supabase.storage
       .from('voice-notes')
       .getPublicUrl(fileName)
 
-    const voiceNoteUrl = urlData?.publicUrl || null
+    const voiceNoteUrl = urlData?.publicUrl || ''
 
-    // Send email
-    const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceBuffer, sizeMb)
+    // Send email with voice note URL instead of attachment
+    const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceNoteUrl, voiceBuffer, sizeMb)
 
-    // Update candidate with token and voice note URL
     await supabase
       .from('candidates')
       .update({
