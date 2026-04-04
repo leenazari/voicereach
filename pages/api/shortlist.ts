@@ -1,29 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../lib/supabase'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
 import { generateVoiceNote, getAudioSizeMb } from '../../lib/voice'
 import { sendVoiceOutreachEmail } from '../../lib/email'
 
-export async function POST(req: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   try {
-    const { candidateId, jobTitle, jobSalary } = await req.json()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { candidateId, jobTitle, jobSalary } = req.body
 
     if (!candidateId) {
-      return NextResponse.json({ error: 'candidateId required' }, { status: 400 })
+      return res.status(400).json({ error: 'candidateId required' })
     }
 
-    // Fetch candidate
-    const { data: candidate, error: fetchError } = await supabaseAdmin
+    const { data: candidate, error: fetchError } = await supabase
       .from('candidates')
       .select('*')
       .eq('id', candidateId)
       .single()
 
     if (fetchError || !candidate) {
-      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+      return res.status(404).json({ error: 'Candidate not found' })
     }
 
-    // Update with job details and move to shortlisted
-    const { error: updateError } = await supabaseAdmin
+    await supabase
       .from('candidates')
       .update({
         status: 'shortlisted',
@@ -32,23 +39,18 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', candidateId)
 
-    if (updateError) throw updateError
-
     const updatedCandidate = {
       ...candidate,
       job_title: jobTitle || candidate.job_title,
       job_salary: jobSalary || candidate.job_salary
     }
 
-    // Generate voice note
     const voiceBuffer = await generateVoiceNote(updatedCandidate)
     const sizeMb = getAudioSizeMb(voiceBuffer)
 
-    // Send email with voice note + calendar invite
     const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceBuffer, sizeMb)
 
-    // Save interview token and update status
-    await supabaseAdmin
+    await supabase
       .from('candidates')
       .update({
         status: 'voice_sent',
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', candidateId)
 
-    return NextResponse.json({
+    return res.status(200).json({
       success: true,
       candidateId,
       audioSizeMb: sizeMb,
@@ -65,6 +67,6 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     console.error('Shortlist error:', err)
-    return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 })
+    return res.status(500).json({ error: err.message || 'Failed' })
   }
 }
