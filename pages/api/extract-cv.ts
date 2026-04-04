@@ -30,13 +30,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       text: `You are a recruitment assistant analysing a CV. Extract the following information and respond ONLY with a valid JSON object, no markdown, no backticks, no explanation, just raw JSON.
 
 Rules:
-- years_experience: only count roles relevant to the candidate's primary career track, ignore unrelated jobs, add up only the relevant years
+- years_experience: only count roles relevant to the candidate primary career track, ignore unrelated jobs, add up only the relevant years
 - role: their most recent relevant job title
 - last_employer: the name of the most recent company they worked at, exactly as written on the CV
 - all_employers: list of all company names mentioned on the CV in order from most recent to oldest
-- skills: list of key skills mentioned on the CV
+- skills: list of up to 10 key skills mentioned on the CV as short phrases
+- qualifications: list of any degrees, certifications or qualifications mentioned
 - location: their city or region if mentioned
-- experience_summary: 2-3 natural sentences summarising only their relevant experience and key skills, written for use in a voice note
+- candidate_summary: 3-4 natural sentences summarising their career, key skills, achievements and what kind of role they are best suited for. Written in third person, professional tone, for use in matching them to jobs.
+- experience_summary: 2-3 natural sentences summarising their relevant experience and skills, written in first person style for use in a voice note
 
 Respond with exactly this format:
 {
@@ -49,7 +51,9 @@ Respond with exactly this format:
   "last_employer": "most recent company name exactly as on CV",
   "all_employers": ["company1", "company2"],
   "skills": ["skill1", "skill2", "skill3"],
-  "experience_summary": "2-3 sentence natural summary of relevant experience and skills"
+  "qualifications": ["qualification1", "qualification2"],
+  "candidate_summary": "3-4 sentence professional profile summary in third person",
+  "experience_summary": "2-3 sentence summary for voice note"
 }`
     })
 
@@ -62,7 +66,7 @@ Respond with exactly this format:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 1500,
         messages: [{ role: 'user', content }]
       })
     })
@@ -75,8 +79,6 @@ Respond with exactly this format:
     }
 
     const text = apiData.content?.[0]?.text || ''
-    console.log('Claude response:', text)
-
     const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
 
     let extracted
