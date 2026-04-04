@@ -1,56 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../lib/supabase'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const status = searchParams.get('status')
-
-  let query = supabaseAdmin
-    .from('candidates')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (status) {
-    query = query.eq('status', status)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ candidates: data })
-}
-
-export async function POST(req: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const body = await req.json()
-    const { name, email, phone, role_applied, experience_summary, years_experience, skills } = body
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    if (!name || !email || !role_applied || !experience_summary) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return res.status(200).json({ candidates: data })
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('candidates')
-      .insert({
-        name,
-        email,
-        phone,
-        role_applied,
-        experience_summary,
-        years_experience: years_experience || 0,
-        skills: skills || [],
-        status: 'applied'
-      })
-      .select()
-      .single()
+    if (req.method === 'POST') {
+      const { name, email, phone, role_applied, experience_summary, years_experience, skills } = req.body
 
-    if (error) throw error
+      if (!name || !email || !role_applied || !experience_summary) {
+        return res.status(400).json({ error: 'Missing required fields' })
+      }
 
-    return NextResponse.json({ candidate: data })
+      const { data, error } = await supabase
+        .from('candidates')
+        .insert({ name, email, phone, role_applied, experience_summary, years_experience: years_experience || 0, skills: skills || [], status: 'applied' })
+        .select()
+        .single()
+
+      if (error) throw error
+      return res.status(200).json({ candidate: data })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('API error:', err)
+    return res.status(500).json({ error: err.message || 'Internal server error' })
   }
 }
