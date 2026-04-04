@@ -5,14 +5,14 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
   const firstName = candidate.name.split(' ')[0]
   const jobTitle = job?.title || candidate.job_title || candidate.role_applied
   const company = job?.company ? `at ${job.company}` : ''
-  const sector = job?.sector || ''
+  const sector = job?.sector ? `in the ${job.sector} space` : ''
 
   const salaryLine = (job?.salary || candidate.job_salary)
     ? `, paying ${formatSalary(job?.salary || candidate.job_salary)},`
     : ','
 
-  const employerLine = candidate.last_employer
-    ? `your time at ${candidate.last_employer}`
+  const employerLine = (candidate as any).last_employer
+    ? `your time at ${(candidate as any).last_employer}`
     : `your ${candidate.years_experience > 0 ? candidate.years_experience + ' years of' : ''} experience in ${candidate.role_applied}`
 
   let matchLine = ''
@@ -21,10 +21,10 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     matchLine = ` Your ${matches.join(' and ')} really stand out for this one.`
   }
 
-  const hookLine = matchData?.pitch_hook || `With your background, you are exactly what this client is looking for.`
-  const urgencyLine = matchData?.urgency_line || `This one is moving fast and they are ready to hire.`
+  const hookLine = matchData?.pitch_hook || `with your background, you are exactly what this client is looking for`
+  const urgencyLine = matchData?.urgency_line || `this one is moving fast and they are ready to hire`
 
-  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}.${matchLine} ${employerLine} is a brilliant fit for what they need in the ${sector} space. I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes and you can fit it around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
+  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}.${matchLine} ${employerLine} is a brilliant fit for what they need ${sector}. I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes and you can fit it around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
 
   return trimToSixtySeconds(script)
 }
@@ -36,7 +36,19 @@ export function buildScript(candidate: Candidate): string {
 function trimToSixtySeconds(script: string): string {
   const words = script.split(' ')
   if (words.length <= 140) return script
-  return words.slice(0, 140).join(' ') + '.'
+
+  const trimmed = words.slice(0, 140).join(' ')
+  const sentenceEnd = Math.max(
+    trimmed.lastIndexOf('. '),
+    trimmed.lastIndexOf('! '),
+    trimmed.lastIndexOf('? ')
+  )
+
+  if (sentenceEnd > 80) {
+    return trimmed.substring(0, sentenceEnd + 1).trim()
+  }
+
+  return trimmed + '.'
 }
 
 export function formatSalary(salary: string): string {
