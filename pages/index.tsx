@@ -74,6 +74,7 @@ export default function Dashboard() {
     })
     setSelectedVoiceId(voiceId)
     setSavingVoice(false)
+    setShowVoices(false)
   }
 
   function previewVoice(voice: Voice) {
@@ -356,8 +357,8 @@ export default function Dashboard() {
 
       {/* Voice selector modal */}
       {showVoices && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 520, maxHeight: '80vh', overflowY: 'auto' }}>
+        <div onClick={() => setShowVoices(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, padding: 24, width: 520, maxHeight: '80vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Voice selector</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>Preview and select the voice for your outreach notes</p>
             {voices.length === 0 ? (
@@ -377,17 +378,14 @@ export default function Dashboard() {
                 </div>
               ))
             )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button onClick={() => setShowVoices(false)} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'white' }}>Done</button>
-            </div>
           </div>
         </div>
       )}
 
       {/* Add candidate modal */}
       {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div onClick={() => { setShowAdd(false); setCvFile(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, padding: 24, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Add Candidate</h2>
             <div onClick={() => fileRef.current?.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCvUpload(f) }}
               style={{ border: '2px dashed #ddd', borderRadius: 8, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: cvFile ? '#f0eeff' : '#fafafa', borderColor: cvFile ? '#534AB7' : '#ddd' }}>
@@ -422,8 +420,8 @@ export default function Dashboard() {
 
       {/* Edit candidate modal */}
       {showEdit && editingCandidate && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div onClick={() => { setShowEdit(false); setEditingCandidate(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, padding: 24, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Edit — {editingCandidate.name}</h2>
             {modalFields.map(f => (
               <div key={f.key} style={{ marginBottom: 14 }}>
