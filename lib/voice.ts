@@ -1,23 +1,42 @@
 import { Candidate } from './supabase'
 import { createClient } from '@supabase/supabase-js'
 
-export function buildScript(candidate: Candidate): string {
+export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: any): string {
   const firstName = candidate.name.split(' ')[0]
-  const jobTitle = candidate.job_title || candidate.role_applied
+  const jobTitle = job?.title || candidate.job_title || candidate.role_applied
+  const company = job?.company ? `at ${job.company}` : ''
+  const sector = job?.sector || ''
 
-  const expLine = candidate.years_experience > 0
-    ? `${candidate.years_experience} years in ${candidate.role_applied}`
-    : `your background in ${candidate.role_applied}`
-
-  const salaryLine = candidate.job_salary
-    ? `, paying ${formatSalary(candidate.job_salary)},`
+  const salaryLine = (job?.salary || candidate.job_salary)
+    ? `, paying ${formatSalary(job?.salary || candidate.job_salary)},`
     : ','
 
-  const employerLine = (candidate as any).last_employer
-    ? ` Your experience at ${(candidate as any).last_employer} in particular really stands out.`
-    : ''
+  const employerLine = candidate.last_employer
+    ? `your time at ${candidate.last_employer}`
+    : `your ${candidate.years_experience > 0 ? candidate.years_experience + ' years of' : ''} experience in ${candidate.role_applied}`
 
-  return `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role${salaryLine} and honestly, with your ${expLine}, you are exactly what this client is looking for.${employerLine} I think this could be a brilliant move for you. Now here is the exciting part... I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes, and you can fit it around your day. But do not leave it too long ${firstName}, this one is moving fast and they are ready to hire. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
+  let matchLine = ''
+  if (matchData?.top_matches && matchData.top_matches.length > 0) {
+    const matches = matchData.top_matches.slice(0, 2)
+    matchLine = ` Your ${matches.join(' and ')} really stand out for this one.`
+  }
+
+  const hookLine = matchData?.pitch_hook || `With your background, you are exactly what this client is looking for.`
+  const urgencyLine = matchData?.urgency_line || `This one is moving fast and they are ready to hire.`
+
+  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}.${matchLine} ${employerLine} is a brilliant fit for what they need in the ${sector} space. I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes and you can fit it around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
+
+  return trimToSixtySeconds(script)
+}
+
+export function buildScript(candidate: Candidate): string {
+  return buildScriptFromMatch(candidate, null, null)
+}
+
+function trimToSixtySeconds(script: string): string {
+  const words = script.split(' ')
+  if (words.length <= 140) return script
+  return words.slice(0, 140).join(' ') + '.'
 }
 
 export function formatSalary(salary: string): string {
@@ -86,8 +105,7 @@ async function getVoiceId(): Promise<string> {
   }
 }
 
-export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
-  const script = buildScript(candidate)
+async function generateAudio(script: string): Promise<Buffer> {
   const voiceId = await getVoiceId()
 
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -115,7 +133,24 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
   }
 
   const arrayBuffer = await response.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+  return Buffer.from(arrayBuffer)
+}
+
+export async function generateVoiceNoteFromMatch(candidate: Candidate, matchData: any, job: any, customScript?: string): Promise<Buffer> {
+  const script = customScript || buildScriptFromMatch(candidate, matchData, job)
+  const buffer = await generateAudio(script)
+
+  const sizeMb = buffer.length / (1024 * 1024)
+  if (sizeMb > 2) {
+    console.warn(`Voice note for ${candidate.name} is ${sizeMb.toFixed(2)}mb — over 2mb limit`)
+  }
+
+  return buffer
+}
+
+export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
+  const script = buildScript(candidate)
+  const buffer = await generateAudio(script)
 
   const sizeMb = buffer.length / (1024 * 1024)
   if (sizeMb > 2) {
