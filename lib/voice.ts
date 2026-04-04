@@ -1,19 +1,19 @@
 import { Candidate } from './supabase'
 
-const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'
+const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'P4DhdyNCB4Nl6MA0sL45'
 
 export function buildScript(candidate: Candidate): string {
   const firstName = candidate.name.split(' ')[0]
 
   const expLine = candidate.years_experience > 0
-    ? `your ${candidate.years_experience} years in ${candidate.role_applied}`
+    ? `${candidate.years_experience} years in ${candidate.role_applied}`
     : `your background in ${candidate.role_applied}`
 
   const salaryLine = candidate.job_salary
-    ? ` at ${formatSalary(candidate.job_salary)}`
+    ? ` paying ${formatSalary(candidate.job_salary)}`
     : ''
 
-  return `Hi ${firstName}, we have just seen your CV and ${expLine} is exactly what we need for this ${candidate.job_title || candidate.role_applied} role${salaryLine}. Click the interview link in this email whenever suits you and we will get something booked in. Looking forward to hearing from you soon.`
+  return `Hi ${firstName}, this is a personal message just for you. We have been looking at your CV and your ${expLine} is exactly what our client needs. We have got a brilliant ${candidate.job_title || candidate.role_applied} opportunity${salaryLine} and honestly, you would be perfect for it. All I need you to do is click the interview link in this email. It only takes a few minutes and it could be the best career move you make this year. We would love to hear from you.`
 }
 
 export function formatSalary(salary: string): string {
@@ -40,8 +40,10 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
       text: script,
       model_id: 'eleven_flash_v2_5',
       voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75
+        stability: 0.4,
+        similarity_boost: 0.8,
+        style: 0.3,
+        use_speaker_boost: true
       }
     })
   })
