@@ -59,7 +59,6 @@ export async function sendVoiceOutreachEmail(
 
   <p style="font-size: 15px; line-height: 1.7; color: #333; margin: 0 0 24px;">Hi ${firstName}, we have left you a personal voice message about an opportunity we think is perfect for you. Hit play below to listen.</p>
 
-  <!-- Play Voice Note Button -->
   <div style="text-align: center; margin: 32px 0;">
     <a href="${voiceNoteUrl}" style="display: inline-block; background: #534AB7; color: white; padding: 16px 36px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; letter-spacing: 0.3px;">
       ▶&nbsp;&nbsp;Play your personal voice note
@@ -69,17 +68,15 @@ export async function sendVoiceOutreachEmail(
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 28px 0;">
 
-  <!-- Interview CTA -->
   <p style="font-size: 15px; line-height: 1.7; color: #333; margin: 0 0 20px;">Ready to go for it? Click below to start your interview right now. It takes less than 10 minutes and you can do it straight away or schedule it for a time that suits you.</p>
 
   <div style="text-align: center; margin: 24px 0;">
     <a href="${interviewLink}" style="display: inline-block; background: #1D9E75; color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 15px;">
-      Start your interview →
+      Book your interview →
     </a>
     <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">Link valid for 24 hours</p>
   </div>
 
-  <!-- Calendar -->
   <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin: 24px 0;">
     <p style="font-size: 13px; color: #555; margin: 0;">📅 <strong>Prefer to schedule?</strong> Open the calendar invite attached to this email to book your interview at a time that works for you.</p>
   </div>
