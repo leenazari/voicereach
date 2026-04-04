@@ -30,6 +30,8 @@ export default function Dashboard() {
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showVoices, setShowVoices] = useState(false)
+  const [showPlayer, setShowPlayer] = useState(false)
+  const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
@@ -40,8 +42,8 @@ export default function Dashboard() {
   const [extracting, setExtracting] = useState(false)
   const [voices, setVoices] = useState<Voice[]>([])
   const [selectedVoiceId, setSelectedVoiceId] = useState('P4DhdyNCB4Nl6MA0sL45')
-  const [savingVoice, setSavingVoice] = useState(false)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -66,14 +68,12 @@ export default function Dashboard() {
   }
 
   async function selectVoice(voiceId: string) {
-    setSavingVoice(true)
     await fetch('/api/voices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ voiceId })
     })
     setSelectedVoiceId(voiceId)
-    setSavingVoice(false)
     setShowVoices(false)
   }
 
@@ -91,6 +91,11 @@ export default function Dashboard() {
     audio.play()
     setPlayingVoice(voice.voice_id)
     audio.onended = () => setPlayingVoice(null)
+  }
+
+  function openPlayer(candidate: Candidate) {
+    setPlayerCandidate(candidate)
+    setShowPlayer(true)
   }
 
   async function handleCvUpload(file: File) {
@@ -160,6 +165,21 @@ export default function Dashboard() {
       fetchCandidates()
     } else {
       alert('Error: ' + (data.error || 'Something went wrong'))
+    }
+  }
+
+  async function deleteCandidate(candidate: Candidate) {
+    if (!confirm(`Delete ${candidate.name}? This cannot be undone.`)) return
+    const res = await fetch('/api/candidates', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidateId: candidate.id })
+    })
+    const data = await res.json()
+    if (data.success) {
+      fetchCandidates()
+    } else {
+      alert('Error: ' + (data.error || 'Could not delete'))
     }
   }
 
@@ -248,7 +268,17 @@ export default function Dashboard() {
     }
   }
 
-  const byStatus = (status: string) => candidates.filter(c => c.status === status)
+  const filterCandidates = (list: Candidate[]) => {
+    if (!search) return list
+    const s = search.toLowerCase()
+    return list.filter(c =>
+      c.name?.toLowerCase().includes(s) ||
+      c.role_applied?.toLowerCase().includes(s) ||
+      c.email?.toLowerCase().includes(s)
+    )
+  }
+
+  const byStatus = (status: string) => filterCandidates(candidates.filter(c => c.status === status))
 
   const stats = {
     total: candidates.length,
@@ -289,7 +319,16 @@ export default function Dashboard() {
             <div style={{ fontSize: 15, fontWeight: 500 }}>Candidate Pipeline</div>
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>Drag candidates between columns or click to shortlist</div>
           </div>
-          <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ Add Candidate</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search candidates..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ padding: '7px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }}
+            />
+            <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ Add Candidate</button>
+          </div>
         </div>
 
         <div style={{ padding: 24 }}>
@@ -327,7 +366,10 @@ export default function Dashboard() {
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>{c.name}</div>
-                        <div onClick={e => { e.stopPropagation(); openEdit(c) }} style={{ fontSize: 10, color: '#aaa', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, border: '1px solid #eee', marginLeft: 6, flexShrink: 0 }}>edit</div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <div onClick={e => { e.stopPropagation(); openEdit(c) }} style={{ fontSize: 10, color: '#aaa', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, border: '1px solid #eee' }}>edit</div>
+                          <div onClick={e => { e.stopPropagation(); deleteCandidate(c) }} style={{ fontSize: 10, color: '#E24B4A', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, border: '1px solid #fdd', background: '#fff5f5' }}>del</div>
+                        </div>
                       </div>
                       <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{c.role_applied}</div>
                       {c.years_experience > 0 && <div style={{ fontSize: 10, background: '#EEEDFE', color: '#3C3489', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginTop: 6 }}>{c.years_experience}yr exp</div>}
@@ -341,8 +383,22 @@ export default function Dashboard() {
                           {shortlisting === c.id ? '⟳ Sending...' : '↺ Resend voice note'}
                         </div>
                       )}
-                      {status === 'voice_sent' && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 6 }}>✓ Voice note delivered</div>}
-                      {status === 'interview_booked' && <div style={{ fontSize: 11, color: '#639922', marginTop: 6 }}>✓ Interview link clicked</div>}
+                      {status === 'voice_sent' && (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ fontSize: 11, color: '#1D9E75' }}>✓ Voice note delivered</div>
+                          {c.voice_note_url && (
+                            <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>
+                          )}
+                        </div>
+                      )}
+                      {status === 'interview_booked' && (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ fontSize: 11, color: '#639922' }}>✓ Interview link clicked</div>
+                          {c.voice_note_url && (
+                            <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {!loading && byStatus(status).length === 0 && (
@@ -354,6 +410,20 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Voice note player modal */}
+      {showPlayer && playerCandidate && (
+        <div onClick={() => setShowPlayer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, padding: 24, width: 420 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Voice note</h2>
+            <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>{playerCandidate.name} — {playerCandidate.job_title || playerCandidate.role_applied}</p>
+            <audio controls src={playerCandidate.voice_note_url!} style={{ width: '100%', borderRadius: 8 }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button onClick={() => setShowPlayer(false)} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'white' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Voice selector modal */}
       {showVoices && (
