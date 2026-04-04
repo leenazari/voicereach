@@ -27,21 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               ...(isPdf ? [{
                 type: 'document',
                 source: { type: 'base64', media_type: 'application/pdf', data: base64 }
-              }] : [{
-                type: 'text',
-                text: `Here is the CV content as base64: ${base64}`
-              }]),
+              }] : []),
               {
                 type: 'text',
-                text: `Extract the following from this CV and respond ONLY with a JSON object, no other text:
-{
-  "name": "full name",
-  "email": "email address or empty string",
-  "phone": "phone number or empty string",
-  "role": "most recent job title or primary role",
-  "years_experience": number of years total experience as integer,
-  "experience_summary": "2-3 sentence summary of their experience, skills and background, written naturally for use in a voice note"
-}`
+                text: `Extract the following from this CV and respond ONLY with a valid JSON object. No markdown, no backticks, no explanation, just the raw JSON:\n{"name":"full name","email":"email or empty string","phone":"phone or empty string","role":"most recent job title","years_experience":total years as integer,"experience_summary":"2-3 sentence summary of experience and skills written naturally"}`
               }
             ]
           }
@@ -49,10 +38,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     })
 
-    const data = await response.json()
-    const text = data.content?.[0]?.text || ''
-    const clean = text.replace(/```json|```/g, '').trim()
-    const extracted = JSON.parse(clean)
+    const apiData = await response.json()
+    
+    if (!response.ok) {
+      console.error('Anthropic API error:', apiData)
+      return res.status(500).json({ error: 'Claude API error: ' + (apiData.error?.message || 'Unknown') })
+    }
+
+    const text = apiData.content?.[0]?.text || ''
+    console.log('Claude response:', text)
+    
+    // Strip any accidental markdown
+    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
+    
+    let extracted
+    try {
+      extracted = JSON.parse(clean)
+    } catch (parseErr) {
+      console.error('Parse error, raw text:', text)
+      return res.status(500).json({ error: 'Could not parse CV data' })
+    }
 
     return res.status(200).json({ extracted })
   } catch (err: any) {
