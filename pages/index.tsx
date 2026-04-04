@@ -504,21 +504,17 @@ export default function Dashboard() {
                 <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>to {jobModalCandidate.name}</div>
               </div>
             </div>
-
             <div style={{ background: '#f9f9f9', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 12, color: '#666', lineHeight: 1.6 }}>
               A personalised voice note will be generated and emailed to <strong>{jobModalCandidate.email}</strong> with a 24-hour interview link.
             </div>
-
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Job title *</label>
               <input type="text" value={jobForm.jobTitle} onChange={e => { setJobForm(p => ({ ...p, jobTitle: e.target.value })); setShowScriptPreview(false) }} placeholder="e.g. Senior Sales Executive" style={inputStyle} autoFocus />
             </div>
-
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Salary <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
               <input type="text" value={jobForm.jobSalary} onChange={e => { setJobForm(p => ({ ...p, jobSalary: e.target.value })); setShowScriptPreview(false) }} placeholder="e.g. £45,000" style={inputStyle} />
             </div>
-
             {showScriptPreview && (
               <div style={{ marginBottom: 20 }}>
                 <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Voice note script <span style={{ color: '#aaa', fontWeight: 400 }}>(edit if needed)</span></label>
@@ -528,7 +524,6 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowJobModal(false); setScriptPreview(''); setShowScriptPreview(false) }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500, color: '#555' }}>Cancel</button>
               {!showScriptPreview ? (
