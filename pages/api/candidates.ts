@@ -13,58 +13,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('candidates')
         .select('*')
         .order('created_at', { ascending: false })
-
       if (error) throw error
       return res.status(200).json({ candidates: data })
     }
 
     if (req.method === 'POST') {
       const { name, email, phone, role_applied, experience_summary, years_experience, skills } = req.body
-
       if (!name || !email || !role_applied || !experience_summary) {
         return res.status(400).json({ error: 'Missing required fields' })
       }
-
       const { data, error } = await supabase
         .from('candidates')
-        .insert({ 
-          name, 
-          email, 
-          phone, 
-          role_applied, 
-          experience_summary, 
-          years_experience: years_experience || 0, 
-          skills: skills || [], 
-          status: 'applied' 
-        })
+        .insert({ name, email, phone, role_applied, experience_summary, years_experience: years_experience || 0, skills: skills || [], status: 'applied' })
         .select()
         .single()
-
       if (error) {
-        // If duplicate email error, insert anyway with a timestamp suffix
         if (error.code === '23505') {
           const { data: data2, error: error2 } = await supabase
             .from('candidates')
-            .insert({ 
-              name, 
-              email: `${email.split('@')[0]}+${Date.now()}@${email.split('@')[1]}`, 
-              phone, 
-              role_applied, 
-              experience_summary, 
-              years_experience: years_experience || 0, 
-              skills: skills || [], 
-              status: 'applied' 
-            })
+            .insert({ name, email: `${email.split('@')[0]}+${Date.now()}@${email.split('@')[1]}`, phone, role_applied, experience_summary, years_experience: years_experience || 0, skills: skills || [], status: 'applied' })
             .select()
             .single()
-
           if (error2) throw error2
           return res.status(200).json({ candidate: data2 })
         }
         throw error
       }
-
       return res.status(200).json({ candidate: data })
+    }
+
+    if (req.method === 'PATCH') {
+      const { candidateId, status } = req.body
+      if (!candidateId || !status) {
+        return res.status(400).json({ error: 'candidateId and status required' })
+      }
+      const { error } = await supabase
+        .from('candidates')
+        .update({ status })
+        .eq('id', candidateId)
+      if (error) throw error
+      return res.status(200).json({ success: true })
     }
 
     return res.status(405).json({ error: 'Method not allowed' })
