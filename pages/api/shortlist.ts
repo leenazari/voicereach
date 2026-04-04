@@ -48,13 +48,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const voiceBuffer = await generateVoiceNote(updatedCandidate)
     const sizeMb = getAudioSizeMb(voiceBuffer)
 
+    // Upload to Supabase storage
+    const fileName = `${candidateId}-${Date.now()}.mp3`
+    const { error: uploadError } = await supabase.storage
+      .from('voice-notes')
+      .upload(fileName, voiceBuffer, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError)
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('voice-notes')
+      .getPublicUrl(fileName)
+
+    const voiceNoteUrl = urlData?.publicUrl || null
+
+    // Send email
     const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceBuffer, sizeMb)
 
+    // Update candidate with token and voice note URL
     await supabase
       .from('candidates')
       .update({
         status: 'voice_sent',
-        interview_token: token
+        interview_token: token,
+        voice_note_url: voiceNoteUrl
       })
       .eq('id', candidateId)
 
@@ -62,7 +85,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       candidateId,
       audioSizeMb: sizeMb,
-      underSizeLimit: sizeMb < 2
+      underSizeLimit: sizeMb < 2,
+      voiceNoteUrl
     })
 
   } catch (err: any) {
