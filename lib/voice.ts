@@ -6,24 +6,24 @@ export function buildScript(candidate: Candidate): string {
   const firstName = candidate.name.split(' ')[0]
 
   const expLine = candidate.years_experience > 0
-    ? `We can see you have got ${candidate.years_experience} years of experience in ${candidate.role_applied}`
-    : `We have had a look at your background in ${candidate.role_applied}`
-
-  const formatSalary = (salary: string) => {
-    return salary
-      .replace('£', '')
-      .replace('$', '')
-      .replace('€', '')
-      .trim()
-      .replace(/(\d{1,3})(,000)$/, '$1 thousand')
-      .replace(/(\d{1,3})(,000,000)$/, '$1 million')
-  }
+    ? `your ${candidate.years_experience} years in ${candidate.role_applied}`
+    : `your background in ${candidate.role_applied}`
 
   const salaryLine = candidate.job_salary
-    ? `The salary for this role is ${formatSalary(candidate.job_salary)} pounds and we think it could be a brilliant fit for you.`
-    : `We think this could be a brilliant fit for you.`
+    ? ` at ${formatSalary(candidate.job_salary)}`
+    : ''
 
-  return `Hi ${firstName}, hope you are doing well. We have just received your CV and we are really impressed. ${expLine}, which is exactly what we are looking for. We have got a ${candidate.job_title || candidate.role_applied} position available. ${salaryLine} I have included a 24 hour interview link in this email. Click it whenever suits you and you can schedule it straight into your calendar. Looking forward to hearing from you soon.`
+  return `Hi ${firstName}, we have just seen your CV and ${expLine} is exactly what we need for this ${candidate.job_title || candidate.role_applied} role${salaryLine}. Click the interview link in this email whenever suits you and we will get something booked in. Looking forward to hearing from you soon.`
+}
+
+export function formatSalary(salary: string): string {
+  return salary
+    .replace('£', '')
+    .replace('$', '')
+    .replace('€', '')
+    .trim()
+    .replace(/(\d{1,3}),000,000/, '$1 million pounds')
+    .replace(/(\d{1,3}),000/, '$1 thousand pounds')
 }
 
 export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
@@ -38,7 +38,7 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
     },
     body: JSON.stringify({
       text: script,
-      model_id: 'eleven_turbo_v2',
+      model_id: 'eleven_flash_v2_5',
       voice_settings: {
         stability: 0.5,
         similarity_boost: 0.75
