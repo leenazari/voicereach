@@ -43,13 +43,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PATCH') {
-      const { candidateId, status } = req.body
-      if (!candidateId || !status) {
-        return res.status(400).json({ error: 'candidateId and status required' })
+      const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary } = req.body
+      if (!candidateId) {
+        return res.status(400).json({ error: 'candidateId required' })
       }
+      const updates: any = {}
+      if (status !== undefined) updates.status = status
+      if (name !== undefined) updates.name = name
+      if (email !== undefined) updates.email = email
+      if (phone !== undefined) updates.phone = phone
+      if (role_applied !== undefined) updates.role_applied = role_applied
+      if (experience_summary !== undefined) updates.experience_summary = experience_summary
+      if (years_experience !== undefined) updates.years_experience = years_experience
+      if (job_title !== undefined) updates.job_title = job_title
+      if (job_salary !== undefined) updates.job_salary = job_salary
+
       const { error } = await supabase
         .from('candidates')
-        .update({ status })
+        .update(updates)
+        .eq('id', candidateId)
+      if (error) throw error
+      return res.status(200).json({ success: true })
+    }
+
+    if (req.method === 'DELETE') {
+      const { candidateId } = req.body
+      if (!candidateId) {
+        return res.status(400).json({ error: 'candidateId required' })
+      }
+
+      // Delete voice note from storage if exists
+      const { data: candidate } = await supabase
+        .from('candidates')
+        .select('voice_note_url')
+        .eq('id', candidateId)
+        .single()
+
+      if (candidate?.voice_note_url) {
+        const fileName = candidate.voice_note_url.split('/').pop()
+        if (fileName) {
+          await supabase.storage.from('voice-notes').remove([fileName])
+        }
+      }
+
+      const { error } = await supabase
+        .from('candidates')
+        .delete()
         .eq('id', candidateId)
       if (error) throw error
       return res.status(200).json({ success: true })
