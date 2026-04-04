@@ -58,10 +58,10 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
       text: script,
       model_id: 'eleven_flash_v2_5',
       voice_settings: {
-        stability: 0.4,
-        similarity_boost: 0.8,
-        style: 0.3,
-        use_speaker_boost: true
+        stability: 0.35,
+        similarity_boost: 0.65,
+        style: 0.25,
+        use_speaker_boost: false
       }
     })
   })
