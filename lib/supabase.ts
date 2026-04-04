@@ -19,6 +19,7 @@ export type Candidate = {
   experience_summary: string
   years_experience: number
   skills: string[]
+  last_employer?: string
   status: 'applied' | 'shortlisted' | 'voice_sent' | 'interview_booked' | 'hired' | 'rejected'
   job_title?: string
   job_salary?: string
@@ -28,34 +29,3 @@ export type Candidate = {
   created_at: string
   updated_at: string
 }
-
-// Supabase SQL to run in your dashboard:
-export const SCHEMA_SQL = `
-create table candidates (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  email text not null unique,
-  phone text,
-  role_applied text not null,
-  experience_summary text not null,
-  years_experience integer default 0,
-  skills text[] default '{}',
-  status text default 'applied' check (status in ('applied','shortlisted','voice_sent','interview_booked','hired','rejected')),
-  job_title text,
-  job_salary text,
-  voice_note_url text,
-  interview_token text unique,
-  interview_scheduled_at timestamptz,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create or replace function update_updated_at()
-returns trigger as $$
-begin new.updated_at = now(); return new; end;
-$$ language plpgsql;
-
-create trigger candidates_updated_at
-before update on candidates
-for each row execute function update_updated_at();
-`
