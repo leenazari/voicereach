@@ -13,7 +13,9 @@ export function buildScript(candidate: Candidate): string {
     ? ` It is paying ${formatSalary(candidate.job_salary)} and`
     : ' And'
 
-  return `Hi ${firstName}, I hope you are well. We have just had a ${jobTitle} position come in and honestly, we think it is perfect for you. ${expLine}, you are exactly what this client is looking for.${salaryLine} we think you would absolutely nail it. I have created a personal interview link just for you. If you click it, you can actually interview for this ${jobTitle} role right now. The interview takes less than ten minutes and you can do it straight away. Time is limited on this one though, so do not leave it too long. If now is not the right time, no problem at all. You can schedule the interview yourself for later today or tomorrow. But honestly ${firstName}, they are actively looking and you look perfect for this role. Click the link, do the interview, and let us get you this job.`
+  // No full stops mid-sentence — use commas to keep it flowing and upbeat
+  // Exclamation marks signal upbeat energy to ElevenLabs
+  return `Hi ${firstName}, I hope you are well! We have just had a ${jobTitle} position come in and honestly, we think it is perfect for you. ${expLine}, you are exactly what this client is looking for,${salaryLine} we think you would absolutely nail it! I have created a personal interview link just for you, and if you click it, you can actually interview for this ${jobTitle} role right now. The interview takes less than ten minutes and you can do it straight away. Time is limited on this one though, so do not leave it too long. If now is not the right time, no problem at all, you can schedule the interview yourself for later today or tomorrow. But honestly ${firstName}, they are actively looking and you look perfect for this role. Click the link, do the interview, and let us get you this job!`
 }
 
 export function formatSalary(salary: string): string {
@@ -97,9 +99,9 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
       text: script,
       model_id: 'eleven_flash_v2_5',
       voice_settings: {
-        stability: 0.35,
-        similarity_boost: 0.65,
-        style: 0.25,
+        stability: 0.25,
+        similarity_boost: 0.6,
+        style: 0.45,
         use_speaker_boost: false
       }
     })
