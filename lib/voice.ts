@@ -9,8 +9,18 @@ export function buildScript(candidate: Candidate): string {
     ? `We can see you have got ${candidate.years_experience} years of experience in ${candidate.role_applied}`
     : `We have had a look at your background in ${candidate.role_applied}`
 
+  const formatSalary = (salary: string) => {
+    return salary
+      .replace('£', '')
+      .replace('$', '')
+      .replace('€', '')
+      .trim()
+      .replace(/(\d{1,3})(,000)$/, '$1 thousand')
+      .replace(/(\d{1,3})(,000,000)$/, '$1 million')
+  }
+
   const salaryLine = candidate.job_salary
-    ? `The salary for this role is ${candidate.job_salary} and we think it could be a brilliant fit for you.`
+    ? `The salary for this role is ${formatSalary(candidate.job_salary)} pounds and we think it could be a brilliant fit for you.`
     : `We think this could be a brilliant fit for you.`
 
   return `Hi ${firstName}, hope you are doing well. We have just received your CV and we are really impressed. ${expLine}, which is exactly what we are looking for. We have got a ${candidate.job_title || candidate.role_applied} position available. ${salaryLine} I have included a 24 hour interview link in this email. Click it whenever suits you and you can schedule it straight into your calendar. Looking forward to hearing from you soon.`
