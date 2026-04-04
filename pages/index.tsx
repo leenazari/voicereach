@@ -44,6 +44,9 @@ export default function Dashboard() {
   const [showEdit, setShowEdit] = useState(false)
   const [showVoices, setShowVoices] = useState(false)
   const [showPlayer, setShowPlayer] = useState(false)
+  const [showJobModal, setShowJobModal] = useState(false)
+  const [jobModalCandidate, setJobModalCandidate] = useState<Candidate | null>(null)
+  const [jobForm, setJobForm] = useState({ jobTitle: '', jobSalary: '' })
   const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
@@ -104,6 +107,29 @@ export default function Dashboard() {
 
   function openPlayer(candidate: Candidate) { setPlayerCandidate(candidate); setShowPlayer(true) }
 
+  function openJobModal(candidate: Candidate) {
+    setJobModalCandidate(candidate)
+    setJobForm({ jobTitle: candidate.job_title || candidate.role_applied, jobSalary: candidate.job_salary || '' })
+    setShowJobModal(true)
+  }
+
+  async function confirmShortlist() {
+    if (!jobModalCandidate) return
+    if (!jobForm.jobTitle) { notify('Please enter a job title', 'error'); return }
+    setShowJobModal(false)
+    setShortlisting(jobModalCandidate.id)
+    try {
+      const res = await fetch('/api/shortlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: jobModalCandidate.id, jobTitle: jobForm.jobTitle, jobSalary: jobForm.jobSalary })
+      })
+      const data = await res.json()
+      if (data.success) { notify(`Voice note sent to ${jobModalCandidate.name} ✓`); fetchCandidates() }
+      else notify('Error: ' + data.error, 'error')
+    } finally { setShortlisting(null); setJobModalCandidate(null) }
+  }
+
   async function handleCvUpload(file: File) {
     setCvFile(file); setExtracting(true)
     try {
@@ -154,19 +180,6 @@ export default function Dashboard() {
     else notify('Could not delete candidate', 'error')
   }
 
-  async function shortlistCandidate(candidate: Candidate) {
-    const jobTitle = prompt(`Job title for ${candidate.name}:`, candidate.role_applied)
-    if (!jobTitle) return
-    const jobSalary = prompt('Salary (e.g. £45,000):', '') || ''
-    setShortlisting(candidate.id)
-    try {
-      const res = await fetch('/api/shortlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId: candidate.id, jobTitle, jobSalary }) })
-      const data = await res.json()
-      if (data.success) { notify(`Voice note sent to ${candidate.name} ✓`); fetchCandidates() }
-      else notify('Error: ' + data.error, 'error')
-    } finally { setShortlisting(null) }
-  }
-
   async function moveCandidate(candidateId: string, newStatus: string) {
     await fetch('/api/candidates', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId, status: newStatus }) })
     fetchCandidates()
@@ -179,7 +192,7 @@ export default function Dashboard() {
     if (dragId) {
       const candidate = candidates.find(c => c.id === dragId)
       if (candidate && candidate.status !== status) {
-        if (status === 'shortlisted' && candidate.status === 'applied') shortlistCandidate(candidate)
+        if (status === 'shortlisted' && candidate.status === 'applied') openJobModal(candidate)
         else moveCandidate(dragId, status)
       }
     }
@@ -220,7 +233,9 @@ export default function Dashboard() {
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
 
-  const inputStyle = { width: '100%', padding: '8px 10px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
+  const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
+  const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
@@ -236,11 +251,12 @@ export default function Dashboard() {
 
       <style>{`
         @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
         * { box-sizing: border-box; }
       `}</style>
 
       {/* Sidebar */}
-      <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', padding: '0', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
           <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
@@ -253,15 +269,15 @@ export default function Dashboard() {
             { id: 'analytics', label: 'Analytics', icon: '◷' }
           ].map(tab => (
             <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#534AB7' : '#555', background: activeTab === tab.id ? '#f0eeff' : 'transparent', borderLeft: activeTab === tab.id ? '2px solid #534AB7' : '2px solid transparent', fontWeight: activeTab === tab.id ? 600 : 400, margin: '1px 0' }}>
-              <span style={{ fontSize: 14 }}>{tab.icon}</span>{tab.label}
+              <span>{tab.icon}</span>{tab.label}
             </div>
           ))}
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
           <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#555', cursor: 'pointer', borderLeft: '2px solid transparent' }}>
-            <span style={{ fontSize: 14 }}>⊙</span>Voice selector
+            <span>⊙</span>Voice selector
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#555', cursor: 'pointer', borderLeft: '2px solid transparent' }}>
-            <span style={{ fontSize: 14 }}>⊞</span>Templates
+            <span>⊞</span>Templates
           </div>
         </div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
@@ -269,10 +285,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Main */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-
-        {/* Top bar */}
         <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.2px' }}>
@@ -283,15 +297,12 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />
-            <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '-0.1px' }}>+ Add Candidate</button>
+            <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />
+            <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Candidate</button>
           </div>
         </div>
 
         <div style={{ padding: 28, flex: 1 }}>
-
-          {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
             {[
               { label: 'Total candidates', value: stats.total, color: '#534AB7' },
@@ -305,7 +316,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Pipeline view */}
           {activeTab === 'pipeline' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
               {STATUSES.map(status => (
@@ -330,12 +340,12 @@ export default function Dashboard() {
                         <div style={{ fontSize: 11, color: '#999', marginBottom: 6 }}>{c.role_applied}</div>
                         {c.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>{c.years_experience}yr exp</span>}
                         {status === 'applied' && (
-                          <div onClick={() => shortlistCandidate(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 600, marginTop: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div onClick={() => openJobModal(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 600, marginTop: 8, cursor: 'pointer' }}>
                             {shortlisting === c.id ? '⟳ Sending...' : '→ Shortlist & send voice note'}
                           </div>
                         )}
                         {status === 'shortlisted' && (
-                          <div onClick={() => shortlistCandidate(c)} style={{ fontSize: 11, color: '#BA7517', fontWeight: 600, marginTop: 8, cursor: 'pointer' }}>
+                          <div onClick={() => openJobModal(c)} style={{ fontSize: 11, color: '#BA7517', fontWeight: 600, marginTop: 8, cursor: 'pointer' }}>
                             {shortlisting === c.id ? '⟳ Sending...' : '↺ Resend voice note'}
                           </div>
                         )}
@@ -362,7 +372,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Candidates list view */}
           {activeTab === 'candidates' && (
             <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -379,7 +388,7 @@ export default function Dashboard() {
                   ) : filteredAll.length === 0 ? (
                     <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#ccc', fontSize: 13 }}>No candidates found</td></tr>
                   ) : filteredAll.map((c, i) => (
-                    <tr key={c.id} style={{ borderBottom: i < filteredAll.length - 1 ? '1px solid #f5f5f5' : 'none', transition: 'background 0.1s' }}
+                    <tr key={c.id} style={{ borderBottom: i < filteredAll.length - 1 ? '1px solid #f5f5f5' : 'none' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
                       <td style={{ padding: '12px 16px' }}>
@@ -400,7 +409,7 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => openEdit(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
                           {c.voice_note_url && <button onClick={() => openPlayer(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #EEEDFE', borderRadius: 6, cursor: 'pointer', background: '#EEEDFE', color: '#534AB7', fontWeight: 500 }}>▶ Play</button>}
-                          <button onClick={() => shortlistCandidate(c)} style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', background: '#534AB7', color: 'white', fontWeight: 500 }}>
+                          <button onClick={() => openJobModal(c)} style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', background: '#534AB7', color: 'white', fontWeight: 500 }}>
                             {shortlisting === c.id ? '⟳' : '→ Send'}
                           </button>
                           <button onClick={() => deleteCandidate(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #fdd', borderRadius: 6, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
@@ -413,7 +422,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Analytics placeholder */}
           {activeTab === 'analytics' && (
             <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 40, textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>◷</div>
@@ -421,14 +429,63 @@ export default function Dashboard() {
               <div style={{ fontSize: 13, color: '#aaa' }}>Open rates, click rates and conversion stats will appear here</div>
             </div>
           )}
-
         </div>
       </div>
 
+      {/* Job details modal */}
+      {showJobModal && jobModalCandidate && (
+        <div onClick={() => setShowJobModal(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 440, animation: 'modalIn 0.2s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎙</div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Send voice note</div>
+                <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>to {jobModalCandidate.name}</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#f9f9f9', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 12, color: '#666', lineHeight: 1.6 }}>
+              A personalised voice note will be generated and emailed to <strong>{jobModalCandidate.email}</strong> with a 24-hour interview link.
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Job title *</label>
+              <input
+                type="text"
+                value={jobForm.jobTitle}
+                onChange={e => setJobForm(p => ({ ...p, jobTitle: e.target.value }))}
+                placeholder="e.g. Senior Sales Executive"
+                style={inputStyle}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Salary <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
+              <input
+                type="text"
+                value={jobForm.jobSalary}
+                onChange={e => setJobForm(p => ({ ...p, jobSalary: e.target.value }))}
+                placeholder="e.g. £45,000"
+                style={inputStyle}
+                onKeyDown={e => { if (e.key === 'Enter') confirmShortlist() }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowJobModal(false)} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500, color: '#555' }}>Cancel</button>
+              <button onClick={confirmShortlist} style={{ padding: '9px 20px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                🎙 Generate & send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Voice note player modal */}
       {showPlayer && playerCandidate && (
-        <div onClick={() => setShowPlayer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => setShowPlayer(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 420 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#1a1a1a' }}>Voice note</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>{playerCandidate.name} — {playerCandidate.job_title || playerCandidate.role_applied}</p>
             <audio controls src={playerCandidate.voice_note_url!} style={{ width: '100%', borderRadius: 8 }} />
@@ -438,8 +495,8 @@ export default function Dashboard() {
 
       {/* Voice selector modal */}
       {showVoices && (
-        <div onClick={() => setShowVoices(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 520, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => setShowVoices(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 520, maxHeight: '80vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#1a1a1a' }}>Voice selector</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>Preview and select the voice for your outreach notes</p>
             {voices.length === 0 ? <div style={{ fontSize: 13, color: '#aaa', textAlign: 'center', padding: 24 }}>Loading voices...</div> : voices.map(v => (
@@ -461,8 +518,8 @@ export default function Dashboard() {
 
       {/* Add candidate modal */}
       {showAdd && (
-        <div onClick={() => { setShowAdd(false); setCvFile(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 500, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => { setShowAdd(false); setCvFile(null) }} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Add Candidate</h2>
             <div onClick={() => fileRef.current?.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCvUpload(f) }}
               style={{ border: `2px dashed ${cvFile ? '#534AB7' : '#e0e0e0'}`, borderRadius: 10, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: cvFile ? '#f0eeff' : '#fafafa' }}>
@@ -497,8 +554,8 @@ export default function Dashboard() {
 
       {/* Edit candidate modal */}
       {showEdit && editingCandidate && (
-        <div onClick={() => { setShowEdit(false); setEditingCandidate(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 500, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => { setShowEdit(false); setEditingCandidate(null) }} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Edit — {editingCandidate.name}</h2>
             {modalFields.map(f => (
               <div key={f.key} style={{ marginBottom: 14 }}>
