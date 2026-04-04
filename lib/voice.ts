@@ -3,16 +3,17 @@ import { createClient } from '@supabase/supabase-js'
 
 export function buildScript(candidate: Candidate): string {
   const firstName = candidate.name.split(' ')[0]
+  const jobTitle = candidate.job_title || candidate.role_applied
 
   const expLine = candidate.years_experience > 0
-    ? `${candidate.years_experience} years in ${candidate.role_applied}`
-    : `your background in ${candidate.role_applied}`
+    ? `with your ${candidate.years_experience} years in ${candidate.role_applied}`
+    : `with your background in ${candidate.role_applied}`
 
   const salaryLine = candidate.job_salary
-    ? ` paying ${formatSalary(candidate.job_salary)}`
-    : ''
+    ? ` It is paying ${formatSalary(candidate.job_salary)} and`
+    : ' And'
 
-  return `Hi ${firstName}, this is a personal message just for you. We have been looking at your CV and your ${expLine} is exactly what our client needs. We have got a brilliant ${candidate.job_title || candidate.role_applied} opportunity${salaryLine} and honestly, you would be perfect for it. All I need you to do is click the interview link in this email. It only takes a few minutes and it could be the best career move you make this year. We would love to hear from you.`
+  return `Hi ${firstName}, I hope you are well. We have just had a ${jobTitle} position come in and honestly, we think it is perfect for you. ${expLine}, you are exactly what this client is looking for.${salaryLine} we think you would absolutely nail it. I have created a personal interview link just for you. If you click it, you can actually interview for this ${jobTitle} role right now. The interview takes less than ten minutes and you can do it straight away. Time is limited on this one though, so do not leave it too long. If now is not the right time, no problem at all. You can schedule the interview yourself for later today or tomorrow. But honestly ${firstName}, they are actively looking and you look perfect for this role. Click the link, do the interview, and let us get you this job.`
 }
 
 export function formatSalary(salary: string): string {
