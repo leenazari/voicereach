@@ -45,14 +45,16 @@ export default function Dashboard() {
   const [showVoices, setShowVoices] = useState(false)
   const [showPlayer, setShowPlayer] = useState(false)
   const [showJobModal, setShowJobModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null)
   const [jobModalCandidate, setJobModalCandidate] = useState<Candidate | null>(null)
   const [jobForm, setJobForm] = useState({ jobTitle: '', jobSalary: '' })
   const [scriptPreview, setScriptPreview] = useState('')
   const [generatingPreview, setGeneratingPreview] = useState(false)
   const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '' })
-  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '' })
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
   const [activeTab, setActiveTab] = useState('pipeline')
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
@@ -109,6 +111,7 @@ export default function Dashboard() {
   }
 
   function openPlayer(candidate: Candidate) { setPlayerCandidate(candidate); setShowPlayer(true) }
+  function openProfile(candidate: Candidate) { setProfileCandidate(candidate); setShowProfile(true) }
 
   async function generatePreview(candidateId: string, jobTitle: string, jobSalary: string) {
     if (!jobTitle) return
@@ -180,15 +183,21 @@ export default function Dashboard() {
       const response = await fetch('/api/extract-cv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base64, filename: file.name }) })
       const data = await response.json()
       if (data.extracted) {
+        const e = data.extracted
         setForm(prev => ({
           ...prev,
-          name: data.extracted.name || prev.name,
-          email: data.extracted.email || prev.email,
-          phone: data.extracted.phone || prev.phone,
-          role_applied: data.extracted.role || prev.role_applied,
-          experience_summary: data.extracted.experience_summary || prev.experience_summary,
-          years_experience: data.extracted.years_experience?.toString() || prev.years_experience,
-          last_employer: data.extracted.last_employer || prev.last_employer,
+          name: e.name || prev.name,
+          email: e.email || prev.email,
+          phone: e.phone || prev.phone,
+          role_applied: e.role || prev.role_applied,
+          experience_summary: e.experience_summary || prev.experience_summary,
+          years_experience: e.years_experience?.toString() || prev.years_experience,
+          last_employer: e.last_employer || prev.last_employer,
+          location: e.location || prev.location,
+          candidate_summary: e.candidate_summary || prev.candidate_summary,
+          skills: (e.skills || []).join(', '),
+          qualifications: (e.qualifications || []).join(', '),
+          all_employers: (e.all_employers || []).join(', '),
         }))
         notify('CV read successfully — fields auto-filled')
       }
@@ -208,6 +217,7 @@ export default function Dashboard() {
       job_title: candidate.job_title || '',
       job_salary: candidate.job_salary || '',
       last_employer: (candidate as any).last_employer || '',
+      location: (candidate as any).location || '',
     })
     setShowEdit(true)
   }
@@ -251,10 +261,23 @@ export default function Dashboard() {
 
   async function addCandidate() {
     if (!form.name || !form.email || !form.role_applied || !form.experience_summary) { notify('Please fill in all required fields', 'error'); return }
-    const res = await fetch('/api/candidates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, years_experience: parseInt(form.years_experience) || 0 }) })
+    const res = await fetch('/api/candidates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...form,
+        years_experience: parseInt(form.years_experience) || 0,
+        skills: form.skills ? form.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        qualifications: form.qualifications ? form.qualifications.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        all_employers: form.all_employers ? form.all_employers.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      })
+    })
     const data = await res.json()
-    if (data.candidate) { setShowAdd(false); setCvFile(null); setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '' }); fetchCandidates(); notify('Candidate added successfully') }
-    else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
+    if (data.candidate) {
+      setShowAdd(false); setCvFile(null)
+      setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '' })
+      fetchCandidates(); notify('Candidate added successfully')
+    } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
   }
 
   const filterCandidates = (list: Candidate[]) => {
@@ -280,6 +303,7 @@ export default function Dashboard() {
     { key: 'name', label: 'Full name *', type: 'text' },
     { key: 'email', label: 'Email *', type: 'email' },
     { key: 'phone', label: 'Phone', type: 'tel' },
+    { key: 'location', label: 'Location', type: 'text' },
     { key: 'role_applied', label: 'Role applied for *', type: 'text' },
     { key: 'last_employer', label: 'Last employer', type: 'text' },
     { key: 'years_experience', label: 'Years of experience', type: 'number' },
@@ -289,6 +313,7 @@ export default function Dashboard() {
     { key: 'name', label: 'Full name *', type: 'text' },
     { key: 'email', label: 'Email *', type: 'email' },
     { key: 'phone', label: 'Phone', type: 'tel' },
+    { key: 'location', label: 'Location', type: 'text' },
     { key: 'role_applied', label: 'Role applied for *', type: 'text' },
     { key: 'last_employer', label: 'Last employer', type: 'text' },
     { key: 'years_experience', label: 'Years of experience', type: 'number' },
@@ -388,7 +413,7 @@ export default function Dashboard() {
                       <div key={c.id} draggable onDragStart={e => handleDragStart(e, c.id)} onDragEnd={handleDragEnd}
                         style={{ background: 'white', border: '1px solid #f0f0f0', borderLeft: `3px solid ${STATUS_COLORS[status]}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab', opacity: dragId === c.id ? 0.4 : 1, transition: 'all 0.15s', userSelect: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 3 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.3 }}>{c.name}</div>
+                          <div onClick={e => { e.stopPropagation(); openProfile(c) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', lineHeight: 1.3, cursor: 'pointer' }}>{c.name}</div>
                           <div style={{ display: 'flex', gap: 3, flexShrink: 0, marginLeft: 6 }}>
                             <div onClick={e => { e.stopPropagation(); openEdit(c) }} style={{ fontSize: 10, color: '#888', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, border: '1px solid #e8e8e8', background: 'white' }}>edit</div>
                             <div onClick={e => { e.stopPropagation(); deleteCandidate(c) }} style={{ fontSize: 10, color: '#E24B4A', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, border: '1px solid #fdd', background: '#fff8f8' }}>del</div>
@@ -396,6 +421,7 @@ export default function Dashboard() {
                         </div>
                         <div style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>{c.role_applied}</div>
                         {(c as any).last_employer && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 4 }}>@ {(c as any).last_employer}</div>}
+                        {(c as any).location && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 4 }}>📍 {(c as any).location}</div>}
                         {c.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>{c.years_experience}yr exp</span>}
                         {status === 'applied' && (
                           <div onClick={() => openJobModal(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 600, marginTop: 8, cursor: 'pointer' }}>
@@ -435,7 +461,7 @@ export default function Dashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#fafafa', borderBottom: '1px solid #ebebeb' }}>
-                    {['Name', 'Role', 'Last Employer', 'Email', 'Exp', 'Status', 'Actions'].map(h => (
+                    {['Name', 'Role', 'Last Employer', 'Location', 'Exp', 'Status', 'Actions'].map(h => (
                       <th key={h} style={{ padding: '11px 16px', fontSize: 11, fontWeight: 700, color: '#888', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                     ))}
                   </tr>
@@ -450,12 +476,12 @@ export default function Dashboard() {
                       onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{c.name}</div>
+                        <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{c.name}</div>
                         {c.phone && <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{c.phone}</div>}
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>{c.role_applied}</td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).last_employer || '—'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{c.email}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).location || '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
                         {c.years_experience > 0 && <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{c.years_experience}yr</span>}
                       </td>
@@ -466,8 +492,9 @@ export default function Dashboard() {
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => openProfile(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #EEEDFE', borderRadius: 6, cursor: 'pointer', background: '#EEEDFE', color: '#534AB7', fontWeight: 500 }}>Profile</button>
                           <button onClick={() => openEdit(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          {c.voice_note_url && <button onClick={() => openPlayer(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #EEEDFE', borderRadius: 6, cursor: 'pointer', background: '#EEEDFE', color: '#534AB7', fontWeight: 500 }}>▶ Play</button>}
+                          {c.voice_note_url && <button onClick={() => openPlayer(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #E1F5EE', borderRadius: 6, cursor: 'pointer', background: '#E1F5EE', color: '#1D9E75', fontWeight: 500 }}>▶ Play</button>}
                           <button onClick={() => openJobModal(c)} style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', background: '#534AB7', color: 'white', fontWeight: 500 }}>
                             {shortlisting === c.id ? '⟳' : '→ Send'}
                           </button>
@@ -499,6 +526,99 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Candidate profile modal */}
+      {showProfile && profileCandidate && (
+        <div onClick={() => setShowProfile(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 580, maxHeight: '85vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
+            
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7' }}>
+                  {profileCandidate.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>{profileCandidate.name}</div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{profileCandidate.role_applied}</div>
+                </div>
+              </div>
+              <span style={{ fontSize: 11, background: STATUS_BG[profileCandidate.status] || '#f0f0f0', color: STATUS_COLORS[profileCandidate.status] || '#888', padding: '4px 12px', borderRadius: 10, fontWeight: 600 }}>
+                {STATUS_LABELS[profileCandidate.status] || profileCandidate.status}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {[
+                { label: 'Experience', value: profileCandidate.years_experience > 0 ? `${profileCandidate.years_experience} years` : 'Not specified' },
+                { label: 'Location', value: (profileCandidate as any).location || 'Not specified' },
+                { label: 'Last employer', value: (profileCandidate as any).last_employer || 'Not specified' },
+              ].map(item => (
+                <div key={item.label} style={{ background: '#f9f9f9', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4, fontWeight: 600 }}>{item.label}</div>
+                  <div style={{ fontSize: 13, color: '#1a1a1a', fontWeight: 500 }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, fontWeight: 600 }}>Contact</div>
+                <div style={{ fontSize: 13, color: '#555', marginBottom: 3 }}>{profileCandidate.email}</div>
+                {profileCandidate.phone && <div style={{ fontSize: 13, color: '#555' }}>{profileCandidate.phone}</div>}
+              </div>
+              {((profileCandidate as any).all_employers || []).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, fontWeight: 600 }}>Companies</div>
+                  {((profileCandidate as any).all_employers || []).map((emp: string) => (
+                    <div key={emp} style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>• {emp}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {(profileCandidate as any).candidate_summary && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Profile summary</div>
+                <div style={{ fontSize: 13, color: '#444', lineHeight: 1.7, background: '#f9f9f9', borderRadius: 8, padding: '12px 14px' }}>
+                  {(profileCandidate as any).candidate_summary}
+                </div>
+              </div>
+            )}
+
+            {((profileCandidate as any).skills || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Skills</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {((profileCandidate as any).skills || []).map((skill: string) => (
+                    <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>{skill}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {((profileCandidate as any).qualifications || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Qualifications</div>
+                {((profileCandidate as any).qualifications || []).map((q: string) => (
+                  <div key={q} style={{ fontSize: 12, color: '#555', marginBottom: 3 }}>• {q}</div>
+                ))}
+              </div>
+            )}
+
+            {profileCandidate.voice_note_url && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Last voice note</div>
+                <audio controls src={profileCandidate.voice_note_url} style={{ width: '100%', borderRadius: 8 }} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+              <button onClick={() => { setShowProfile(false); openEdit(profileCandidate) }} style={{ padding: '9px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Edit</button>
+              <button onClick={() => { setShowProfile(false); openJobModal(profileCandidate) }} style={{ padding: '9px 16px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🎙 Send voice note</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Job details modal */}
       {showJobModal && jobModalCandidate && (
         <div onClick={() => { setShowJobModal(false); setScriptPreview('') }} style={overlayStyle}>
@@ -510,7 +630,6 @@ export default function Dashboard() {
                 <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>to {jobModalCandidate.name}</div>
               </div>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Job title *</label>
@@ -521,26 +640,18 @@ export default function Dashboard() {
                 <input type="text" value={jobForm.jobSalary} onChange={e => handleJobFormChange('jobSalary', e.target.value)} placeholder="e.g. £45,000" style={inputStyle} />
               </div>
             </div>
-
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>Voice note script <span style={{ color: '#aaa', fontWeight: 400 }}>(edit if needed)</span></label>
                 {generatingPreview && <span style={{ fontSize: 11, color: '#aaa' }}>⟳ Generating...</span>}
               </div>
-              <textarea
-                value={scriptPreview}
-                onChange={e => setScriptPreview(e.target.value)}
-                rows={7}
-                placeholder={generatingPreview ? 'Generating script...' : 'Script will appear here'}
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontSize: 12, background: generatingPreview ? '#fafafa' : 'white' }}
-              />
+              <textarea value={scriptPreview} onChange={e => setScriptPreview(e.target.value)} rows={7} placeholder={generatingPreview ? 'Generating script...' : 'Script will appear here'} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontSize: 12, background: generatingPreview ? '#fafafa' : 'white' }} />
               {scriptPreview && (
                 <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
                   {scriptPreview.split(' ').length} words, approx {Math.round(scriptPreview.split(' ').length / 2.3)} seconds
                 </div>
               )}
             </div>
-
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowJobModal(false); setScriptPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500, color: '#555' }}>Cancel</button>
               <button onClick={confirmShortlist} disabled={!jobForm.jobTitle || generatingPreview} style={{ padding: '9px 20px', background: !jobForm.jobTitle || generatingPreview ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !jobForm.jobTitle || generatingPreview ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
