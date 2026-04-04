@@ -58,7 +58,11 @@ export default function Dashboard() {
     }
   }
 
-  async function addCandidate() {
+async function addCandidate() {
+    if (!form.name || !form.email || !form.role_applied || !form.experience_summary) {
+      alert('Please fill in all required fields')
+      return
+    }
     const res = await fetch('/api/candidates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -70,7 +74,7 @@ export default function Dashboard() {
       setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
       fetchCandidates()
     } else {
-      alert('Error: ' + data.error)
+      alert('Error: ' + (data.error || 'Something went wrong'))
     }
   }
 
