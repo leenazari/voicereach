@@ -1,9 +1,4 @@
-import { ElevenLabsClient } from 'elevenlabs'
 import { Candidate } from './supabase'
-
-const client = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY!
-})
 
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'
 
@@ -19,24 +14,31 @@ export function buildScript(candidate: Candidate): string {
 export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
   const script = buildScript(candidate)
 
-  const audio = await client.generate({
-    voice: VOICE_ID,
-    text: script,
-    model_id: 'eleven_turbo_v2',
-    voice_settings: {
-      stability: 0.5,
-      similarity_boost: 0.75
-    }
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY!,
+      'Content-Type': 'application/json',
+      'Accept': 'audio/mpeg'
+    },
+    body: JSON.stringify({
+      text: script,
+      model_id: 'eleven_turbo_v2',
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75
+      }
+    })
   })
 
-  const chunks: Buffer[] = []
-  for await (const chunk of audio) {
-    chunks.push(Buffer.from(chunk))
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`ElevenLabs error: ${error}`)
   }
 
-  const buffer = Buffer.concat(chunks)
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
 
-  // Warn if over 2mb
   const sizeMb = buffer.length / (1024 * 1024)
   if (sizeMb > 2) {
     console.warn(`Voice note for ${candidate.name} is ${sizeMb.toFixed(2)}mb — over 2mb limit`)
