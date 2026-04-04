@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Candidate } from '../lib/supabase'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
@@ -26,6 +26,9 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('pipeline')
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [extracting, setExtracting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { fetchCandidates() }, [])
 
@@ -34,6 +37,42 @@ export default function Dashboard() {
     const data = await res.json()
     setCandidates(data.candidates || [])
     setLoading(false)
+  }
+
+  async function handleCvUpload(file: File) {
+    setCvFile(file)
+    setExtracting(true)
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = () => rej(new Error('Read failed'))
+        r.readAsDataURL(file)
+      })
+
+      const response = await fetch('/api/extract-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, filename: file.name })
+      })
+
+      const data = await response.json()
+      if (data.extracted) {
+        setForm(prev => ({
+          ...prev,
+          name: data.extracted.name || prev.name,
+          email: data.extracted.email || prev.email,
+          phone: data.extracted.phone || prev.phone,
+          role_applied: data.extracted.role || prev.role_applied,
+          experience_summary: data.extracted.experience_summary || prev.experience_summary,
+          years_experience: data.extracted.years_experience?.toString() || prev.years_experience,
+        }))
+      }
+    } catch (err) {
+      alert('Could not extract CV details — please fill in manually')
+    } finally {
+      setExtracting(false)
+    }
   }
 
   async function shortlistCandidate(candidate: Candidate) {
@@ -114,6 +153,7 @@ export default function Dashboard() {
     const data = await res.json()
     if (data.candidate) {
       setShowAdd(false)
+      setCvFile(null)
       setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
       fetchCandidates()
     } else {
@@ -239,8 +279,28 @@ export default function Dashboard() {
 
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Add Candidate</h2>
+
+            <div
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCvUpload(f) }}
+              style={{ border: '2px dashed #ddd', borderRadius: 8, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: cvFile ? '#f0eeff' : '#fafafa', borderColor: cvFile ? '#534AB7' : '#ddd' }}
+            >
+              <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleCvUpload(f) }} />
+              {extracting ? (
+                <div style={{ fontSize: 13, color: '#534AB7' }}>⟳ Reading CV with AI...</div>
+              ) : cvFile ? (
+                <div style={{ fontSize: 13, color: '#534AB7' }}>✓ {cvFile.name} — fields auto-filled below</div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 13, color: '#888' }}>Drop CV here or click to upload</div>
+                  <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>PDF, DOC, DOCX — fields will auto-fill</div>
+                </div>
+              )}
+            </div>
+
             {[
               { key: 'name', label: 'Full name *', type: 'text' },
               { key: 'email', label: 'Email *', type: 'email' },
@@ -254,7 +314,7 @@ export default function Dashboard() {
                   type={f.type}
                   value={(form as any)[f.key]}
                   onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, outline: 'none' }}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, outline: 'none', background: extracting ? '#f5f5f5' : 'white' }}
                 />
               </div>
             ))}
@@ -264,13 +324,15 @@ export default function Dashboard() {
                 value={form.experience_summary}
                 onChange={e => setForm(p => ({ ...p, experience_summary: e.target.value }))}
                 rows={3}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, outline: 'none', resize: 'vertical' }}
-                placeholder="e.g. 8 years in logistics management, specialized in last-mile delivery operations..."
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, outline: 'none', resize: 'vertical', background: extracting ? '#f5f5f5' : 'white' }}
+                placeholder="e.g. 8 years in logistics management, specialized in last-mile delivery..."
               />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-              <button onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'white' }}>Cancel</button>
-              <button onClick={addCandidate} style={{ padding: '8px 16px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add candidate</button>
+              <button onClick={() => { setShowAdd(false); setCvFile(null) }} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'white' }}>Cancel</button>
+              <button onClick={addCandidate} disabled={extracting} style={{ padding: '8px 16px', background: extracting ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: extracting ? 'not-allowed' : 'pointer' }}>
+                {extracting ? 'Reading CV...' : 'Add candidate'}
+              </button>
             </div>
           </div>
         </div>
