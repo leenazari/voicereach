@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { generateVoiceNote, getAudioSizeMb } from '../../lib/voice'
+import { generateVoiceNoteFromMatch, getAudioSizeMb } from '../../lib/voice'
 import { sendVoiceOutreachEmail } from '../../lib/email'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,11 +14,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { candidateId, jobTitle, jobSalary } = req.body
+    const { candidateId, jobId, jobTitle, jobSalary } = req.body
 
-    if (!candidateId) {
-      return res.status(400).json({ error: 'candidateId required' })
-    }
+    if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
 
     const { data: candidate, error: fetchError } = await supabase
       .from('candidates')
@@ -26,66 +24,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', candidateId)
       .single()
 
-    if (fetchError || !candidate) {
-      return res.status(404).json({ error: 'Candidate not found' })
+    if (fetchError || !candidate) return res.status(404).json({ error: 'Candidate not found' })
+
+    let matchData = null
+    let job = null
+
+    if (jobId) {
+      const { data: jobData } = await supabase.from('jobs').select('*').eq('id', jobId).single()
+      job = jobData
+
+      if (job) {
+        const matchRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/match`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidateId, jobId })
+        })
+        const matchResult = await matchRes.json()
+        matchData = matchResult.match
+      }
+    }
+
+    const updatedCandidate = {
+      ...candidate,
+      job_title: job?.title || jobTitle || candidate.job_title,
+      job_salary: job?.salary || jobSalary || candidate.job_salary
     }
 
     await supabase
       .from('candidates')
       .update({
         status: 'shortlisted',
-        job_title: jobTitle || candidate.job_title,
-        job_salary: jobSalary || candidate.job_salary
+        job_title: updatedCandidate.job_title,
+        job_salary: updatedCandidate.job_salary
       })
       .eq('id', candidateId)
 
-    const updatedCandidate = {
-      ...candidate,
-      job_title: jobTitle || candidate.job_title,
-      job_salary: jobSalary || candidate.job_salary
-    }
-
-    const voiceBuffer = await generateVoiceNote(updatedCandidate)
+    const voiceBuffer = await generateVoiceNoteFromMatch(updatedCandidate, matchData, job)
     const sizeMb = getAudioSizeMb(voiceBuffer)
 
-    // Upload to Supabase storage
     const fileName = `${candidateId}-${Date.now()}.mp3`
-    const { error: uploadError } = await supabase.storage
+    await supabase.storage
       .from('voice-notes')
-      .upload(fileName, voiceBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: true
-      })
+      .upload(fileName, voiceBuffer, { contentType: 'audio/mpeg', upsert: true })
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError)
-    }
-
-    const { data: urlData } = supabase.storage
-      .from('voice-notes')
-      .getPublicUrl(fileName)
-
+    const { data: urlData } = supabase.storage.from('voice-notes').getPublicUrl(fileName)
     const voiceNoteUrl = urlData?.publicUrl || ''
 
-    // Send email with voice note URL instead of attachment
     const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceNoteUrl, voiceBuffer, sizeMb)
 
     await supabase
       .from('candidates')
-      .update({
-        status: 'voice_sent',
-        interview_token: token,
-        voice_note_url: voiceNoteUrl
-      })
+      .update({ status: 'voice_sent', interview_token: token, voice_note_url: voiceNoteUrl })
       .eq('id', candidateId)
 
-    return res.status(200).json({
-      success: true,
-      candidateId,
-      audioSizeMb: sizeMb,
-      underSizeLimit: sizeMb < 2,
-      voiceNoteUrl
-    })
+    return res.status(200).json({ success: true, candidateId, audioSizeMb: sizeMb, underSizeLimit: sizeMb < 2, voiceNoteUrl })
 
   } catch (err: any) {
     console.error('Shortlist error:', err)
