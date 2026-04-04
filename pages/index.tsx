@@ -23,6 +23,12 @@ type Voice = {
   preview_url: string
 }
 
+type Notification = {
+  id: number
+  message: string
+  type: 'success' | 'error'
+}
+
 export default function Dashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,10 +50,20 @@ export default function Dashboard() {
   const [selectedVoiceId, setSelectedVoiceId] = useState('P4DhdyNCB4Nl6MA0sL45')
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => { fetchCandidates() }, [])
+
+  function notify(message: string, type: 'success' | 'error' = 'success') {
+    const id = ++notifId.current
+    setNotifications(prev => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }, 4000)
+  }
 
   async function fetchCandidates() {
     const res = await fetch('/api/candidates')
@@ -75,6 +91,7 @@ export default function Dashboard() {
     })
     setSelectedVoiceId(voiceId)
     setShowVoices(false)
+    notify('Voice updated successfully')
   }
 
   function previewVoice(voice: Voice) {
@@ -124,9 +141,10 @@ export default function Dashboard() {
           experience_summary: data.extracted.experience_summary || prev.experience_summary,
           years_experience: data.extracted.years_experience?.toString() || prev.years_experience,
         }))
+        notify('CV read successfully — fields auto-filled')
       }
     } catch (err) {
-      alert('Could not extract CV details — please fill in manually')
+      notify('Could not extract CV — please fill in manually', 'error')
     } finally {
       setExtracting(false)
     }
@@ -150,7 +168,7 @@ export default function Dashboard() {
   async function saveEdit() {
     if (!editingCandidate) return
     if (!editForm.name || !editForm.email || !editForm.role_applied || !editForm.experience_summary) {
-      alert('Please fill in all required fields')
+      notify('Please fill in all required fields', 'error')
       return
     }
     const res = await fetch('/api/candidates', {
@@ -163,8 +181,9 @@ export default function Dashboard() {
       setShowEdit(false)
       setEditingCandidate(null)
       fetchCandidates()
+      notify('Candidate updated successfully')
     } else {
-      alert('Error: ' + (data.error || 'Something went wrong'))
+      notify('Error: ' + (data.error || 'Something went wrong'), 'error')
     }
   }
 
@@ -178,8 +197,9 @@ export default function Dashboard() {
     const data = await res.json()
     if (data.success) {
       fetchCandidates()
+      notify(`${candidate.name} deleted`)
     } else {
-      alert('Error: ' + (data.error || 'Could not delete'))
+      notify('Could not delete candidate', 'error')
     }
   }
 
@@ -196,10 +216,10 @@ export default function Dashboard() {
       })
       const data = await res.json()
       if (data.success) {
-        alert(`Voice note sent to ${candidate.name}! Audio: ${data.audioSizeMb}mb ${data.underSizeLimit ? '✓' : '⚠ over 2mb'}`)
+        notify(`Voice note sent to ${candidate.name} ✓ ${data.audioSizeMb}mb`)
         fetchCandidates()
       } else {
-        alert('Error: ' + data.error)
+        notify('Error: ' + data.error, 'error')
       }
     } finally {
       setShortlisting(null)
@@ -249,7 +269,7 @@ export default function Dashboard() {
 
   async function addCandidate() {
     if (!form.name || !form.email || !form.role_applied || !form.experience_summary) {
-      alert('Please fill in all required fields')
+      notify('Please fill in all required fields', 'error')
       return
     }
     const res = await fetch('/api/candidates', {
@@ -263,8 +283,9 @@ export default function Dashboard() {
       setCvFile(null)
       setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '' })
       fetchCandidates()
+      notify('Candidate added successfully')
     } else {
-      alert('Error: ' + (data.error || 'Something went wrong'))
+      notify('Error: ' + (data.error || 'Something went wrong'), 'error')
     }
   }
 
@@ -298,6 +319,36 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f8f8f8' }}>
+
+      {/* Notifications */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {notifications.map(n => (
+          <div key={n.id} style={{
+            background: n.type === 'success' ? '#1a1a1a' : '#E24B4A',
+            color: 'white',
+            padding: '12px 18px',
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            animation: 'slideIn 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}>
+            <span>{n.type === 'success' ? '✓' : '✕'}</span>
+            {n.message}
+          </div>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       <div style={{ width: 220, background: 'white', borderRight: '1px solid #eee', padding: '24px 0', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '0 20px 20px', borderBottom: '1px solid #eee', marginBottom: 12 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a' }}>VoiceReach</div>
@@ -320,13 +371,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>Drag candidates between columns or click to shortlist</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search candidates..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ padding: '7px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }}
-            />
+            <input type="text" placeholder="Search candidates..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }} />
             <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ Add Candidate</button>
           </div>
         </div>
@@ -347,13 +392,8 @@ export default function Dashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {STATUSES.map(status => (
-              <div
-                key={status}
-                onDragOver={e => handleDragOver(e, status)}
-                onDrop={e => handleDrop(e, status)}
-                onDragLeave={() => setDragOver(null)}
-                style={{ background: dragOver === status ? '#f0eeff' : 'white', border: dragOver === status ? '2px dashed #534AB7' : '1px solid #eee', borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s' }}
-              >
+              <div key={status} onDragOver={e => handleDragOver(e, status)} onDrop={e => handleDrop(e, status)} onDragLeave={() => setDragOver(null)}
+                style={{ background: dragOver === status ? '#f0eeff' : 'white', border: dragOver === status ? '2px dashed #534AB7' : '1px solid #eee', borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s' }}>
                 <div style={{ padding: '10px 12px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888' }}>{STATUS_LABELS[status]}</span>
                   <span style={{ fontSize: 11, background: '#f0f0f0', padding: '2px 8px', borderRadius: 10, color: '#555' }}>{byStatus(status).length}</span>
@@ -362,8 +402,7 @@ export default function Dashboard() {
                   {loading ? <div style={{ fontSize: 12, color: '#ccc', padding: 8 }}>Loading...</div> : null}
                   {byStatus(status).map(c => (
                     <div key={c.id} draggable onDragStart={e => handleDragStart(e, c.id)} onDragEnd={handleDragEnd}
-                      style={{ background: 'white', border: '1px solid #eee', borderLeft: `2px solid ${STATUS_COLORS[status]}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab', opacity: dragId === c.id ? 0.4 : 1, transition: 'opacity 0.15s', userSelect: 'none' }}
-                    >
+                      style={{ background: 'white', border: '1px solid #eee', borderLeft: `2px solid ${STATUS_COLORS[status]}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab', opacity: dragId === c.id ? 0.4 : 1, transition: 'opacity 0.15s', userSelect: 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>{c.name}</div>
                         <div style={{ display: 'flex', gap: 4 }}>
@@ -386,17 +425,13 @@ export default function Dashboard() {
                       {status === 'voice_sent' && (
                         <div style={{ marginTop: 6 }}>
                           <div style={{ fontSize: 11, color: '#1D9E75' }}>✓ Voice note delivered</div>
-                          {c.voice_note_url && (
-                            <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>
-                          )}
+                          {c.voice_note_url && <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>}
                         </div>
                       )}
                       {status === 'interview_booked' && (
                         <div style={{ marginTop: 6 }}>
                           <div style={{ fontSize: 11, color: '#639922' }}>✓ Interview link clicked</div>
-                          {c.voice_note_url && (
-                            <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>
-                          )}
+                          {c.voice_note_url && <div onClick={() => openPlayer(c)} style={{ fontSize: 11, color: '#534AB7', fontWeight: 500, marginTop: 4, cursor: 'pointer' }}>▶ Play voice note</div>}
                         </div>
                       )}
                     </div>
@@ -418,9 +453,6 @@ export default function Dashboard() {
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Voice note</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>{playerCandidate.name} — {playerCandidate.job_title || playerCandidate.role_applied}</p>
             <audio controls src={playerCandidate.voice_note_url!} style={{ width: '100%', borderRadius: 8 }} />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button onClick={() => setShowPlayer(false)} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'white' }}>Close</button>
-            </div>
           </div>
         </div>
       )}
