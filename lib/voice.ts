@@ -4,11 +4,16 @@ const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'
 
 export function buildScript(candidate: Candidate): string {
   const firstName = candidate.name.split(' ')[0]
-  const expLine = candidate.years_experience > 0
-    ? `We can see you've got ${candidate.years_experience} years of experience in ${candidate.role_applied}`
-    : `We've had a look at your background in ${candidate.role_applied}`
 
-  return `Hi ${firstName}, hope you're doing well. We've just received your CV and we're really impressed. ${expLine}, which is exactly what we're looking for. We've got a ${candidate.job_title || candidate.role_applied} position available${candidate.job_salary ? ` with a salary of ${candidate.job_salary}` : ''}. I think this could be a brilliant opportunity for you. I've included a 24-hour interview link in this email — click it whenever suits you and you can schedule it straight into your calendar. Looking forward to hearing from you soon.`
+  const expLine = candidate.years_experience > 0
+    ? `We can see you have got ${candidate.years_experience} years of experience in ${candidate.role_applied}`
+    : `We have had a look at your background in ${candidate.role_applied}`
+
+  const salaryLine = candidate.job_salary
+    ? `The salary for this role is ${candidate.job_salary} and we think it could be a brilliant fit for you.`
+    : `We think this could be a brilliant fit for you.`
+
+  return `Hi ${firstName}, hope you are doing well. We have just received your CV and we are really impressed. ${expLine}, which is exactly what we are looking for. We have got a ${candidate.job_title || candidate.role_applied} position available. ${salaryLine} I have included a 24 hour interview link in this email. Click it whenever suits you and you can schedule it straight into your calendar. Looking forward to hearing from you soon.`
 }
 
 export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
