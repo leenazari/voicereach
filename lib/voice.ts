@@ -13,7 +13,11 @@ export function buildScript(candidate: Candidate): string {
     ? `, paying ${formatSalary(candidate.job_salary)},`
     : ','
 
-  return `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role${salaryLine} and honestly, with your ${expLine}, you are exactly what this client is looking for. I think this could be a brilliant move for you. Now here is the exciting part... I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes, and you can fit it around your day. But do not leave it too long ${firstName}, this one is moving fast and they are ready to hire. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
+  const employerLine = (candidate as any).last_employer
+    ? ` Your experience at ${(candidate as any).last_employer} in particular really stands out.`
+    : ''
+
+  return `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role${salaryLine} and honestly, with your ${expLine}, you are exactly what this client is looking for.${employerLine} I think this could be a brilliant move for you. Now here is the exciting part... I have created a personal interview link just for you. You can actually do the interview right now, it takes less than ten minutes, and you can fit it around your day. But do not leave it too long ${firstName}, this one is moving fast and they are ready to hire. Click the link in this email, do the interview, and let us get you this job. I genuinely think you are perfect for it.`
 }
 
 export function formatSalary(salary: string): string {
