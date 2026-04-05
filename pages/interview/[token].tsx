@@ -1,11 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { useState } from 'react'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { useState, useRef, useEffect } from 'react'
 
 type Props = {
   candidate: {
@@ -30,132 +25,179 @@ type Props = {
 }
 
 export default function InterviewPage({ candidate, job, expired, notFound, calUrl }: Props) {
-
   const [playing, setPlaying] = useState(false)
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause() }
+  }, [])
 
   function togglePlay() {
-    if (playing && audio) {
-      audio.pause()
-      setPlaying(false)
-      return
-    }
-    if (candidate?.voice_note_url) {
+    if (!candidate?.voice_note_url) return
+    if (!audioRef.current) {
       const a = new Audio(candidate.voice_note_url)
-      setAudio(a)
-      a.play()
+      audioRef.current = a
+      a.onended = () => { setPlaying(false); setProgress(0) }
+      a.ontimeupdate = () => setProgress(a.currentTime / (a.duration || 1))
+      a.onloadedmetadata = () => setDuration(a.duration)
+    }
+    if (playing) {
+      audioRef.current.pause()
+      setPlaying(false)
+    } else {
+      audioRef.current.play()
       setPlaying(true)
-      a.onended = () => setPlaying(false)
     }
   }
 
-  const ContactBox = () => (
-    <div style={{ background: '#f5f4ff', borderRadius: 12, padding: '20px 24px', marginTop: 28, textAlign: 'left', borderLeft: '3px solid #534AB7' }}>
-      <p style={{ fontSize: 14, fontWeight: 700, color: '#534AB7', marginBottom: 8 }}>Looking for something new?</p>
-      <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, marginBottom: 16 }}>
-        We always have new opportunities coming in. Get in touch and we will match you with the right role.
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <a href="tel:07545812308" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-          📞 07545 812308
-        </a>
-        <a href="mailto:lee.nazari@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-          ✉ lee.nazari@gmail.com
-        </a>
-        <a href="https://voicereach.co.uk" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-          🌐 voicereach.co.uk
-        </a>
+  function formatTime(s: number) {
+    if (!s || isNaN(s)) return '0:00'
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const firstName = candidate?.name.split(' ')[0] || ''
+  const displayJob = job || {
+    title: candidate?.job_title || 'Exciting Opportunity',
+    company: '',
+    location: '',
+    salary: candidate?.job_salary || '',
+    description: '',
+    required_skills: [],
+    logo_url: null,
+    sector: ''
+  }
+
+  const SorryPage = ({ message }: { message: string }) => (
+    <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 24 }}>
+      <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+        <div style={{ fontSize: 64, marginBottom: 24 }}>😔</div>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 16, letterSpacing: '-0.5px' }}>This role has been filled</h1>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, lineHeight: 1.7, marginBottom: 32 }}>{message}</p>
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24 }}>
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>We have plenty more opportunities though!</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <a href="tel:07545812308" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>📞 07545 812308</a>
+            <a href="mailto:lee.nazari@gmail.com" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>✉ lee.nazari@gmail.com</a>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   )
 
-  if (notFound || !candidate) {
-    return (
-      <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', maxWidth: 520, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff0ee', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>😔</div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 12 }}>Unfortunately this job has been filled</h1>
-        <p style={{ color: '#888', fontSize: 15, lineHeight: 1.7 }}>
-          We are sorry you missed out on this one. The position has already been filled but we have plenty more opportunities that might be perfect for you.
-        </p>
-        <ContactBox />
-      </main>
-    )
-  }
-
-  if (expired) {
-    return (
-      <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', maxWidth: 520, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff8ee', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>⏱</div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 12 }}>Unfortunately this job has been filled</h1>
-        <p style={{ color: '#888', fontSize: 15, lineHeight: 1.7 }}>
-          This link has expired and the position has now been filled. But we may have other great opportunities that suit your experience.
-        </p>
-        <ContactBox />
-      </main>
-    )
-  }
-
-  const firstName = candidate.name.split(' ')[0]
-  const displayJob = job || { title: candidate.job_title, company: '', location: '', salary: candidate.job_salary, description: '', required_skills: [], logo_url: null, sector: '' }
+  if (notFound || !candidate) return <SorryPage message="Sorry, we could not find this opportunity. It may have already been filled or the link may be incorrect." />
+  if (expired) return <SorryPage message="This link has expired and the position has now been filled. But we have plenty of other exciting opportunities that might be perfect for you." />
 
   return (
-    <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', minHeight: '100vh', background: '#f5f5f7' }}>
+    <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+
+      <style>{`
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(102,126,234,0.4); } 50% { box-shadow: 0 0 40px rgba(102,126,234,0.8), 0 0 60px rgba(118,75,162,0.4); } }
+        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+      `}</style>
 
       {/* HEADER */}
-      <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>
-          Voice<span style={{ color: '#534AB7' }}>Reach</span>
+      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px' }}>
+          <span style={{ color: 'white' }}>Voice</span>
+          <span style={{ background: 'linear-gradient(135deg, #667eea, #f093fb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Reach</span>
         </div>
       </div>
 
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ maxWidth: 620, margin: '0 auto', padding: '32px 20px 60px' }}>
 
-        {/* COMPANY HEADER */}
-        <div style={{ background: 'white', borderRadius: 16, padding: '28px', marginBottom: 20, border: '1px solid #ebebeb', textAlign: 'center' }}>
+        {/* HERO — COMPANY + JOB */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
           {displayJob.logo_url ? (
-            <img src={displayJob.logo_url} alt={displayJob.company} style={{ width: 72, height: 72, borderRadius: 14, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', marginBottom: 16 }} />
+            <div style={{ display: 'inline-block', background: 'white', borderRadius: 20, padding: 12, marginBottom: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+              <img src={displayJob.logo_url} alt={displayJob.company} style={{ width: 72, height: 72, objectFit: 'contain', display: 'block' }} />
+            </div>
           ) : (
-            <div style={{ width: 72, height: 72, borderRadius: 14, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#534AB7', margin: '0 auto 16px' }}>
+            <div style={{ width: 88, height: 88, borderRadius: 20, background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, fontWeight: 800, color: 'white', margin: '0 auto 20px', boxShadow: '0 8px 32px rgba(102,126,234,0.4)' }}>
               {(displayJob.company || displayJob.title || 'J')[0].toUpperCase()}
             </div>
           )}
-          {displayJob.company && <div style={{ fontSize: 14, color: '#888', marginBottom: 6 }}>{displayJob.company}</div>}
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.2 }}>{displayJob.title}</h1>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {displayJob.salary && <span style={{ fontSize: 14, color: '#534AB7', fontWeight: 600 }}>💰 {displayJob.salary}</span>}
-            {displayJob.location && <span style={{ fontSize: 14, color: '#888' }}>📍 {displayJob.location}</span>}
-            {displayJob.sector && <span style={{ fontSize: 14, color: '#888' }}>◎ {displayJob.sector}</span>}
+
+          {displayJob.company && (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, marginBottom: 10 }}>{displayJob.company}</div>
+          )}
+
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.15, marginBottom: 16 }}>
+            {displayJob.title}
+          </h1>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            {displayJob.salary && (
+              <span style={{ background: 'linear-gradient(135deg, #f093fb, #f5576c)', color: 'white', padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 700 }}>
+                💰 {displayJob.salary}
+              </span>
+            )}
+            {displayJob.location && (
+              <span style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 500 }}>
+                📍 {displayJob.location}
+              </span>
+            )}
+            {displayJob.sector && (
+              <span style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 500 }}>
+                ◎ {displayJob.sector}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* PERSONAL MESSAGE */}
-        <div style={{ background: 'white', borderRadius: 16, padding: '28px', marginBottom: 20, border: '1px solid #ebebeb' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Hi {firstName} 👋</div>
-          <p style={{ fontSize: 15, color: '#555', lineHeight: 1.75, marginBottom: 20 }}>
-            We have a personal voice message for you about this opportunity. Hit play to hear why we think you are a great fit for this role.
-          </p>
+        {/* PERSONAL MESSAGE + PLAY */}
+        <div style={{ background: 'linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15))', border: '1px solid rgba(102,126,234,0.3)', borderRadius: 24, padding: '28px 24px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, rgba(102,126,234,0.15), transparent)', pointerEvents: 'none' }} />
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'white', marginBottom: 8 }}>
+              Hey {firstName}! 👋
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15, lineHeight: 1.7 }}>
+              We have got a personal message for you about this opportunity. Hit play below to hear exactly why we think you are the perfect fit!
+            </p>
+          </div>
 
           {/* PLAY BUTTON */}
-          <div style={{ background: '#f5f4ff', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <button onClick={togglePlay} style={{ width: 56, height: 56, borderRadius: '50%', background: playing ? '#E24B4A' : '#534AB7', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(83,74,183,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+            <button
+              onClick={togglePlay}
+              style={{ width: 64, height: 64, borderRadius: '50%', background: playing ? 'linear-gradient(135deg, #f5576c, #f093fb)' : 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: playing ? 'glow 2s ease-in-out infinite' : 'pulse 3s ease-in-out infinite', transition: 'all 0.3s' }}
+            >
               {playing ? (
-                <div style={{ width: 14, height: 14, background: 'white', borderRadius: 2, boxShadow: '6px 0 0 white' }} />
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
+                  <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
+                </div>
               ) : (
-                <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid white', marginLeft: 4 }} />
+                <div style={{ width: 0, height: 0, borderTop: '12px solid transparent', borderBottom: '12px solid transparent', borderLeft: '20px solid white', marginLeft: 4 }} />
               )}
             </button>
+
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 2 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'white', marginBottom: 6 }}>
                 {playing ? 'Playing your personal message...' : 'Play your personal voice message'}
               </div>
-              <div style={{ fontSize: 12, color: '#888' }}>
-                {playing ? 'Tap to pause' : 'Tap to hear why you are perfect for this role'}
+              {/* PROGRESS BAR */}
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+                <div style={{ height: '100%', width: `${progress * 100}%`, background: 'linear-gradient(90deg, #667eea, #f093fb)', borderRadius: 4, transition: 'width 0.1s' }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                {playing ? formatTime((audioRef.current?.currentTime || 0)) : 'Tap to play'} {duration > 0 ? `/ ${formatTime(duration)}` : ''}
               </div>
             </div>
+
             {playing && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 {[1,2,3,4,5].map(i => (
-                  <div key={i} style={{ width: 3, borderRadius: 2, background: '#534AB7', animation: `wave 1s ease-in-out infinite`, animationDelay: `${i * 0.1}s`, height: `${20 + Math.sin(i) * 10}px` }} />
+                  <div key={i} style={{ width: 3, borderRadius: 2, background: `hsl(${220 + i * 20}, 80%, 70%)`, animation: `wave 0.8s ease-in-out infinite`, animationDelay: `${i * 0.12}s`, height: 24 }} />
                 ))}
               </div>
             )}
@@ -164,48 +206,50 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
 
         {/* JOB DESCRIPTION */}
         {displayJob.description && (
-          <div style={{ background: 'white', borderRadius: 16, padding: '28px', marginBottom: 20, border: '1px solid #ebebeb' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>About the role</div>
-            <p style={{ fontSize: 14, color: '#555', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{displayJob.description}</p>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>About the role</div>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.85, whiteSpace: 'pre-line' }}>{displayJob.description}</p>
           </div>
         )}
 
         {/* REQUIRED SKILLS */}
         {(displayJob.required_skills || []).length > 0 && (
-          <div style={{ background: 'white', borderRadius: 16, padding: '28px', marginBottom: 20, border: '1px solid #ebebeb' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>What they are looking for</div>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>What they are looking for</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {(displayJob.required_skills || []).map(skill => (
-                <span key={skill} style={{ fontSize: 13, background: '#EEEDFE', color: '#534AB7', padding: '6px 14px', borderRadius: 100, fontWeight: 500 }}>{skill}</span>
+              {(displayJob.required_skills || []).map((skill, i) => (
+                <span key={skill} style={{ fontSize: 13, background: `linear-gradient(135deg, hsla(${200 + i * 25}, 70%, 50%, 0.2), hsla(${220 + i * 25}, 70%, 50%, 0.2))`, border: `1px solid hsla(${200 + i * 25}, 70%, 60%, 0.3)`, color: `hsl(${200 + i * 25}, 80%, 75%)`, padding: '6px 14px', borderRadius: 100, fontWeight: 500 }}>{skill}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* BOOK INTERVIEW */}
-        <div style={{ background: '#534AB7', borderRadius: 16, padding: '28px', textAlign: 'center', marginBottom: 20 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'white', marginBottom: 8 }}>Ready to go for it, {firstName}?</div>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 24, lineHeight: 1.6 }}>
-            Book your interview now. It takes less than 10 minutes and you can do it around your schedule. But do not wait too long — this role is moving fast.
+        {/* CTA */}
+        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)', borderRadius: 24, padding: '32px 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)', pointerEvents: 'none' }} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 }}>🚀 This role is moving fast</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: 'white', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+            Ready to go for it, {firstName}?
+          </div>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', marginBottom: 28, lineHeight: 1.6 }}>
+            Book your interview now — it takes less than 10 minutes and you can do it around your schedule. Do not let this one slip away!
           </p>
-          <a href={calUrl} style={{ display: 'inline-block', background: 'white', color: '#534AB7', padding: '15px 40px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>
-            Book my interview now →
+          
+            href={calUrl}
+            style={{ display: 'inline-block', background: 'white', color: '#5a4fcf', padding: '18px 48px', borderRadius: 14, textDecoration: 'none', fontWeight: 900, fontSize: 17, letterSpacing: '-0.3px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', animation: 'float 3s ease-in-out infinite' }}
+          >
+            Claim this opportunity →
           </a>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 12 }}>Pick a time that works for you</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14 }}>
+            Pick a time that works for you — no pressure
+          </div>
         </div>
 
         {/* FOOTER */}
-        <div style={{ textAlign: 'center', fontSize: 12, color: '#ccc', paddingBottom: 40 }}>
+        <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
           Powered by VoiceReach · voicereach.co.uk
         </div>
       </div>
-
-      <style>{`
-        @keyframes wave {
-          0%, 100% { transform: scaleY(0.4); }
-          50% { transform: scaleY(1); }
-        }
-      `}</style>
     </main>
   )
 }
@@ -213,6 +257,11 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
 export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   const token = params?.token as string
   const calUrl = process.env.NEXT_PUBLIC_CALCOM_URL || 'https://cal.com/lee-nazari-ohfnvf/15min'
+
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   try {
     const { data: candidate, error } = await supabaseAdmin
