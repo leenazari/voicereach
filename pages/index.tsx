@@ -40,6 +40,24 @@ type Job = {
   status: string
   logo_url: string | null
   created_at: string
+  closes_at?: string | null
+  work_type?: string
+  match_priority?: string
+  match_threshold?: number
+}
+
+type MatchResult = {
+  candidate_id: string
+  name: string
+  email: string
+  role_applied: string
+  years_experience: number
+  last_employer: string
+  location: string
+  strength_keywords: string[]
+  match_score: number
+  keyword_matches: string[]
+  status: string
 }
 
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
@@ -54,6 +72,9 @@ export default function Dashboard() {
   const [showAddJob, setShowAddJob] = useState(false)
   const [showEditJob, setShowEditJob] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
+  const [matchingJob, setMatchingJob] = useState<string | null>(null)
+  const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
+  const [expandedJob, setExpandedJob] = useState<string | null>(null)
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -121,6 +142,46 @@ export default function Dashboard() {
     const res = await fetch('/api/jobs')
     const data = await res.json()
     setJobs(data.jobs || [])
+  }
+
+  async function findMatches(job: Job) {
+    setMatchingJob(job.id)
+    try {
+      const res = await fetch('/api/match-candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMatchResults(prev => ({ ...prev, [job.id]: data.results }))
+        setExpandedJob(job.id)
+        notify(`Found ${data.shortlist} strong matches out of ${data.total} candidates`)
+      } else notify('Could not match candidates', 'error')
+    } catch { notify('Matching failed', 'error') }
+    finally { setMatchingJob(null) }
+  }
+
+  async function sendVoiceNoteToMatch(match: MatchResult, job: Job) {
+    setShortlisting(match.candidate_id)
+    try {
+      const res = await fetch('/api/shortlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateId: match.candidate_id,
+          jobId: job.id,
+          jobTitle: job.title,
+          jobSalary: job.salary
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        notify(`Voice note sent to ${match.name} ✓`)
+        fetchCandidates()
+        if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+      } else notify('Error: ' + data.error, 'error')
+    } finally { setShortlisting(null) }
   }
 
   async function deleteJob(job: Job) {
@@ -398,6 +459,20 @@ export default function Dashboard() {
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
 
+  function getMatchColor(score: number): string {
+    if (score >= 80) return '#1D9E75'
+    if (score >= 70) return '#534AB7'
+    if (score >= 55) return '#BA7517'
+    return '#E24B4A'
+  }
+
+  function getMatchBg(score: number): string {
+    if (score >= 80) return '#E1F5EE'
+    if (score >= 70) return '#EEEDFE'
+    if (score >= 55) return '#FFF3E0'
+    return '#fff0ee'
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
 
@@ -636,49 +711,140 @@ export default function Dashboard() {
                   <button onClick={() => setShowAddJob(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add your first job</button>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {jobs.map(job => (
                     <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 18px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+
+                      {/* JOB HEADER */}
+                      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
                         {job.logo_url ? (
-                          <img src={job.logo_url} alt={job.company} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white' }} />
+                          <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
                         ) : (
-                          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
                             {(job.company || job.title)[0].toUpperCase()}
                           </div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.title}</div>
-                          <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>{job.company || 'No company'}</div>
-                        </div>
-                        <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize', flexShrink: 0 }}>
-                          {job.status}
-                        </span>
-                      </div>
-                      <div style={{ padding: '12px 18px' }}>
-                        <div style={{ display: 'flex', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-                          {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
-                          {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
-                          {job.sector && <span style={{ fontSize: 12, color: '#888' }}>◎ {job.sector}</span>}
-                        </div>
-                        {job.description && (
-                          <div style={{ fontSize: 12, color: '#666', lineHeight: 1.6, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {job.description}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
+                            <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
+                            {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500, textTransform: 'capitalize' }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
                           </div>
-                        )}
-                        {(job.required_skills || []).length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
-                            {(job.required_skills || []).slice(0, 4).map(skill => (
-                              <span key={skill} style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
-                            ))}
-                            {(job.required_skills || []).length > 4 && <span style={{ fontSize: 10, color: '#aaa', padding: '2px 4px' }}>+{(job.required_skills || []).length - 4} more</span>}
+                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
+                            {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
+                            {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
+                            {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
                           </div>
-                        )}
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ flex: 1, padding: '7px', border: '1px solid #e5e5e5', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          <button onClick={() => deleteJob(job)} style={{ padding: '7px 12px', border: '1px solid #fdd', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <button
+                            onClick={() => findMatches(job)}
+                            disabled={matchingJob === job.id}
+                            style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}
+                          >
+                            {matchingJob === job.id ? '⟳ Matching...' : '◎ Find matches'}
+                          </button>
+                          <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
+                          <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
                         </div>
                       </div>
+
+                      {/* REQUIRED SKILLS */}
+                      {(job.required_skills || []).length > 0 && (
+                        <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {(job.required_skills || []).map(skill => (
+                            <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
+                          ))}
+                          <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+                            {job.match_priority === 'skills' ? '⚡ Skills priority' : job.match_priority === 'experience' ? '🏆 Experience priority' : '📍 Location priority'}
+                          </span>
+                          <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+                            {job.match_threshold || 70}% threshold
+                          </span>
+                        </div>
+                      )}
+
+                      {/* MATCH RESULTS */}
+                      {expandedJob === job.id && matchResults[job.id] && (
+                        <div style={{ borderTop: '1px solid #f0f0f0' }}>
+                          <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
+                              Match results — {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
+                                ✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match
+                              </span>
+                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
+                                {matchResults[job.id].filter(r => r.status === 'longlist').length} low match
+                              </span>
+                              <button onClick={() => setExpandedJob(null)} style={{ fontSize: 11, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>✕ Close</button>
+                            </div>
+                          </div>
+
+                          {/* SHORTLIST */}
+                          {matchResults[job.id].filter(r => r.status === 'shortlist').length > 0 && (
+                            <div style={{ padding: '12px 20px' }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {matchResults[job.id].filter(r => r.status === 'shortlist').map(match => (
+                                  <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: '#f9fffe', border: '1px solid #d4f0e8', borderRadius: 10 }}>
+                                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      <div style={{ fontSize: 13, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', marginBottom: 2 }}>{match.name}</div>
+                                      <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
+                                      {match.keyword_matches.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                          {match.keyword_matches.slice(0, 4).map(kw => (
+                                            <span key={kw} style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => sendVoiceNoteToMatch(match, job)}
+                                      disabled={shortlisting === match.candidate_id}
+                                      style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                                    >
+                                      {shortlisting === match.candidate_id ? '⟳' : '🎙 Send'}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* LONGLIST */}
+                          {matchResults[job.id].filter(r => r.status === 'longlist').length > 0 && (
+                            <div style={{ padding: '0 20px 16px' }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {matchResults[job.id].filter(r => r.status === 'longlist').map(match => (
+                                  <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 1 }}>{match.name}</div>
+                                      <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
+                                    </div>
+                                    <button
+                                      onClick={() => sendVoiceNoteToMatch(match, job)}
+                                      disabled={shortlisting === match.candidate_id}
+                                      style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                                    >
+                                      {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -696,24 +862,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* JOB MODALS — now handled by JobFormModal component */}
+      {/* JOB MODALS */}
       {showAddJob && (
-        <JobFormModal
-          mode="add"
-          onSave={fetchJobs}
-          onClose={() => setShowAddJob(false)}
-          notify={notify}
-        />
+        <JobFormModal mode="add" onSave={fetchJobs} onClose={() => setShowAddJob(false)} notify={notify} />
       )}
-
       {showEditJob && editingJob && (
-        <JobFormModal
-          mode="edit"
-          job={editingJob}
-          onSave={fetchJobs}
-          onClose={() => { setShowEditJob(false); setEditingJob(null) }}
-          notify={notify}
-        />
+        <JobFormModal mode="edit" job={editingJob} onSave={fetchJobs} onClose={() => { setShowEditJob(false); setEditingJob(null) }} notify={notify} />
       )}
 
       {/* SEND VOICE NOTE MODAL */}
@@ -829,6 +983,16 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {((profileCandidate as any).skills || []).map((skill: string) => (
                     <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>{skill}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {((profileCandidate as any).strength_keywords || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Strength keywords</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
+                    <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
                   ))}
                 </div>
               </div>
