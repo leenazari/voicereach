@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { Candidate } from '../lib/supabase'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
@@ -38,8 +38,15 @@ type Notification = {
 }
 
 export default function Dashboard() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -71,7 +78,30 @@ export default function Dashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const scriptDebounce = useRef<any>(null)
 
-  useEffect(() => { fetchCandidates() }, [])
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      window.location.href = '/login'
+      return
+    }
+    setUser(session.user)
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+    setProfile(data)
+    fetchCandidates()
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
 
   function notify(message: string, type: 'success' | 'error' = 'success') {
     const id = ++notifId.current
@@ -153,6 +183,10 @@ export default function Dashboard() {
   async function confirmShortlist() {
     if (!jobModalCandidate) return
     if (!jobForm.jobTitle) { notify('Please enter a job title', 'error'); return }
+    if (profile && profile.credits_used >= profile.credits_limit) {
+      notify('You have used all your credits. Please upgrade your plan.', 'error')
+      return
+    }
     setShowJobModal(false)
     setShortlisting(jobModalCandidate.id)
     try {
@@ -167,12 +201,19 @@ export default function Dashboard() {
         })
       })
       const data = await res.json()
-      if (data.success) { notify(`Voice note sent to ${jobModalCandidate.name} ✓`); fetchCandidates() }
-      else notify('Error: ' + data.error, 'error')
+      if (data.success) {
+        notify(`Voice note sent to ${jobModalCandidate.name} ✓`)
+        fetchCandidates()
+        if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+      } else notify('Error: ' + data.error, 'error')
     } finally { setShortlisting(null); setJobModalCandidate(null); setScriptPreview('') }
   }
 
   async function handleCvUpload(file: File) {
+    if (profile && profile.credits_used >= profile.credits_limit) {
+      notify('You have used all your credits. Please upgrade your plan.', 'error')
+      return
+    }
     setCvFile(file); setExtracting(true)
     try {
       const base64 = await new Promise<string>((res, rej) => {
@@ -296,6 +337,9 @@ export default function Dashboard() {
     interviews: candidates.filter(c => ['interview_booked', 'hired'].includes(c.status)).length,
   }
 
+  const creditsPercent = profile ? Math.min((profile.credits_used / profile.credits_limit) * 100, 100) : 0
+  const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#534AB7'
+
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
   const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
@@ -339,6 +383,7 @@ export default function Dashboard() {
         * { box-sizing: border-box; }
       `}</style>
 
+      {/* SIDEBAR */}
       <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
@@ -356,6 +401,11 @@ export default function Dashboard() {
               <span>{tab.icon}</span>{tab.label}
             </div>
           ))}
+          {profile?.role === 'admin' && (
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '2px solid transparent', margin: '1px 0' }}>
+              <span>⊛</span>Admin panel
+            </div>
+          )}
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
           <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#555', cursor: 'pointer', borderLeft: '2px solid transparent' }}>
             <span>⊙</span>Voice selector
@@ -364,11 +414,43 @@ export default function Dashboard() {
             <span>⊞</span>Templates
           </div>
         </div>
+
+        {/* USER FOOTER */}
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
-          <div style={{ fontSize: 11, color: '#aaa' }}>voicereach.co.uk</div>
+          {profile && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
+                  {(profile.full_name || user?.email || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {profile.full_name || user?.email?.split('@')[0]}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#aaa', textTransform: 'capitalize' }}>{profile.plan} plan</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: '#aaa' }}>Credits</span>
+                <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit}</span>
+              </div>
+              <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
+              </div>
+              {creditsPercent >= 90 && (
+                <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>
+                  Credits almost used up — <a href="/pricing" style={{ color: '#534AB7', textDecoration: 'none', fontWeight: 600 }}>upgrade</a>
+                </div>
+              )}
+            </div>
+          )}
+          <div onClick={signOut} style={{ fontSize: 12, color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <span>→</span> Sign out
+          </div>
         </div>
       </div>
 
+      {/* MAIN CONTENT */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
@@ -527,11 +609,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Candidate profile modal */}
+      {/* CANDIDATE PROFILE MODAL */}
       {showProfile && profileCandidate && (
         <div onClick={() => setShowProfile(false)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 580, maxHeight: '85vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
-            
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7' }}>
@@ -546,7 +627,6 @@ export default function Dashboard() {
                 {STATUS_LABELS[profileCandidate.status] || profileCandidate.status}
               </span>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
               {[
                 { label: 'Experience', value: profileCandidate.years_experience > 0 ? `${profileCandidate.years_experience} years` : 'Not specified' },
@@ -559,7 +639,6 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, fontWeight: 600 }}>Contact</div>
@@ -575,7 +654,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-
             {(profileCandidate as any).candidate_summary && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Profile summary</div>
@@ -584,7 +662,6 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-
             {((profileCandidate as any).skills || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Skills</div>
@@ -595,7 +672,6 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-
             {((profileCandidate as any).qualifications || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Qualifications</div>
@@ -604,14 +680,12 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-
             {profileCandidate.voice_note_url && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Last voice note</div>
                 <audio controls src={profileCandidate.voice_note_url} style={{ width: '100%', borderRadius: 8 }} />
               </div>
             )}
-
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
               <button onClick={() => { setShowProfile(false); openEdit(profileCandidate) }} style={{ padding: '9px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Edit</button>
               <button onClick={() => { setShowProfile(false); openJobModal(profileCandidate) }} style={{ padding: '9px 16px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🎙 Send voice note</button>
@@ -620,7 +694,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Job details modal */}
+      {/* JOB MODAL */}
       {showJobModal && jobModalCandidate && (
         <div onClick={() => { setShowJobModal(false); setScriptPreview('') }} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 520, animation: 'modalIn 0.2s ease' }}>
@@ -663,7 +737,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Voice note player modal */}
+      {/* VOICE NOTE PLAYER */}
       {showPlayer && playerCandidate && (
         <div onClick={() => setShowPlayer(false)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 420 }}>
@@ -674,7 +748,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Voice selector modal */}
+      {/* VOICE SELECTOR */}
       {showVoices && (
         <div onClick={() => setShowVoices(false)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 520, maxHeight: '80vh', overflowY: 'auto' }}>
@@ -697,11 +771,16 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Add candidate modal */}
+      {/* ADD CANDIDATE */}
       {showAdd && (
         <div onClick={() => { setShowAdd(false); setCvFile(null) }} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Add Candidate</h2>
+            {profile && profile.credits_used >= profile.credits_limit && (
+              <div style={{ background: '#fff8f8', border: '1px solid #fdd', borderRadius: 10, padding: '14px 16px', marginBottom: 20, fontSize: 13, color: '#E24B4A', fontWeight: 500 }}>
+                You have used all your credits. Please upgrade your plan to add more candidates.
+              </div>
+            )}
             <div onClick={() => fileRef.current?.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCvUpload(f) }}
               style={{ border: `2px dashed ${cvFile ? '#534AB7' : '#e0e0e0'}`, borderRadius: 10, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: cvFile ? '#f0eeff' : '#fafafa' }}>
               <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleCvUpload(f) }} />
@@ -721,13 +800,13 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
               <button onClick={() => { setShowAdd(false); setCvFile(null) }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
-              <button onClick={addCandidate} disabled={extracting} style={{ padding: '9px 18px', background: extracting ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: extracting ? 'not-allowed' : 'pointer' }}>{extracting ? 'Reading CV...' : 'Add candidate'}</button>
+              <button onClick={addCandidate} disabled={extracting || (profile && profile.credits_used >= profile.credits_limit)} style={{ padding: '9px 18px', background: extracting ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: extracting ? 'not-allowed' : 'pointer' }}>{extracting ? 'Reading CV...' : 'Add candidate'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit candidate modal */}
+      {/* EDIT CANDIDATE */}
       {showEdit && editingCandidate && (
         <div onClick={() => { setShowEdit(false); setEditingCandidate(null) }} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
