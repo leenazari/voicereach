@@ -52,16 +52,16 @@ function numberToWords(n: number): string {
 
 function trimToSixtySeconds(script: string): string {
   const words = script.split(' ')
-  if (words.length <= 140) return script
+  if (words.length <= 160) return script
 
-  const trimmed = words.slice(0, 140).join(' ')
+  const trimmed = words.slice(0, 160).join(' ')
   const sentenceEnd = Math.max(
     trimmed.lastIndexOf('. '),
     trimmed.lastIndexOf('! '),
     trimmed.lastIndexOf('? ')
   )
 
-  if (sentenceEnd > 80) {
+  if (sentenceEnd > 100) {
     return trimmed.substring(0, sentenceEnd + 1).trim()
   }
 
