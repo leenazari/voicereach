@@ -57,7 +57,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .eq('id', candidateId)
 
-    // Generate voice note — now returns { buffer, script }
     const { buffer: voiceBuffer, script: generatedScript } = await generateVoiceNoteFromMatch(
       updatedCandidate,
       matchData,
@@ -73,3 +72,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .upload(fileName, voiceBuffer, { contentType: 'audio/mpeg', upsert: true })
 
     const { data: urlData } = supabase.storage.from('voice-notes').getPublicUrl(fileName)
+    const voiceNoteUrl = urlData?.publicUrl || ''
+
+    const { token } = await sendVoiceOutreachEmail(updatedCandidate, voiceNoteUrl, voiceBuffer, sizeMb)
+
+    await supabase
+      .from('candidates')
+      .update({
+        status: 'voice_sent',
+        interview_token: token,
+        voice_note_url: voiceNoteUrl,
+        last_script: generatedScript,
+        last_script_at: new Date().toISOString()
+      })
+      .eq('id', candidateId)
+
+    return res.status(200).json({
+      success: true,
+      candidateId,
+      audioSizeMb: sizeMb,
+      underSizeLimit: sizeMb < 2,
+      voiceNoteUrl,
+      script: generatedScript
+    })
+
+  } catch (err: any) {
+    console.error('Shortlist error:', err)
+    return res.status(500).json({ error: err.message || 'Failed' })
+  }
+}
