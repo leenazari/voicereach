@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useRef } from 'react'
 import { Candidate } from '../lib/supabase'
 
