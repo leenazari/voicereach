@@ -456,6 +456,26 @@ export default function Dashboard() {
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
   const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 
+  const logoUploadUI = (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 500 }}>Company logo</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {logoPreview ? (
+          <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e5e5', background: '#fafafa' }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏢</div>
+        )}
+        <div style={{ flex: 1 }}>
+          <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f) }} />
+          <button type="button" onClick={() => logoRef.current?.click()} disabled={uploadingLogo} style={{ padding: '7px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: uploadingLogo ? 'not-allowed' : 'pointer', background: uploadingLogo ? '#f5f5f5' : 'white', fontWeight: 500, color: '#555' }}>
+            {uploadingLogo ? '⟳ Uploading...' : logoPreview ? '↺ Change logo' : '↑ Upload logo'}
+          </button>
+          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>PNG, JPG or SVG — shown on the candidate landing page</div>
+        </div>
+      </div>
+    </div>
+  )
+
   const jobTextFields = [
     { key: 'title', label: 'Job title *', placeholder: 'e.g. Senior Sales Executive' },
     { key: 'company', label: 'Company name', placeholder: 'e.g. Acme Corp' },
@@ -485,26 +505,6 @@ export default function Dashboard() {
     { key: 'job_title', label: 'Job title', type: 'text' },
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
-
-  const logoUploadUI = (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 500 }}>Company logo</label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {logoPreview ? (
-          <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e5e5', background: '#fafafa' }} />
-        ) : (
-          <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏢</div>
-        )}
-        <div style={{ flex: 1 }}>
-          <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f) }} />
-          <button type="button" onClick={() => logoRef.current?.click()} disabled={uploadingLogo} style={{ padding: '7px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: uploadingLogo ? 'not-allowed' : 'pointer', background: uploadingLogo ? '#f5f5f5' : 'white', fontWeight: 500, color: '#555' }}>
-            {uploadingLogo ? '⟳ Uploading...' : logoPreview ? '↺ Change logo' : '↑ Upload logo'}
-          </button>
-          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>PNG, JPG or SVG — shown on the candidate landing page</div>
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
