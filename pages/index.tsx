@@ -207,7 +207,6 @@ export default function Dashboard() {
       const data = await res.json()
       if (data.success) {
         notify(`Voice note sent to ${match.name} ✓`)
-        // Update the match result locally to show as sent
         setMatchResults(prev => ({
           ...prev,
           [job.id]: (prev[job.id] || []).map(m =>
@@ -777,13 +776,13 @@ export default function Dashboard() {
                             {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           {matchResults[job.id] && (
                             <button
                               onClick={() => toggleJobExpanded(job.id)}
                               style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                             >
-                              {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show results (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
+                              {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
                             </button>
                           )}
                           <button
@@ -791,7 +790,7 @@ export default function Dashboard() {
                             disabled={matchingJob === job.id}
                             style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}
                           >
-                            {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh matches' : '◎ Find matches'}
+                            {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
                           </button>
                           <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
                           <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
@@ -813,7 +812,7 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* MATCH RESULTS — only show if expanded */}
+                      {/* MATCH RESULTS */}
                       {expandedJobs.has(job.id) && matchResults[job.id] && (
                         <div style={{ borderTop: '1px solid #f0f0f0' }}>
                           <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
