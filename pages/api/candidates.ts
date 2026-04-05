@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
-      const { name, email, phone, role_applied, experience_summary, years_experience, skills, last_employer, location, candidate_summary, qualifications, all_employers } = req.body
+      const { name, email, phone, role_applied, experience_summary, years_experience, skills, last_employer, location, candidate_summary, qualifications, all_employers, strength_keywords } = req.body
       if (!name || !email || !role_applied || !experience_summary) {
         return res.status(400).json({ error: 'Missing required fields' })
       }
@@ -33,7 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           location: location || null,
           candidate_summary: candidate_summary || null,
           qualifications: qualifications || [],
-          all_employers: all_employers || []
+          all_employers: all_employers || [],
+          strength_keywords: strength_keywords || []
         })
         .select()
         .single()
@@ -51,7 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               location: location || null,
               candidate_summary: candidate_summary || null,
               qualifications: qualifications || [],
-              all_employers: all_employers || []
+              all_employers: all_employers || [],
+              strength_keywords: strength_keywords || []
             })
             .select()
             .single()
@@ -64,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PATCH') {
-      const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary, last_employer, location, candidate_summary, qualifications, all_employers, skills } = req.body
+      const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary, last_employer, location, candidate_summary, qualifications, all_employers, skills, strength_keywords, job_id } = req.body
       if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
       const updates: any = {}
       if (status !== undefined) updates.status = status
@@ -82,6 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (qualifications !== undefined) updates.qualifications = qualifications
       if (all_employers !== undefined) updates.all_employers = all_employers
       if (skills !== undefined) updates.skills = skills
+      if (strength_keywords !== undefined) updates.strength_keywords = strength_keywords
+      if (job_id !== undefined) updates.job_id = job_id
       const { error } = await supabase.from('candidates').update(updates).eq('id', candidateId)
       if (error) throw error
       return res.status(200).json({ success: true })
