@@ -72,23 +72,15 @@ export default function Dashboard() {
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const scriptDebounce = useRef<any>(null)
+  const mouseDownOnOverlay = useRef(false)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  useEffect(() => { checkAuth() }, [])
 
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      window.location.href = '/login'
-      return
-    }
+    if (!session) { window.location.href = '/login'; return }
     setUser(session.user)
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
+    const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
     setProfile(data)
     fetchCandidates()
   }
@@ -138,6 +130,15 @@ export default function Dashboard() {
 
   function openPlayer(candidate: Candidate) { setPlayerCandidate(candidate); setShowPlayer(true) }
   function openProfile(candidate: Candidate) { setProfileCandidate(candidate); setShowProfile(true) }
+
+  function overlayMouseDown(e: React.MouseEvent) {
+    mouseDownOnOverlay.current = e.target === e.currentTarget
+  }
+
+  function overlayMouseUp(e: React.MouseEvent, closeFn: () => void) {
+    if (e.target === e.currentTarget && mouseDownOnOverlay.current) closeFn()
+    mouseDownOnOverlay.current = false
+  }
 
   async function generatePreview(candidateId: string, jobTitle: string, jobSalary: string) {
     if (!jobTitle) return
@@ -332,7 +333,7 @@ export default function Dashboard() {
     interviews: candidates.filter(c => ['interview_booked', 'hired'].includes(c.status)).length,
   }
 
-  const creditsPercent = profile ? Math.min((profile.credits_used / profile.credits_limit) * 100, 100) : 0
+  const creditsPercent = profile && profile.credits_limit !== 999999 ? Math.min((profile.credits_used / profile.credits_limit) * 100, 100) : 0
   const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#534AB7'
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
@@ -423,17 +424,22 @@ export default function Dashboard() {
                   <div style={{ fontSize: 10, color: '#aaa', textTransform: 'capitalize' }}>{profile.plan} plan</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: '#aaa' }}>Credits</span>
-                <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit === 999999 ? '∞' : profile.credits_limit}</span>
-              </div>
-              <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
-              </div>
-              {creditsPercent >= 90 && profile.credits_limit !== 999999 && (
-                <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>
-                  Credits almost used up
-                </div>
+              {profile.credits_limit !== 999999 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: '#aaa' }}>Credits</span>
+                    <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit}</span>
+                  </div>
+                  <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
+                  </div>
+                  {creditsPercent >= 90 && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>Credits almost used up</div>
+                  )}
+                </>
+              )}
+              {profile.credits_limit === 999999 && (
+                <div style={{ fontSize: 10, color: '#1D9E75', fontWeight: 600, marginTop: 4 }}>✓ Unlimited credits</div>
               )}
             </div>
           )}
@@ -603,7 +609,7 @@ export default function Dashboard() {
 
       {/* CANDIDATE PROFILE MODAL */}
       {showProfile && profileCandidate && (
-        <div onClick={() => setShowProfile(false)} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => setShowProfile(false))} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 580, maxHeight: '85vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -688,7 +694,7 @@ export default function Dashboard() {
 
       {/* JOB MODAL */}
       {showJobModal && jobModalCandidate && (
-        <div onClick={() => { setShowJobModal(false); setScriptPreview('') }} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowJobModal(false); setScriptPreview('') })} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 520, animation: 'modalIn 0.2s ease' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎙</div>
@@ -731,7 +737,7 @@ export default function Dashboard() {
 
       {/* VOICE NOTE PLAYER */}
       {showPlayer && playerCandidate && (
-        <div onClick={() => setShowPlayer(false)} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => setShowPlayer(false))} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 420 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#1a1a1a' }}>Voice note</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>{playerCandidate.name} — {playerCandidate.job_title || playerCandidate.role_applied}</p>
@@ -742,7 +748,7 @@ export default function Dashboard() {
 
       {/* VOICE SELECTOR */}
       {showVoices && (
-        <div onClick={() => setShowVoices(false)} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => setShowVoices(false))} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 520, maxHeight: '80vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#1a1a1a' }}>Voice selector</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: 20 }}>Preview and select the voice for your outreach notes</p>
@@ -765,7 +771,7 @@ export default function Dashboard() {
 
       {/* ADD CANDIDATE */}
       {showAdd && (
-        <div onClick={() => { setShowAdd(false); setCvFile(null) }} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowAdd(false); setCvFile(null) })} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Add Candidate</h2>
             {profile && profile.credits_used >= profile.credits_limit && (
@@ -800,7 +806,7 @@ export default function Dashboard() {
 
       {/* EDIT CANDIDATE */}
       {showEdit && editingCandidate && (
-        <div onClick={() => { setShowEdit(false); setEditingCandidate(null) }} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowEdit(false); setEditingCandidate(null) })} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Edit — {editingCandidate.name}</h2>
             {editFields.map(f => (
