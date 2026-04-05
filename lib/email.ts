@@ -25,7 +25,7 @@ function buildCalendarInvite(candidate: Candidate, interviewLink: string): strin
   cal.createEvent({
     start,
     end,
-    summary: `Interview — ${candidate.job_title || candidate.role_applied}`,
+    summary: `Interview - ${candidate.job_title || candidate.role_applied}`,
     description: `Your interview link: ${interviewLink}\n\nThis link is valid for 24 hours.`,
     url: interviewLink,
     organizer: { name: 'VoiceReach', email: FROM }
@@ -62,27 +62,27 @@ export async function sendVoiceOutreachEmail(
 
     <!-- PLAY BUTTON -->
     <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 17px; letter-spacing: 0.3px; box-shadow: 0 8px 24px rgba(102,126,234,0.4);">
-      ▶&nbsp;&nbsp;Play your personal message
+      &#9654;&nbsp;&nbsp;Play your personal message
     </a>
     <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 12px 0 0;">Tap to hear why we think you are the perfect fit</p>
   </div>
 
   <!-- BODY -->
   <div style="padding: 32px 32px 0;">
-    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why — hit play above to hear it!</p>
+    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why. Hit play above to hear it!</p>
 
     <!-- URGENCY BOX -->
     <div style="background: linear-gradient(135deg, #f093fb22, #667eea22); border: 1px solid #667eea44; border-radius: 14px; padding: 18px 20px; margin-bottom: 28px;">
-      <p style="font-size: 14px; color: #534AB7; font-weight: 700; margin: 0 0 6px;">🚀 This role is moving fast</p>
-      <p style="font-size: 13px; color: #555; margin: 0; line-height: 1.6;">They are actively interviewing right now. Do not let this one slip away — your interview takes less than 10 minutes and you can do it right now.</p>
+      <p style="font-size: 14px; color: #534AB7; font-weight: 700; margin: 0 0 6px;">🚀 Interviews have already started</p>
+      <p style="font-size: 13px; color: #555; margin: 0; line-height: 1.6;">They are actively interviewing right now and spaces are filling up fast. Your interview link is waiting. Do not let this one slip away.</p>
     </div>
 
     <!-- CTA BUTTON -->
     <div style="text-align: center; margin-bottom: 28px;">
       <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 8px 24px rgba(102,126,234,0.3);">
-        Claim this opportunity →
+        Claim this opportunity
       </a>
-      <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">Link valid for 24 hours · Less than 10 minutes</p>
+      <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">This is your actual interview for this job. Click and go straight in.</p>
     </div>
 
     <!-- CALENDAR NOTE -->
@@ -111,7 +111,7 @@ export async function sendVoiceOutreachEmail(
   await resend.emails.send({
     from: FROM,
     to: candidate.email,
-    subject: `${firstName}, we have a personal message for you 🎙`,
+    subject: `${firstName}, we have a personal message for you`,
     html,
     attachments
   })
