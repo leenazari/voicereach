@@ -84,8 +84,7 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
       ? `your ${candidate.years_experience} years of experience`
       : `your background`
 
-  // Use pitch hook only — no matchLine to avoid repetition
-  let hookLine = matchData?.pitch_hook || `with your background, you are exactly what this client is looking for`
+  let hookLine = matchData?.pitch_hook || `with your background you are exactly what this client is looking for`
   hookLine = hookLine
     .replace(new RegExp(`${firstName}\\s+has`, 'gi'), 'you have')
     .replace(new RegExp(`${firstName}\\s+is`, 'gi'), 'you are')
@@ -100,9 +99,7 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     .replace(/with your \d+ years (of experience|experience)/gi, 'with your background')
     .replace(/your \d+ years (of experience|experience) in [^,\.]+,?\s*/gi, '')
 
-  const urgencyLine = matchData?.urgency_line || `this one is moving fast and they are ready to hire`
-
-  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}. ${employerLine} makes you a brilliant fit for what they need ${sector}. I have created a personal interview link just for you — you can do the interview right now, it takes less than ten minutes and fits around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link below, do the interview, and let us get you this job.`
+  const script = `Hi ${firstName}... I hope you are having a brilliant day! I have literally just seen your CV and I had to reach out straight away because I have got something really exciting for you. We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${employerLine} makes you such a strong fit for what they need ${sector} and I think you would absolutely love it. Now listen, interviews have already started on this one and I really want to get you on that list as quickly as possible. The link I have just sent you in this email is your actual interview for this job. Not a call with me, not a pre-screen, the real thing. You click it and you are straight in. As you can imagine there has been a huge amount of interest in this role and the interview spaces are filling up fast. They are going to make a decision very quickly so please do not sit on this one ${firstName}. Get in there today, do your interview, and I am really confident that with your skills and background you are exactly what they are looking for. Go and get it!`
 
   return trimToSixtySeconds(script)
 }
