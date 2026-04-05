@@ -49,40 +49,53 @@ export async function sendVoiceOutreachEmail(
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 16px; color: #1a1a1a; background: #ffffff;">
+<body style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #1a1a1a; background: #ffffff;">
 
-  <div style="margin-bottom: 28px;">
-    <p style="font-size: 13px; color: #888; margin: 0 0 6px;">Personal message for ${candidate.name}</p>
-    <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 4px;">${candidate.job_title || candidate.role_applied}</h1>
-    ${candidate.job_salary ? `<p style="font-size: 15px; color: #534AB7; margin: 0; font-weight: 500;">${candidate.job_salary}</p>` : ''}
-  </div>
+  <!-- HERO HEADER -->
+  <div style="background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); padding: 40px 32px; text-align: center; border-radius: 0 0 24px 24px;">
+    <div style="font-size: 22px; font-weight: 800; color: white; margin-bottom: 20px; letter-spacing: -0.5px;">
+      Voice<span style="color: #a78bfa;">Reach</span>
+    </div>
+    <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1.5px;">Personal message for</p>
+    <h1 style="font-size: 26px; font-weight: 900; color: white; margin: 0 0 6px; letter-spacing: -0.5px;">${firstName}</h1>
+    <p style="font-size: 16px; color: rgba(255,255,255,0.7); margin: 0 0 20px;">${candidate.job_title || candidate.role_applied}${candidate.job_salary ? ` · ${candidate.job_salary}` : ''}</p>
 
-  <p style="font-size: 15px; line-height: 1.7; color: #333; margin: 0 0 24px;">Hi ${firstName}, we have left you a personal voice message about an opportunity we think is perfect for you. Hit play below to listen.</p>
-
-  <div style="text-align: center; margin: 32px 0;">
-    <a href="${voiceNoteUrl}" style="display: inline-block; background: #534AB7; color: white; padding: 16px 36px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; letter-spacing: 0.3px;">
-      ▶&nbsp;&nbsp;Play your personal voice note
+    <!-- PLAY BUTTON -->
+    <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 17px; letter-spacing: 0.3px; box-shadow: 0 8px 24px rgba(102,126,234,0.4);">
+      ▶&nbsp;&nbsp;Play your personal message
     </a>
-    <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">Tap to listen — less than 30 seconds</p>
+    <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 12px 0 0;">Tap to hear why we think you are the perfect fit</p>
   </div>
 
-  <hr style="border: none; border-top: 1px solid #eee; margin: 28px 0;">
+  <!-- BODY -->
+  <div style="padding: 32px 32px 0;">
+    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why — hit play above to hear it!</p>
 
-  <p style="font-size: 15px; line-height: 1.7; color: #333; margin: 0 0 20px;">Ready to go for it? Click below to start your interview right now. It takes less than 10 minutes and you can do it straight away or schedule it for a time that suits you.</p>
+    <!-- URGENCY BOX -->
+    <div style="background: linear-gradient(135deg, #f093fb22, #667eea22); border: 1px solid #667eea44; border-radius: 14px; padding: 18px 20px; margin-bottom: 28px;">
+      <p style="font-size: 14px; color: #534AB7; font-weight: 700; margin: 0 0 6px;">🚀 This role is moving fast</p>
+      <p style="font-size: 13px; color: #555; margin: 0; line-height: 1.6;">They are actively interviewing right now. Do not let this one slip away — your interview takes less than 10 minutes and you can do it right now.</p>
+    </div>
 
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="${interviewLink}" style="display: inline-block; background: #1D9E75; color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 15px;">
-      Book your interview →
-    </a>
-    <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">Link valid for 24 hours</p>
+    <!-- CTA BUTTON -->
+    <div style="text-align: center; margin-bottom: 28px;">
+      <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 8px 24px rgba(102,126,234,0.3);">
+        Claim this opportunity →
+      </a>
+      <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">Link valid for 24 hours · Less than 10 minutes</p>
+    </div>
+
+    <!-- CALENDAR NOTE -->
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px;">
+      <p style="font-size: 13px; color: #555; margin: 0;">📅 <strong>Prefer to schedule?</strong> Open the calendar invite attached to this email to pick a time that suits you.</p>
+    </div>
   </div>
 
-  <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin: 24px 0;">
-    <p style="font-size: 13px; color: #555; margin: 0;">📅 <strong>Prefer to schedule?</strong> Open the calendar invite attached to this email to book your interview at a time that works for you.</p>
+  <!-- FOOTER -->
+  <div style="padding: 20px 32px 32px; border-top: 1px solid #eee; text-align: center;">
+    <p style="font-size: 12px; color: #bbb; margin: 0;">Sent by VoiceReach · Personalised for ${candidate.name}</p>
   </div>
 
-  <hr style="border: none; border-top: 1px solid #eee; margin: 28px 0;">
-  <p style="font-size: 12px; color: #bbb; margin: 0; text-align: center;">Sent by VoiceReach · Personalised for ${candidate.name}</p>
 </body>
 </html>`
 
@@ -98,7 +111,7 @@ export async function sendVoiceOutreachEmail(
   await resend.emails.send({
     from: FROM,
     to: candidate.email,
-    subject: `${firstName}, we have a personal message for you`,
+    subject: `${firstName}, we have a personal message for you 🎙`,
     html,
     attachments
   })
