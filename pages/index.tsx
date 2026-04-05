@@ -58,6 +58,7 @@ type MatchResult = {
   match_score: number
   keyword_matches: string[]
   status: string
+  already_sent: boolean
 }
 
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
@@ -74,7 +75,7 @@ export default function Dashboard() {
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [matchingJob, setMatchingJob] = useState<string | null>(null)
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
-  const [expandedJob, setExpandedJob] = useState<string | null>(null)
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -145,6 +146,15 @@ export default function Dashboard() {
     setJobs(data.jobs || [])
   }
 
+  function toggleJobExpanded(jobId: string) {
+    setExpandedJobs(prev => {
+      const next = new Set(prev)
+      if (next.has(jobId)) next.delete(jobId)
+      else next.add(jobId)
+      return next
+    })
+  }
+
   async function regenerateKeywords(candidate: Candidate) {
     setRegeneratingKeywords(true)
     try {
@@ -174,7 +184,7 @@ export default function Dashboard() {
       const data = await res.json()
       if (data.success) {
         setMatchResults(prev => ({ ...prev, [job.id]: data.results }))
-        setExpandedJob(job.id)
+        setExpandedJobs(prev => new Set(prev).add(job.id))
         notify(`Found ${data.shortlist} strong matches out of ${data.total} candidates`)
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
@@ -197,6 +207,15 @@ export default function Dashboard() {
       const data = await res.json()
       if (data.success) {
         notify(`Voice note sent to ${match.name} ✓`)
+        // Update the match result locally to show as sent
+        setMatchResults(prev => ({
+          ...prev,
+          [job.id]: (prev[job.id] || []).map(m =>
+            m.candidate_id === match.candidate_id
+              ? { ...m, already_sent: true, status: 'voice_sent' }
+              : m
+          )
+        }))
         fetchCandidates()
         if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
       } else notify('Error: ' + data.error, 'error')
@@ -735,6 +754,8 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {jobs.map(job => (
                     <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+
+                      {/* JOB HEADER */}
                       <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
                         {job.logo_url ? (
                           <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
@@ -757,14 +778,27 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                          <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
-                            {matchingJob === job.id ? '⟳ Matching...' : '◎ Find matches'}
+                          {matchResults[job.id] && (
+                            <button
+                              onClick={() => toggleJobExpanded(job.id)}
+                              style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show results (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => findMatches(job)}
+                            disabled={matchingJob === job.id}
+                            style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}
+                          >
+                            {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh matches' : '◎ Find matches'}
                           </button>
                           <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
                           <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
                         </div>
                       </div>
 
+                      {/* REQUIRED SKILLS */}
                       {(job.required_skills || []).length > 0 && (
                         <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {(job.required_skills || []).map(skill => (
@@ -779,30 +813,45 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {expandedJob === job.id && matchResults[job.id] && (
+                      {/* MATCH RESULTS — only show if expanded */}
+                      {expandedJobs.has(job.id) && matchResults[job.id] && (
                         <div style={{ borderTop: '1px solid #f0f0f0' }}>
                           <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                               Match results — {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match</span>
-                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
-                              <button onClick={() => setExpandedJob(null)} style={{ fontSize: 11, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>✕ Close</button>
+                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
+                                ✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match
+                              </span>
+                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
+                                {matchResults[job.id].filter(r => r.status === 'longlist').length} low match
+                              </span>
+                              {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
+                                <span style={{ fontSize: 11, background: '#FFF3E0', color: '#BA7517', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
+                                  {matchResults[job.id].filter(r => r.already_sent).length} already sent
+                                </span>
+                              )}
                             </div>
                           </div>
 
-                          {matchResults[job.id].filter(r => r.status === 'shortlist').length > 0 && (
+                          {/* STRONG MATCHES */}
+                          {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
                             <div style={{ padding: '12px 20px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {matchResults[job.id].filter(r => r.status === 'shortlist').map(match => (
-                                  <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: '#f9fffe', border: '1px solid #d4f0e8', borderRadius: 10 }}>
+                                {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
+                                  <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: match.already_sent ? '#fffbf0' : '#f9fffe', border: `1px solid ${match.already_sent ? '#f0d080' : '#d4f0e8'}`, borderRadius: 10 }}>
                                     <div style={{ width: 48, height: 48, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                       <div style={{ fontSize: 13, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', marginBottom: 2 }}>{match.name}</div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{match.name}</div>
+                                        {match.already_sent && (
+                                          <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>
+                                        )}
+                                      </div>
                                       <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
                                       {match.keyword_matches.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -812,8 +861,20 @@ export default function Dashboard() {
                                         </div>
                                       )}
                                     </div>
-                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                                      {shortlisting === match.candidate_id ? '⟳' : '🎙 Send'}
+                                    <button
+                                      onClick={() => sendVoiceNoteToMatch(match, job)}
+                                      disabled={shortlisting === match.candidate_id}
+                                      style={{
+                                        padding: '8px 16px',
+                                        background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7',
+                                        color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white',
+                                        border: match.already_sent ? '1px solid #f0d080' : 'none',
+                                        borderRadius: 8, fontSize: 12, fontWeight: 600,
+                                        cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      {shortlisting === match.candidate_id ? '⟳' : match.already_sent ? '↺ Resend' : '🎙 Send'}
                                     </button>
                                   </div>
                                 ))}
@@ -821,11 +882,12 @@ export default function Dashboard() {
                             </div>
                           )}
 
-                          {matchResults[job.id].filter(r => r.status === 'longlist').length > 0 && (
+                          {/* LOW MATCHES */}
+                          {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
                             <div style={{ padding: '0 20px 16px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {matchResults[job.id].filter(r => r.status === 'longlist').map(match => (
+                                {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
                                   <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10 }}>
                                     <div style={{ width: 40, height: 40, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                       <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
@@ -834,7 +896,11 @@ export default function Dashboard() {
                                       <div style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 1 }}>{match.name}</div>
                                       <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
                                     </div>
-                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                                    <button
+                                      onClick={() => sendVoiceNoteToMatch(match, job)}
+                                      disabled={shortlisting === match.candidate_id}
+                                      style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                                    >
                                       {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
                                     </button>
                                   </div>
@@ -982,8 +1048,6 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-
-            {/* STRENGTH KEYWORDS WITH REGENERATE BUTTON */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Strength keywords</div>
@@ -1005,7 +1069,6 @@ export default function Dashboard() {
                 <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
               )}
             </div>
-
             {((profileCandidate as any).qualifications || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Qualifications</div>
