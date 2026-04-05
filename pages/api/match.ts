@@ -1,4 +1,3 @@
-import { Candidate } from './supabase'
 import { createClient } from '@supabase/supabase-js'
 
 export function formatSalary(salary: string): string {
