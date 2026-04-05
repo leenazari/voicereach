@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import React from 'react'
+import { supabase } from '../lib/supabase'
 
 type Job = {
   id: string
@@ -97,6 +98,14 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
   }
 
+  async function authHeaders(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession()
+    return {
+      'Content-Type': 'application/json',
+      ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+    }
+  }
+
   function overlayMouseDown(e: React.MouseEvent) {
     mouseDownOnOverlay.current = e.target === e.currentTarget
   }
@@ -115,9 +124,10 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
         r.onerror = () => rej(new Error('Read failed'))
         r.readAsDataURL(file)
       })
+      const headers = await authHeaders()
       const response = await fetch('/api/upload-logo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ base64, filename: file.name, mimeType: file.type })
       })
       const data = await response.json()
@@ -133,9 +143,10 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     if (!form.title) { notify('Please enter a job title first', 'error'); return }
     setGeneratingJob(true)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/generate-job', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ title: form.title, brief: form.brief })
       })
       const data = await res.json()
@@ -165,9 +176,10 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
         closes_at: form.closes_at ? new Date(form.closes_at).toISOString() : null,
         ...(mode === 'edit' && job ? { jobId: job.id } : {})
       }
+      const headers = await authHeaders()
       const res = await fetch('/api/jobs', {
         method: mode === 'edit' ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       })
       const data = await res.json()
