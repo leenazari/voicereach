@@ -90,6 +90,7 @@ export default function Dashboard() {
   const [generatingPreview, setGeneratingPreview] = useState(false)
   const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [regeneratingKeywords, setRegeneratingKeywords] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
   const [activeTab, setActiveTab] = useState('pipeline')
@@ -142,6 +143,24 @@ export default function Dashboard() {
     const res = await fetch('/api/jobs')
     const data = await res.json()
     setJobs(data.jobs || [])
+  }
+
+  async function regenerateKeywords(candidate: Candidate) {
+    setRegeneratingKeywords(true)
+    try {
+      const res = await fetch('/api/regenerate-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: candidate.id })
+      })
+      const data = await res.json()
+      if (data.success) {
+        notify('Keywords regenerated successfully')
+        setProfileCandidate((prev: any) => prev ? { ...prev, strength_keywords: data.strength_keywords } : prev)
+        fetchCandidates()
+      } else notify('Could not regenerate keywords', 'error')
+    } catch { notify('Regeneration failed', 'error') }
+    finally { setRegeneratingKeywords(false) }
   }
 
   async function findMatches(job: Job) {
@@ -716,8 +735,6 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {jobs.map(job => (
                     <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-
-                      {/* JOB HEADER */}
                       <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
                         {job.logo_url ? (
                           <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
@@ -740,11 +757,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                          <button
-                            onClick={() => findMatches(job)}
-                            disabled={matchingJob === job.id}
-                            style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}
-                          >
+                          <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
                             {matchingJob === job.id ? '⟳ Matching...' : '◎ Find matches'}
                           </button>
                           <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
@@ -752,7 +765,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* REQUIRED SKILLS */}
                       {(job.required_skills || []).length > 0 && (
                         <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {(job.required_skills || []).map(skill => (
@@ -767,7 +779,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* MATCH RESULTS */}
                       {expandedJob === job.id && matchResults[job.id] && (
                         <div style={{ borderTop: '1px solid #f0f0f0' }}>
                           <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -775,17 +786,12 @@ export default function Dashboard() {
                               Match results — {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
-                                ✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match
-                              </span>
-                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
-                                {matchResults[job.id].filter(r => r.status === 'longlist').length} low match
-                              </span>
+                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match</span>
+                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
                               <button onClick={() => setExpandedJob(null)} style={{ fontSize: 11, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>✕ Close</button>
                             </div>
                           </div>
 
-                          {/* STRONG MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'shortlist').length > 0 && (
                             <div style={{ padding: '12px 20px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
@@ -806,11 +812,7 @@ export default function Dashboard() {
                                         </div>
                                       )}
                                     </div>
-                                    <button
-                                      onClick={() => sendVoiceNoteToMatch(match, job)}
-                                      disabled={shortlisting === match.candidate_id}
-                                      style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
-                                    >
+                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
                                       {shortlisting === match.candidate_id ? '⟳' : '🎙 Send'}
                                     </button>
                                   </div>
@@ -819,7 +821,6 @@ export default function Dashboard() {
                             </div>
                           )}
 
-                          {/* LOW MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'longlist').length > 0 && (
                             <div style={{ padding: '0 20px 16px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
@@ -833,11 +834,7 @@ export default function Dashboard() {
                                       <div style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 1 }}>{match.name}</div>
                                       <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
                                     </div>
-                                    <button
-                                      onClick={() => sendVoiceNoteToMatch(match, job)}
-                                      disabled={shortlisting === match.candidate_id}
-                                      style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
-                                    >
+                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
                                       {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
                                     </button>
                                   </div>
@@ -865,12 +862,8 @@ export default function Dashboard() {
       </div>
 
       {/* JOB MODALS */}
-      {showAddJob && (
-        <JobFormModal mode="add" onSave={fetchJobs} onClose={() => setShowAddJob(false)} notify={notify} />
-      )}
-      {showEditJob && editingJob && (
-        <JobFormModal mode="edit" job={editingJob} onSave={fetchJobs} onClose={() => { setShowEditJob(false); setEditingJob(null) }} notify={notify} />
-      )}
+      {showAddJob && <JobFormModal mode="add" onSave={fetchJobs} onClose={() => setShowAddJob(false)} notify={notify} />}
+      {showEditJob && editingJob && <JobFormModal mode="edit" job={editingJob} onSave={fetchJobs} onClose={() => { setShowEditJob(false); setEditingJob(null) }} notify={notify} />}
 
       {/* SEND VOICE NOTE MODAL */}
       {showJobModal && jobModalCandidate && (
@@ -989,16 +982,30 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-            {((profileCandidate as any).strength_keywords || []).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Strength keywords</div>
+
+            {/* STRENGTH KEYWORDS WITH REGENERATE BUTTON */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Strength keywords</div>
+                <button
+                  onClick={() => regenerateKeywords(profileCandidate)}
+                  disabled={regeneratingKeywords}
+                  style={{ fontSize: 11, padding: '4px 10px', background: regeneratingKeywords ? '#f5f5f5' : '#f0eeff', color: regeneratingKeywords ? '#aaa' : '#534AB7', border: '1px solid #EEEDFE', borderRadius: 6, cursor: regeneratingKeywords ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+                >
+                  {regeneratingKeywords ? '⟳ Regenerating...' : '⚡ Regenerate keywords'}
+                </button>
+              </div>
+              {((profileCandidate as any).strength_keywords || []).length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
                     <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
+              )}
+            </div>
+
             {((profileCandidate as any).qualifications || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Qualifications</div>
