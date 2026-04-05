@@ -30,11 +30,9 @@ function extractHighlights(description: string): string[] {
   const highlights: string[] = []
   const lower = description.toLowerCase()
 
-  // Salary/compensation
   const salaryMatch = description.match(/£[\d,]+(?:k)?(?:\s*(?:to|-)\s*£[\d,]+(?:k)?)?(?:\s*(?:per year|pa|p\.a\.|annually))?/i)
   if (salaryMatch) highlights.push('💰 ' + salaryMatch[0])
 
-  // Benefits keywords
   if (lower.includes('bonus')) highlights.push('🎯 Bonus scheme')
   if (lower.includes('commission')) highlights.push('💸 Commission structure')
   if (lower.includes('pension')) highlights.push('🏦 Pension scheme')
@@ -306,10 +304,10 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
             onClick={() => window.open(calUrl, '_blank')}
             style={ctaStyle}
           >
-            Claim this opportunity →
+            Start my interview now →
           </button>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14 }}>
-            Less than 10 minutes · Do it right now
+            Takes less than 10 minutes · Go straight in
           </div>
         </div>
 
