@@ -72,6 +72,23 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
     sector: ''
   }
 
+  const ctaStyle: React.CSSProperties = {
+    display: 'inline-block',
+    background: 'white',
+    color: '#5a4fcf',
+    padding: '18px 48px',
+    borderRadius: 14,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 900,
+    fontSize: 17,
+    letterSpacing: '-0.3px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    animation: 'float 3s ease-in-out infinite',
+    textDecoration: 'none',
+    fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif'
+  }
+
   const SorryPage = ({ message }: { message: string }) => (
     <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 24 } as React.CSSProperties}>
       <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' } as React.CSSProperties}>
@@ -81,8 +98,8 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24 }}>
           <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>We have plenty more opportunities though!</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 } as React.CSSProperties}>
-            <a href="tel:07545812308" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 } as React.CSSProperties}>📞 07545 812308</a>
-            <a href="mailto:lee.nazari@gmail.com" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 } as React.CSSProperties}>✉ lee.nazari@gmail.com</a>
+            <button onClick={() => window.location.href = 'tel:07545812308'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '12px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' } as React.CSSProperties}>📞 07545 812308</button>
+            <button onClick={() => window.location.href = 'mailto:lee.nazari@gmail.com'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', color: 'white', padding: '12px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' } as React.CSSProperties}>✉ lee.nazari@gmail.com</button>
           </div>
         </div>
       </div>
@@ -233,12 +250,12 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', marginBottom: 28, lineHeight: 1.6 }}>
             Book your interview now — it takes less than 10 minutes and you can do it around your schedule. Do not let this one slip away!
           </p>
-          
-            href={calUrl}
-            style={{ display: 'inline-block', background: 'white', color: '#5a4fcf', padding: '18px 48px', borderRadius: 14, textDecoration: 'none', fontWeight: 900, fontSize: 17, letterSpacing: '-0.3px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', animation: 'float 3s ease-in-out infinite' } as React.CSSProperties}
+          <button
+            onClick={() => window.open(calUrl, '_blank')}
+            style={ctaStyle}
           >
             Claim this opportunity →
-          </a>
+          </button>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14 }}>
             Pick a time that works for you — no pressure
           </div>
