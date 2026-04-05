@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 type Profile = {
   id: string
   email: string
@@ -36,7 +31,7 @@ const PLAN_BG: Record<string, string> = {
 export default function AdminPanel() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ total: 0, free: 0, paid: 0, totalCandidates: 0, totalVoiceNotes: 0 })
+  const [stats, setStats] = useState({ total: 0, free: 0, paid: 0, totalVoiceNotes: 0 })
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [editPlan, setEditPlan] = useState('')
   const [editCredits, setEditCredits] = useState('')
@@ -44,22 +39,29 @@ export default function AdminPanel() {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: string }[]>([])
-  const notifId = { current: 0 }
+  const [notifCounter, setNotifCounter] = useState(0)
 
   useEffect(() => { checkAdminAndLoad() }, [])
 
+  function getSupabase() {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
+
   async function checkAdminAndLoad() {
+    const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
-
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
     if (!profile || profile.role !== 'admin') { window.location.href = '/'; return }
-
     loadData()
   }
 
   async function loadData() {
     setLoading(true)
+    const supabase = getSupabase()
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
@@ -71,7 +73,6 @@ export default function AdminPanel() {
         total: profileData.length,
         free: profileData.filter(p => p.plan === 'free').length,
         paid: profileData.filter(p => p.plan !== 'free').length,
-        totalCandidates: 0,
         totalVoiceNotes: profileData.reduce((sum, p) => sum + (p.credits_used || 0), 0)
       })
     }
@@ -79,7 +80,8 @@ export default function AdminPanel() {
   }
 
   function notify(message: string, type = 'success') {
-    const id = ++notifId.current
+    const id = notifCounter + 1
+    setNotifCounter(id)
     setNotifications(prev => [...prev, { id, message, type }])
     setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000)
   }
@@ -94,6 +96,7 @@ export default function AdminPanel() {
   async function saveUser() {
     if (!editingUser) return
     setSaving(true)
+    const supabase = getSupabase()
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -104,15 +107,12 @@ export default function AdminPanel() {
       .eq('id', editingUser.id)
 
     if (error) notify('Error saving: ' + error.message, 'error')
-    else {
-      notify('User updated successfully')
-      setEditingUser(null)
-      loadData()
-    }
+    else { notify('User updated successfully'); setEditingUser(null); loadData() }
     setSaving(false)
   }
 
   async function signOut() {
+    const supabase = getSupabase()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
@@ -123,7 +123,7 @@ export default function AdminPanel() {
     p.full_name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
 
   return (
@@ -137,7 +137,6 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* HEADER */}
       <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/" style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>← Back to dashboard</a>
@@ -153,7 +152,6 @@ export default function AdminPanel() {
 
       <div style={{ padding: 32, maxWidth: 1300, margin: '0 auto' }}>
 
-        {/* STATS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
           {[
             { label: 'Total accounts', value: stats.total, color: '#534AB7' },
@@ -168,7 +166,6 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        {/* USERS TABLE */}
         <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>All users ({filtered.length})</div>
@@ -235,16 +232,14 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* EDIT USER MODAL */}
       {editingUser && (
         <div onClick={() => setEditingUser(null)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#1a1a1a' }}>Manage user</h2>
             <p style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>{editingUser.email}</p>
-
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 6 }}>Plan</label>
-              <select value={editPlan} onChange={e => setEditPlan(e.target.value)} style={{ ...inputStyle }}>
+              <select value={editPlan} onChange={e => setEditPlan(e.target.value)} style={inputStyle}>
                 <option value="free">Free</option>
                 <option value="starter">Starter — £29/mo</option>
                 <option value="growth">Growth — £99/mo</option>
@@ -252,21 +247,18 @@ export default function AdminPanel() {
                 <option value="enterprise">Enterprise</option>
               </select>
             </div>
-
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 6 }}>Monthly credit limit</label>
               <input type="number" value={editCredits} onChange={e => setEditCredits(e.target.value)} style={inputStyle} placeholder="e.g. 100" />
               <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Set to 999999 for unlimited</div>
             </div>
-
             <div style={{ marginBottom: 24 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 6 }}>Role</label>
-              <select value={editRole} onChange={e => setEditRole(e.target.value)} style={{ ...inputStyle }}>
+              <select value={editRole} onChange={e => setEditRole(e.target.value)} style={inputStyle}>
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setEditingUser(null)} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
               <button onClick={saveUser} disabled={saving} style={{ padding: '9px 18px', background: saving ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
