@@ -7,7 +7,6 @@ const MATCH_WEIGHTS = {
   location: { keywords: 30, experience: 20, sector: 15, location: 35 }
 }
 
-// Semantic synonyms — words that mean the same thing for matching purposes
 const SYNONYMS: Record<string, string[]> = {
   'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
   'business development': ['sales', 'new business', 'revenue generation', 'commercial development', 'bd'],
@@ -57,8 +56,8 @@ function normalise(str: string): string {
   return str.toLowerCase().trim().replace(/[^a-z0-9\s&]/g, '').replace(/\s+/g, ' ')
 }
 
-function getWordSet(str: string): Set<string> {
-  return new Set(normalise(str).split(' ').filter(w => w.length > 2))
+function getWordArray(str: string): string[] {
+  return normalise(str).split(' ').filter(w => w.length > 2)
 }
 
 function semanticMatch(candidateKeyword: string, jobSkill: string): boolean {
@@ -72,10 +71,11 @@ function semanticMatch(candidateKeyword: string, jobSkill: string): boolean {
   if (ck.includes(js) || js.includes(ck)) return true
 
   // Word level overlap — if 50%+ of words match
-  const ckWords = getWordSet(ck)
-  const jsWords = getWordSet(js)
-  const overlap = [...ckWords].filter(w => jsWords.has(w)).length
-  const minLen = Math.min(ckWords.size, jsWords.size)
+  const ckWords = getWordArray(ck)
+  const jsWords = getWordArray(js)
+  const jsWordSet = new Set(jsWords)
+  const overlap = ckWords.filter(w => jsWordSet.has(w)).length
+  const minLen = Math.min(ckWords.length, jsWords.length)
   if (minLen > 0 && overlap / minLen >= 0.5) return true
 
   // Synonym check
@@ -107,13 +107,11 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
 
   if (jobSkills.length > 0) {
     for (const jobSkill of jobSkills) {
-      let matched = false
       for (const candidateKeyword of allCandidateKeywords) {
         if (semanticMatch(candidateKeyword, jobSkill)) {
           if (!keywordMatches.includes(candidateKeyword)) {
             keywordMatches.push(candidateKeyword)
           }
-          matched = true
           break
         }
       }
@@ -139,24 +137,18 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
   // SECTOR MATCH — semantic
   let sectorScore = 50
   if (jobSector) {
-    const allKeywordsText = allCandidateKeywords.map(k => normalise(k)).join(' ')
     const jobSectorNorm = normalise(jobSector)
-    const jobSectorWords = getWordSet(jobSectorNorm)
+    const jobSectorWords = getWordArray(jobSectorNorm)
 
-    // Check if any candidate keyword semantically matches the sector
-    const sectorMatch = allCandidateKeywords.some(ck => {
+    const sectorMatch = allCandidateKeywords.some((ck: string) => {
       const ckNorm = normalise(ck)
       if (ckNorm.includes(jobSectorNorm) || jobSectorNorm.includes(ckNorm)) return true
-      const ckWords = getWordSet(ckNorm)
-      const overlap = [...ckWords].filter(w => jobSectorWords.has(w)).length
-      return overlap > 0
+      const ckWords = getWordArray(ckNorm)
+      const jobSectorWordSet = new Set(jobSectorWords)
+      return ckWords.some(w => jobSectorWordSet.has(w))
     })
 
-    if (sectorMatch || allKeywordsText.includes(jobSectorWords.values().next().value)) {
-      sectorScore = 100
-    } else {
-      sectorScore = 30
-    }
+    sectorScore = sectorMatch ? 100 : 30
   }
 
   // LOCATION MATCH
@@ -230,7 +222,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const SENT_STATUSES = ['voice_sent', 'interview_booked', 'hired']
-
     const priority = job.match_priority || 'skills'
     const threshold = job.match_threshold || 70
     const results = []
