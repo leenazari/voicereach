@@ -25,6 +25,38 @@ type Props = {
   calUrl: string
 }
 
+function extractHighlights(description: string): string[] {
+  if (!description) return []
+  const highlights: string[] = []
+  const lower = description.toLowerCase()
+
+  // Salary/compensation
+  const salaryMatch = description.match(/£[\d,]+(?:k)?(?:\s*(?:to|-)\s*£[\d,]+(?:k)?)?(?:\s*(?:per year|pa|p\.a\.|annually))?/i)
+  if (salaryMatch) highlights.push('💰 ' + salaryMatch[0])
+
+  // Benefits keywords
+  if (lower.includes('bonus')) highlights.push('🎯 Bonus scheme')
+  if (lower.includes('commission')) highlights.push('💸 Commission structure')
+  if (lower.includes('pension')) highlights.push('🏦 Pension scheme')
+  if (lower.includes('holiday') || lower.includes('annual leave')) {
+    const daysMatch = description.match(/(\d+)\s*days?\s*(?:annual leave|holiday)/i)
+    highlights.push(daysMatch ? `🏖 ${daysMatch[1]} days holiday` : '🏖 Generous holiday allowance')
+  }
+  if (lower.includes('remote') || lower.includes('work from home') || lower.includes('wfh')) highlights.push('🏠 Remote working available')
+  if (lower.includes('hybrid')) highlights.push('🔄 Hybrid working')
+  if (lower.includes('flexible')) highlights.push('⏰ Flexible hours')
+  if (lower.includes('car') || lower.includes('vehicle')) highlights.push('🚗 Company car or car allowance')
+  if (lower.includes('training') || lower.includes('development') || lower.includes('progression')) highlights.push('📈 Career progression and training')
+  if (lower.includes('healthcare') || lower.includes('medical') || lower.includes('health insurance')) highlights.push('🏥 Healthcare benefits')
+  if (lower.includes('equity') || lower.includes('share') || lower.includes('stock')) highlights.push('📊 Equity or share scheme')
+  if (lower.includes('startup') || lower.includes('scale-up') || lower.includes('scaleup')) highlights.push('🚀 Fast growing company')
+  if (lower.includes('leadership') || lower.includes('lead a team') || lower.includes('manage a team')) highlights.push('👥 Leadership opportunity')
+  if (lower.includes('international') || lower.includes('global')) highlights.push('🌍 International exposure')
+  if (lower.includes('uncapped')) highlights.push('♾️ Uncapped earnings')
+
+  return highlights.slice(0, 6)
+}
+
 export default function InterviewPage({ candidate, job, expired, notFound, calUrl }: Props) {
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -71,6 +103,8 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
     logo_url: null,
     sector: ''
   }
+
+  const highlights = extractHighlights(displayJob.description || '')
 
   const ctaStyle: React.CSSProperties = {
     display: 'inline-block',
@@ -223,6 +257,20 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
             )}
           </div>
         </div>
+
+        {/* HIGHLIGHTS */}
+        {highlights.length > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 } as React.CSSProperties}>What is in it for you</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } as React.CSSProperties}>
+              {highlights.map((h, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* JOB DESCRIPTION */}
         {displayJob.description && (
