@@ -122,12 +122,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (candError) throw candError
 
+    // Fetch existing job_candidates so we can preserve sent statuses
+    const { data: existingMatches } = await supabase
+      .from('job_candidates')
+      .select('candidate_id, status')
+      .eq('job_id', jobId)
+
+    const existingStatusMap: Record<string, string> = {}
+    for (const m of existingMatches || []) {
+      existingStatusMap[m.candidate_id] = m.status
+    }
+
+    const SENT_STATUSES = ['voice_sent', 'interview_booked', 'hired']
+
     const priority = job.match_priority || 'skills'
     const threshold = job.match_threshold || 70
     const results = []
 
     for (const candidate of candidates || []) {
       const { score, matches } = calculateMatch(candidate, job, priority)
+
+      const existingStatus = existingStatusMap[candidate.id]
+      const alreadySent = existingStatus && SENT_STATUSES.includes(existingStatus)
+
+      // Preserve sent status — never overwrite with shortlist/longlist
+      const newStatus = alreadySent
+        ? existingStatus
+        : score >= threshold ? 'shortlist' : 'longlist'
 
       await supabase
         .from('job_candidates')
@@ -136,7 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           candidate_id: candidate.id,
           match_score: score,
           keyword_matches: matches,
-          status: score >= threshold ? 'shortlist' : 'longlist',
+          status: newStatus,
           updated_at: new Date().toISOString()
         }, { onConflict: 'job_id,candidate_id' })
 
@@ -151,7 +172,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         strength_keywords: candidate.strength_keywords,
         match_score: score,
         keyword_matches: matches,
-        status: score >= threshold ? 'shortlist' : 'longlist'
+        status: newStatus,
+        already_sent: alreadySent
       })
     }
 
