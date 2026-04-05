@@ -7,28 +7,113 @@ const MATCH_WEIGHTS = {
   location: { keywords: 30, experience: 20, sector: 15, location: 35 }
 }
 
+// Semantic synonyms — words that mean the same thing for matching purposes
+const SYNONYMS: Record<string, string[]> = {
+  'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
+  'business development': ['sales', 'new business', 'revenue generation', 'commercial development', 'bd'],
+  'team leadership': ['people management', 'staff management', 'team management', 'managing teams', 'line management'],
+  'people management': ['team leadership', 'staff management', 'team management', 'managing people', 'line management'],
+  'staff management': ['team leadership', 'people management', 'team management', 'managing staff'],
+  'inventory control': ['inventory management', 'stock management', 'stock control', 'inventory'],
+  'inventory management': ['inventory control', 'stock management', 'stock control', 'inventory'],
+  'stock management': ['inventory control', 'inventory management', 'stock control'],
+  'warehouse management': ['warehousing', 'warehouse operations', 'wms', 'warehouse manager'],
+  'logistics': ['supply chain', 'logistics coordination', 'logistics management', 'distribution'],
+  'supply chain': ['logistics', 'supply chain management', 'scm', 'distribution'],
+  'supply chain management': ['logistics', 'supply chain', 'scm', 'distribution management'],
+  'operations management': ['operations', 'operational management', 'ops management', 'operations manager'],
+  'project management': ['project delivery', 'programme management', 'project manager', 'pmo'],
+  'customer service': ['customer support', 'client services', 'customer success', 'customer relations'],
+  'customer success': ['customer service', 'client success', 'customer support', 'account management'],
+  'account management': ['key account management', 'client management', 'account manager', 'kam'],
+  'business analysis': ['business analyst', 'data analysis', 'requirements gathering', 'ba'],
+  'data analysis': ['data analytics', 'business intelligence', 'bi', 'reporting', 'data analyst'],
+  'financial management': ['finance', 'financial planning', 'fp&a', 'financial analysis', 'p&l'],
+  'p&l management': ['p&l responsibility', 'profit and loss', 'financial management', 'budget management'],
+  'budget management': ['budgeting', 'financial management', 'cost management', 'p&l'],
+  'recruitment': ['talent acquisition', 'hiring', 'resourcing', 'talent management'],
+  'talent acquisition': ['recruitment', 'hiring', 'resourcing', 'headhunting'],
+  'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy'],
+  'digital marketing': ['marketing', 'online marketing', 'performance marketing', 'growth marketing'],
+  'software development': ['software engineering', 'programming', 'coding', 'development'],
+  'software engineering': ['software development', 'programming', 'engineering', 'development'],
+  'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales'],
+  'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales'],
+  'saas': ['software as a service', 'cloud software', 'subscription software', 'tech sales'],
+  'e-commerce': ['ecommerce', 'online retail', 'digital retail', 'online sales'],
+  'ecommerce': ['e-commerce', 'online retail', 'digital retail', 'online sales'],
+  'retail': ['retail management', 'retail operations', 'store management', 'fmcg'],
+  'fmcg': ['retail', 'consumer goods', 'fast moving consumer goods', 'cpg'],
+  'hospitality': ['hotels', 'food and beverage', 'f&b', 'restaurant management'],
+  'healthcare': ['medical', 'nhs', 'health sector', 'clinical'],
+  'wms': ['warehouse management system', 'warehouse management', 'warehouse software'],
+  'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
+  'erp': ['enterprise resource planning', 'sap', 'oracle', 'netsuite'],
+  'safety compliance': ['health and safety', 'hse', 'safety management', 'compliance', 'iso'],
+  'health and safety': ['safety compliance', 'hse', 'safety management', 'risk assessment'],
+}
+
+function normalise(str: string): string {
+  return str.toLowerCase().trim().replace(/[^a-z0-9\s&]/g, '').replace(/\s+/g, ' ')
+}
+
+function getWordSet(str: string): Set<string> {
+  return new Set(normalise(str).split(' ').filter(w => w.length > 2))
+}
+
+function semanticMatch(candidateKeyword: string, jobSkill: string): boolean {
+  const ck = normalise(candidateKeyword)
+  const js = normalise(jobSkill)
+
+  // Exact match
+  if (ck === js) return true
+
+  // One contains the other
+  if (ck.includes(js) || js.includes(ck)) return true
+
+  // Word level overlap — if 50%+ of words match
+  const ckWords = getWordSet(ck)
+  const jsWords = getWordSet(js)
+  const overlap = [...ckWords].filter(w => jsWords.has(w)).length
+  const minLen = Math.min(ckWords.size, jsWords.size)
+  if (minLen > 0 && overlap / minLen >= 0.5) return true
+
+  // Synonym check
+  const synonymList = SYNONYMS[ck] || []
+  if (synonymList.some(s => normalise(s) === js || js.includes(normalise(s)) || normalise(s).includes(js))) return true
+
+  // Reverse synonym check
+  const reverseSynonyms = SYNONYMS[js] || []
+  if (reverseSynonyms.some(s => normalise(s) === ck || ck.includes(normalise(s)) || normalise(s).includes(ck))) return true
+
+  return false
+}
+
 function calculateMatch(candidate: any, job: any, priority: string): { score: number, matches: string[] } {
   const weights = MATCH_WEIGHTS[priority as keyof typeof MATCH_WEIGHTS] || MATCH_WEIGHTS.skills
 
-  const candidateKeywords = (candidate.strength_keywords || []).map((k: string) => k.toLowerCase())
-  const candidateSkills = (candidate.skills || []).map((k: string) => k.toLowerCase())
+  const candidateKeywords = (candidate.strength_keywords || [])
+  const candidateSkills = (candidate.skills || [])
   const allCandidateKeywords = Array.from(new Set([...candidateKeywords, ...candidateSkills]))
 
-  const jobSkills = (job.required_skills || []).map((s: string) => s.toLowerCase())
+  const jobSkills = (job.required_skills || [])
   const jobSector = (job.sector || '').toLowerCase()
   const jobLocation = (job.location || '').toLowerCase()
   const jobTitle = (job.title || '').toLowerCase()
 
-  // KEYWORD MATCH
+  // KEYWORD MATCH — semantic
   const keywordMatches: string[] = []
   let keywordScore = 0
+
   if (jobSkills.length > 0) {
-    for (const keyword of allCandidateKeywords) {
-      for (const skill of jobSkills) {
-        if (keyword.includes(skill) || skill.includes(keyword)) {
-          const original = candidate.strength_keywords?.find((k: string) =>
-            k.toLowerCase() === keyword) || keyword
-          if (!keywordMatches.includes(original)) keywordMatches.push(original)
+    for (const jobSkill of jobSkills) {
+      let matched = false
+      for (const candidateKeyword of allCandidateKeywords) {
+        if (semanticMatch(candidateKeyword, jobSkill)) {
+          if (!keywordMatches.includes(candidateKeyword)) {
+            keywordMatches.push(candidateKeyword)
+          }
+          matched = true
           break
         }
       }
@@ -51,11 +136,23 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
     experienceScore = years >= 2 ? 100 : years >= 1 ? 75 : 50
   }
 
-  // SECTOR MATCH
+  // SECTOR MATCH — semantic
   let sectorScore = 50
   if (jobSector) {
-    const candidateSectors = allCandidateKeywords.join(' ')
-    if (candidateSectors.includes(jobSector) || jobSector.split(' ').some((s: string) => candidateSectors.includes(s))) {
+    const allKeywordsText = allCandidateKeywords.map(k => normalise(k)).join(' ')
+    const jobSectorNorm = normalise(jobSector)
+    const jobSectorWords = getWordSet(jobSectorNorm)
+
+    // Check if any candidate keyword semantically matches the sector
+    const sectorMatch = allCandidateKeywords.some(ck => {
+      const ckNorm = normalise(ck)
+      if (ckNorm.includes(jobSectorNorm) || jobSectorNorm.includes(ckNorm)) return true
+      const ckWords = getWordSet(ckNorm)
+      const overlap = [...ckWords].filter(w => jobSectorWords.has(w)).length
+      return overlap > 0
+    })
+
+    if (sectorMatch || allKeywordsText.includes(jobSectorWords.values().next().value)) {
       sectorScore = 100
     } else {
       sectorScore = 30
@@ -122,7 +219,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (candError) throw candError
 
-    // Fetch existing job_candidates so we can preserve sent statuses
     const { data: existingMatches } = await supabase
       .from('job_candidates')
       .select('candidate_id, status')
@@ -145,7 +241,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const existingStatus = existingStatusMap[candidate.id]
       const alreadySent = existingStatus && SENT_STATUSES.includes(existingStatus)
 
-      // Preserve sent status — never overwrite with shortlist/longlist
       const newStatus = alreadySent
         ? existingStatus
         : score >= threshold ? 'shortlist' : 'longlist'
