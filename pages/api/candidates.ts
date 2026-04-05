@@ -1,6 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
+async function getUserId(req: NextApiRequest): Promise<string | null> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return null
+    const { data: { user } } = await supabase.auth.getUser(token)
+    return user?.id || null
+  } catch { return null }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const supabase = createClient(
@@ -8,10 +21,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorised' })
+
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('candidates')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (error) throw error
       return res.status(200).json({ candidates: data })
@@ -34,7 +51,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           candidate_summary: candidate_summary || null,
           qualifications: qualifications || [],
           all_employers: all_employers || [],
-          strength_keywords: strength_keywords || []
+          strength_keywords: strength_keywords || [],
+          user_id: userId
         })
         .select()
         .single()
@@ -53,7 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               candidate_summary: candidate_summary || null,
               qualifications: qualifications || [],
               all_employers: all_employers || [],
-              strength_keywords: strength_keywords || []
+              strength_keywords: strength_keywords || [],
+              user_id: userId
             })
             .select()
             .single()
@@ -68,6 +87,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'PATCH') {
       const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary, last_employer, location, candidate_summary, qualifications, all_employers, skills, strength_keywords, job_id } = req.body
       if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
+      // Ensure user owns this candidate
+      const { data: candidate } = await supabase.from('candidates').select('user_id').eq('id', candidateId).single()
+      if (!candidate || candidate.user_id !== userId) return res.status(403).json({ error: 'Forbidden' })
       const updates: any = {}
       if (status !== undefined) updates.status = status
       if (name !== undefined) updates.name = name
@@ -94,6 +116,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'DELETE') {
       const { candidateId } = req.body
       if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
+      const { data: candidate } = await supabase.from('candidates').select('user_id').eq('id', candidateId).single()
+      if (!candidate || candidate.user_id !== userId) return res.status(403).json({ error: 'Forbidden' })
       const { error } = await supabase.from('candidates').delete().eq('id', candidateId)
       if (error) throw error
       return res.status(200).json({ success: true })
