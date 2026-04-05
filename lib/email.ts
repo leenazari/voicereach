@@ -111,7 +111,7 @@ export async function sendVoiceOutreachEmail(
   await resend.emails.send({
     from: FROM,
     to: candidate.email,
-    subject: `${firstName}, we have a personal message for you`,
+    subject: `NEW JOB OPPORTUNITY — ${firstName}, we have a personal message for you`,
     html,
     attachments
   })
