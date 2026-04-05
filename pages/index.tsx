@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
+import JobFormModal from '../components/JobFormModal'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
 
@@ -53,10 +54,6 @@ export default function Dashboard() {
   const [showAddJob, setShowAddJob] = useState(false)
   const [showEditJob, setShowEditJob] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
-  const [jobForm, setJobForm] = useState({ title: '', brief: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active', logo_url: '' })
-  const [logoPreview, setLogoPreview] = useState<string>('')
-  const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [generatingJob, setGeneratingJob] = useState(false)
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -86,7 +83,6 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
-  const logoRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
@@ -127,113 +123,12 @@ export default function Dashboard() {
     setJobs(data.jobs || [])
   }
 
-  async function handleLogoUpload(file: File) {
-    setUploadingLogo(true)
-    setLogoPreview(URL.createObjectURL(file))
-    try {
-      const base64 = await new Promise<string>((res, rej) => {
-        const r = new FileReader()
-        r.onload = () => res((r.result as string).split(',')[1])
-        r.onerror = () => rej(new Error('Read failed'))
-        r.readAsDataURL(file)
-      })
-      const response = await fetch('/api/upload-logo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, filename: file.name, mimeType: file.type })
-      })
-      const data = await response.json()
-      if (data.url) {
-        setJobForm(p => ({ ...p, logo_url: data.url }))
-        notify('Logo uploaded successfully')
-      } else notify('Logo upload failed', 'error')
-    } catch { notify('Could not upload logo', 'error') }
-    finally { setUploadingLogo(false) }
-  }
-
-  async function generateJobDetails() {
-    if (!jobForm.title) { notify('Please enter a job title first', 'error'); return }
-    setGeneratingJob(true)
-    try {
-      const res = await fetch('/api/generate-job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: jobForm.title, brief: jobForm.brief || '' })
-      })
-      const data = await res.json()
-      if (data.generated) {
-        setJobForm(p => ({
-          ...p,
-          description: data.generated.description || p.description,
-          required_skills: (data.generated.required_skills || []).join(', '),
-          sector: data.generated.sector || p.sector
-        }))
-        notify('Job details generated successfully')
-      } else notify('Could not generate job details', 'error')
-    } catch { notify('Generation failed', 'error') }
-    finally { setGeneratingJob(false) }
-  }
-
-  async function saveJob() {
-    if (!jobForm.title || !jobForm.description) { notify('Title and description are required', 'error'); return }
-    const payload = {
-      ...jobForm,
-      required_skills: jobForm.required_skills ? jobForm.required_skills.split(',').map(s => s.trim()).filter(Boolean) : []
-    }
-    const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const data = await res.json()
-    if (data.job) {
-      setShowAddJob(false)
-      setJobForm({ title: '', brief: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active', logo_url: '' })
-      setLogoPreview('')
-      fetchJobs()
-      notify('Job added successfully')
-    } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
-  }
-
-  async function updateJob() {
-    if (!editingJob) return
-    if (!jobForm.title || !jobForm.description) { notify('Title and description are required', 'error'); return }
-    const payload = {
-      jobId: editingJob.id,
-      ...jobForm,
-      required_skills: jobForm.required_skills ? jobForm.required_skills.split(',').map(s => s.trim()).filter(Boolean) : []
-    }
-    const res = await fetch('/api/jobs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const data = await res.json()
-    if (data.success) {
-      setShowEditJob(false)
-      setEditingJob(null)
-      setLogoPreview('')
-      fetchJobs()
-      notify('Job updated successfully')
-    } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
-  }
-
   async function deleteJob(job: Job) {
     if (!confirm(`Delete ${job.title}? This cannot be undone.`)) return
     const res = await fetch('/api/jobs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id }) })
     const data = await res.json()
     if (data.success) { fetchJobs(); notify(`${job.title} deleted`) }
     else notify('Could not delete job', 'error')
-  }
-
-  function openEditJob(job: Job) {
-    setEditingJob(job)
-    setJobForm({
-      title: job.title || '',
-      brief: '',
-      company: job.company || '',
-      location: job.location || '',
-      salary: job.salary || '',
-      description: job.description || '',
-      required_skills: (job.required_skills || []).join(', '),
-      sector: job.sector || '',
-      status: job.status || 'active',
-      logo_url: job.logo_url || ''
-    })
-    setLogoPreview(job.logo_url || '')
-    setShowEditJob(true)
   }
 
   async function fetchVoices() {
@@ -481,72 +376,6 @@ export default function Dashboard() {
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
   const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 
-  const logoUploadUI = (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 500 }}>Company logo</label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {logoPreview ? (
-          <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e5e5', background: '#fafafa' }} />
-        ) : (
-          <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏢</div>
-        )}
-        <div style={{ flex: 1 }}>
-          <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f) }} />
-          <button type="button" onClick={() => logoRef.current?.click()} disabled={uploadingLogo} style={{ padding: '7px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: uploadingLogo ? 'not-allowed' : 'pointer', background: uploadingLogo ? '#f5f5f5' : 'white', fontWeight: 500, color: '#555' }}>
-            {uploadingLogo ? '⟳ Uploading...' : logoPreview ? '↺ Change logo' : '↑ Upload logo'}
-          </button>
-          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>PNG, JPG or SVG — shown on the candidate landing page</div>
-        </div>
-      </div>
-    </div>
-  )
-
-  const jobFormUI = (
-    <>
-      {logoUploadUI}
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Job title *</label>
-        <input type="text" value={jobForm.title} onChange={e => setJobForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Senior Sales Executive" style={inputStyle} />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Brief <span style={{ color: '#bbb', fontWeight: 400 }}>(optional — helps AI write better content)</span></label>
-        <input type="text" value={jobForm.brief} onChange={e => setJobForm(p => ({ ...p, brief: e.target.value }))} placeholder="e.g. B2B sales role selling EPOS to SMEs across the UK" style={inputStyle} />
-      </div>
-      <button type="button" onClick={generateJobDetails} disabled={!jobForm.title || generatingJob} style={{ width: '100%', padding: '10px', background: !jobForm.title || generatingJob ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !jobForm.title || generatingJob ? 'not-allowed' : 'pointer', marginBottom: 20 }}>
-        {generatingJob ? '⟳ Generating with AI...' : '✦ Generate job details with AI'}
-      </button>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-        {[
-          { key: 'company', label: 'Company name', placeholder: 'e.g. Acme Corp' },
-          { key: 'location', label: 'Location', placeholder: 'e.g. London, UK' },
-          { key: 'salary', label: 'Salary', placeholder: 'e.g. £45,000' },
-          { key: 'sector', label: 'Sector', placeholder: 'e.g. Technology, Sales' },
-        ].map(f => (
-          <div key={f.key}>
-            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>{f.label}</label>
-            <input type="text" value={(jobForm as any)[f.key]} onChange={e => setJobForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
-          </div>
-        ))}
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span></label>
-        <input type="text" value={jobForm.required_skills} onChange={e => setJobForm(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Negotiation" style={inputStyle} />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Status</label>
-        <select value={jobForm.status} onChange={e => setJobForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
-          <option value="active">Active</option>
-          <option value="draft">Draft</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-      <div style={{ marginBottom: 20 }}>
-        <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Job description *</label>
-        <textarea value={jobForm.description} onChange={e => setJobForm(p => ({ ...p, description: e.target.value }))} rows={6} placeholder="Describe the role... or press Generate with AI above" style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
-      </div>
-    </>
-  )
-
   const addFields = [
     { key: 'name', label: 'Full name *', type: 'text' },
     { key: 'email', label: 'Email *', type: 'email' },
@@ -586,6 +415,7 @@ export default function Dashboard() {
         * { box-sizing: border-box; }
       `}</style>
 
+      {/* SIDEBAR */}
       <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
@@ -651,6 +481,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* MAIN */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
@@ -844,7 +675,7 @@ export default function Dashboard() {
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => openEditJob(job)} style={{ flex: 1, padding: '7px', border: '1px solid #e5e5e5', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
+                          <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ flex: 1, padding: '7px', border: '1px solid #e5e5e5', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
                           <button onClick={() => deleteJob(job)} style={{ padding: '7px 12px', border: '1px solid #fdd', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
                         </div>
                       </div>
@@ -865,36 +696,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ADD JOB MODAL */}
+      {/* JOB MODALS — now handled by JobFormModal component */}
       {showAddJob && (
-        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowAddJob(false); setLogoPreview('') })} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 560, maxHeight: '90vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Add Job</h2>
-            {jobFormUI}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowAddJob(false); setLogoPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
-              <button onClick={saveJob} disabled={uploadingLogo || generatingJob} style={{ padding: '9px 18px', background: uploadingLogo || generatingJob ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo || generatingJob ? 'not-allowed' : 'pointer' }}>
-                Save job
-              </button>
-            </div>
-          </div>
-        </div>
+        <JobFormModal
+          mode="add"
+          onSave={fetchJobs}
+          onClose={() => setShowAddJob(false)}
+          notify={notify}
+        />
       )}
 
-      {/* EDIT JOB MODAL */}
       {showEditJob && editingJob && (
-        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowEditJob(false); setEditingJob(null); setLogoPreview('') })} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 560, maxHeight: '90vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Edit Job — {editingJob.title}</h2>
-            {jobFormUI}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowEditJob(false); setEditingJob(null); setLogoPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
-              <button onClick={updateJob} disabled={uploadingLogo || generatingJob} style={{ padding: '9px 18px', background: uploadingLogo || generatingJob ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo || generatingJob ? 'not-allowed' : 'pointer' }}>
-                Save changes
-              </button>
-            </div>
-          </div>
-        </div>
+        <JobFormModal
+          mode="edit"
+          job={editingJob}
+          onSave={fetchJobs}
+          onClose={() => { setShowEditJob(false); setEditingJob(null) }}
+          notify={notify}
+        />
       )}
 
       {/* SEND VOICE NOTE MODAL */}
