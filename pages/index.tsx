@@ -432,7 +432,6 @@ export default function Dashboard() {
     { key: 'location', label: 'Location', type: 'text', placeholder: 'e.g. London, UK' },
     { key: 'salary', label: 'Salary', type: 'text', placeholder: 'e.g. £45,000' },
     { key: 'sector', label: 'Sector', type: 'text', placeholder: 'e.g. Technology, Sales, Finance' },
-    { key: 'logo_url', label: 'Company logo URL', type: 'text', placeholder: 'https://...' },
   ]
 
   const addFields = [
