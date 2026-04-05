@@ -90,7 +90,7 @@ export default function Dashboard() {
   const [generatingPreview, setGeneratingPreview] = useState(false)
   const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
   const [activeTab, setActiveTab] = useState('pipeline')
   const [dragId, setDragId] = useState<string | null>(null)
@@ -333,6 +333,7 @@ export default function Dashboard() {
           skills: (e.skills || []).join(', '),
           qualifications: (e.qualifications || []).join(', '),
           all_employers: (e.all_employers || []).join(', '),
+          strength_keywords: (e.strength_keywords || []).join(', '),
         }))
         notify('CV read successfully — fields auto-filled')
       }
@@ -405,12 +406,13 @@ export default function Dashboard() {
         skills: form.skills ? form.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
         qualifications: form.qualifications ? form.qualifications.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
         all_employers: form.all_employers ? form.all_employers.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        strength_keywords: form.strength_keywords ? form.strength_keywords.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
       })
     })
     const data = await res.json()
     if (data.candidate) {
       setShowAdd(false); setCvFile(null)
-      setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '' })
+      setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
       fetchCandidates(); notify('Candidate added successfully')
     } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
   }
@@ -728,7 +730,7 @@ export default function Dashboard() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
                             <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
-                            {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500, textTransform: 'capitalize' }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
+                            {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500 }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
                           </div>
                           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                             {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
@@ -783,7 +785,7 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          {/* SHORTLIST */}
+                          {/* STRONG MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'shortlist').length > 0 && (
                             <div style={{ padding: '12px 20px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
@@ -817,7 +819,7 @@ export default function Dashboard() {
                             </div>
                           )}
 
-                          {/* LONGLIST */}
+                          {/* LOW MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'longlist').length > 0 && (
                             <div style={{ padding: '0 20px 16px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
@@ -1080,6 +1082,16 @@ export default function Dashboard() {
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Experience summary * (used in voice note)</label>
               <textarea value={form.experience_summary} onChange={e => setForm(p => ({ ...p, experience_summary: e.target.value }))} rows={3} style={{ ...inputStyle, resize: 'vertical', background: extracting ? '#f5f5f5' : 'white' }} placeholder="e.g. 8 years in logistics management..." />
             </div>
+            {form.strength_keywords && (
+              <div style={{ marginBottom: 14, background: '#f0fff8', border: '1px solid #d4f0e8', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 600, marginBottom: 6 }}>⚡ Strength keywords extracted</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {form.strength_keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => (
+                    <span key={k} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{k}</span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
               <button onClick={() => { setShowAdd(false); setCvFile(null) }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
               <button onClick={addCandidate} disabled={extracting || (profile && profile.credits_used >= profile.credits_limit)} style={{ padding: '9px 18px', background: extracting ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: extracting ? 'not-allowed' : 'pointer' }}>{extracting ? 'Reading CV...' : 'Add candidate'}</button>
