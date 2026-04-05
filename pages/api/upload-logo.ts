@@ -1,0 +1,38 @@
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
+
+export const config = { api: { bodyParser: { sizeLimit: '5mb' } } }
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { base64, filename, mimeType } = req.body
+    if (!base64 || !filename) return res.status(400).json({ error: 'base64 and filename required' })
+
+    const buffer = Buffer.from(base64, 'base64')
+    const ext = filename.split('.').pop()?.toLowerCase() || 'png'
+    const uniqueName = `logo-${Date.now()}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('logos')
+      .upload(uniqueName, buffer, {
+        contentType: mimeType || 'image/png',
+        upsert: true
+      })
+
+    if (error) throw error
+
+    const { data: urlData } = supabase.storage.from('logos').getPublicUrl(uniqueName)
+
+    return res.status(200).json({ url: urlData.publicUrl })
+  } catch (err: any) {
+    console.error('Logo upload error:', err)
+    return res.status(500).json({ error: err.message || 'Upload failed' })
+  }
+}
