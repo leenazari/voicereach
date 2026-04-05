@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import React from 'react'
 
 type Job = {
   id: string
@@ -12,6 +13,9 @@ type Job = {
   status: string
   logo_url: string | null
   created_at: string
+  closes_at?: string | null
+  work_type?: string
+  match_priority?: string
 }
 
 type Props = {
@@ -21,6 +25,36 @@ type Props = {
   onClose: () => void
   notify: (message: string, type?: 'success' | 'error') => void
 }
+
+const MATCH_PRIORITIES = [
+  {
+    key: 'skills',
+    label: 'Skills',
+    icon: '⚡',
+    description: 'Best for roles where specific skills and keywords matter most',
+    weights: { keywords: 60, experience: 20, sector: 15, location: 5 }
+  },
+  {
+    key: 'experience',
+    label: 'Experience',
+    icon: '🏆',
+    description: 'Best for senior roles where years and level of experience matters most',
+    weights: { keywords: 30, experience: 50, sector: 15, location: 5 }
+  },
+  {
+    key: 'location',
+    label: 'Location',
+    icon: '📍',
+    description: 'Best for office based roles where being nearby matters most',
+    weights: { keywords: 30, experience: 20, sector: 15, location: 35 }
+  }
+]
+
+const WORK_TYPES = [
+  { key: 'office', label: 'Office', icon: '🏢' },
+  { key: 'hybrid', label: 'Hybrid', icon: '🔄' },
+  { key: 'remote', label: 'Remote', icon: '🌍' }
+]
 
 export default function JobFormModal({ mode, job, onSave, onClose, notify }: Props) {
   const [form, setForm] = useState({
@@ -33,7 +67,10 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     required_skills: (job?.required_skills || []).join(', '),
     sector: job?.sector || '',
     status: job?.status || 'active',
-    logo_url: job?.logo_url || ''
+    logo_url: job?.logo_url || '',
+    closes_at: job?.closes_at ? job.closes_at.split('T')[0] : '',
+    work_type: job?.work_type || 'office',
+    match_priority: job?.match_priority || 'skills'
   })
   const [logoPreview, setLogoPreview] = useState<string>(job?.logo_url || '')
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -116,6 +153,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
         required_skills: form.required_skills
           ? form.required_skills.split(',').map(s => s.trim()).filter(Boolean)
           : [],
+        closes_at: form.closes_at ? new Date(form.closes_at).toISOString() : null,
         ...(mode === 'edit' && job ? { jobId: job.id } : {})
       }
       const res = await fetch('/api/jobs', {
@@ -133,9 +171,11 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     finally { setSaving(false) }
   }
 
+  const selectedPriority = MATCH_PRIORITIES.find(p => p.key === form.match_priority) || MATCH_PRIORITIES[0]
+
   return (
     <div onMouseDown={overlayMouseDown} onMouseUp={overlayMouseUp} style={overlayStyle}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: 580, maxHeight: '92vh', overflowY: 'auto' }}>
 
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>
           {mode === 'edit' ? `Edit Job — ${job?.title}` : 'Add Job'}
@@ -146,7 +186,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 500 }}>Company logo</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {logoPreview ? (
-              <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e5e5', background: '#fafafa' }} />
+              <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain' as const, border: '1px solid #e5e5e5', background: '#fafafa' }} />
             ) : (
               <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏢</div>
             )}
@@ -179,7 +219,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           type="button"
           onClick={generateJobDetails}
           disabled={!form.title || generatingJob}
-          style={{ width: '100%', padding: '11px', background: !form.title || generatingJob ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !form.title || generatingJob ? 'not-allowed' : 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          style={{ width: '100%', padding: '11px', background: !form.title || generatingJob ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !form.title || generatingJob ? 'not-allowed' : 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } as React.CSSProperties}
         >
           {generatingJob ? '⟳ Generating with AI...' : '✦ Generate job details with AI'}
         </button>
@@ -199,6 +239,39 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           ))}
         </div>
 
+        {/* CLOSES AT + WORK TYPE */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Interview close date <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
+            <input type="date" value={form.closes_at} onChange={e => setForm(p => ({ ...p, closes_at: e.target.value }))} style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Status</label>
+            <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
+              <option value="active">Active</option>
+              <option value="draft">Draft</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        </div>
+
+        {/* WORK TYPE */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 8, fontWeight: 500 }}>Work type</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {WORK_TYPES.map(w => (
+              <button
+                key={w.key}
+                type="button"
+                onClick={() => setForm(p => ({ ...p, work_type: w.key }))}
+                style={{ flex: 1, padding: '10px 8px', border: `2px solid ${form.work_type === w.key ? '#534AB7' : '#e5e5e5'}`, borderRadius: 10, fontSize: 13, cursor: 'pointer', background: form.work_type === w.key ? '#f0eeff' : 'white', color: form.work_type === w.key ? '#534AB7' : '#555', fontWeight: form.work_type === w.key ? 700 : 400, transition: 'all 0.15s' } as React.CSSProperties}
+              >
+                {w.icon} {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* REQUIRED SKILLS */}
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>
@@ -207,14 +280,31 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           <input type="text" value={form.required_skills} onChange={e => setForm(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Negotiation" style={inputStyle} />
         </div>
 
-        {/* STATUS */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Status</label>
-          <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
-            <option value="active">Active</option>
-            <option value="draft">Draft</option>
-            <option value="closed">Closed</option>
-          </select>
+        {/* MATCH PRIORITY */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 8, fontWeight: 500 }}>What matters most for this role?</label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            {MATCH_PRIORITIES.map(p => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, match_priority: p.key }))}
+                style={{ flex: 1, padding: '12px 8px', border: `2px solid ${form.match_priority === p.key ? '#534AB7' : '#e5e5e5'}`, borderRadius: 10, fontSize: 13, cursor: 'pointer', background: form.match_priority === p.key ? '#f0eeff' : 'white', color: form.match_priority === p.key ? '#534AB7' : '#555', fontWeight: form.match_priority === p.key ? 700 : 400, transition: 'all 0.15s', textAlign: 'center' } as React.CSSProperties}
+              >
+                <div style={{ fontSize: 20, marginBottom: 4 }}>{p.icon}</div>
+                <div>{p.label}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#666' }}>
+            {selectedPriority.description}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' as const }}>
+              <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Skills {selectedPriority.weights.keywords}%</span>
+              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Experience {selectedPriority.weights.experience}%</span>
+              <span style={{ fontSize: 11, background: '#E6F1FB', color: '#185FA5', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Sector {selectedPriority.weights.sector}%</span>
+              <span style={{ fontSize: 11, background: '#FFF3E0', color: '#E65100', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Location {selectedPriority.weights.location}%</span>
+            </div>
+          </div>
         </div>
 
         {/* DESCRIPTION */}
@@ -225,7 +315,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
             rows={6}
             placeholder="Describe the role... or press Generate with AI above"
-            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+            style={{ ...inputStyle, resize: 'vertical' as const, lineHeight: 1.6 }}
           />
         </div>
 
@@ -237,7 +327,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           <button
             onClick={handleSave}
             disabled={uploadingLogo || generatingJob || saving}
-            style={{ padding: '9px 18px', background: uploadingLogo || generatingJob || saving ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo || generatingJob || saving ? 'not-allowed' : 'pointer' }}
+            style={{ padding: '9px 18px', background: uploadingLogo || generatingJob || saving ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo || generatingJob || saving ? 'not-allowed' : 'pointer' } as React.CSSProperties}
           >
             {saving ? '⟳ Saving...' : mode === 'edit' ? 'Save changes' : 'Save job'}
           </button>
