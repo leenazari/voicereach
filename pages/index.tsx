@@ -112,6 +112,14 @@ export default function Dashboard() {
 
   useEffect(() => { checkAuth() }, [])
 
+  async function authHeaders(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession()
+    return {
+      'Content-Type': 'application/json',
+      ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+    }
+  }
+
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
@@ -134,14 +142,16 @@ export default function Dashboard() {
   }
 
   async function fetchCandidates() {
-    const res = await fetch('/api/candidates')
+    const headers = await authHeaders()
+    const res = await fetch('/api/candidates', { headers })
     const data = await res.json()
     setCandidates(data.candidates || [])
     setLoading(false)
   }
 
   async function fetchJobs() {
-    const res = await fetch('/api/jobs')
+    const headers = await authHeaders()
+    const res = await fetch('/api/jobs', { headers })
     const data = await res.json()
     setJobs(data.jobs || [])
   }
@@ -163,9 +173,10 @@ export default function Dashboard() {
   async function regenerateKeywords(candidate: Candidate) {
     setRegeneratingKeywords(true)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/regenerate-keywords', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ candidateId: candidate.id })
       })
       const data = await res.json()
@@ -181,9 +192,10 @@ export default function Dashboard() {
   async function findMatches(job: Job) {
     setMatchingJob(job.id)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/match-candidates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ jobId: job.id })
       })
       const data = await res.json()
@@ -199,9 +211,10 @@ export default function Dashboard() {
   async function sendVoiceNoteToMatch(match: MatchResult, job: Job) {
     setShortlisting(match.candidate_id)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/shortlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           candidateId: match.candidate_id,
           jobId: job.id,
@@ -228,7 +241,8 @@ export default function Dashboard() {
 
   async function deleteJob(job: Job) {
     if (!confirm(`Delete ${job.title}? This cannot be undone.`)) return
-    const res = await fetch('/api/jobs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id }) })
+    const headers = await authHeaders()
+    const res = await fetch('/api/jobs', { method: 'DELETE', headers, body: JSON.stringify({ jobId: job.id }) })
     const data = await res.json()
     if (data.success) { fetchJobs(); notify(`${job.title} deleted`) }
     else notify('Could not delete job', 'error')
@@ -243,7 +257,8 @@ export default function Dashboard() {
   function openVoices() { setShowVoices(true); fetchVoices() }
 
   async function selectVoice(voiceId: string) {
-    await fetch('/api/voices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ voiceId }) })
+    const headers = await authHeaders()
+    await fetch('/api/voices', { method: 'POST', headers, body: JSON.stringify({ voiceId }) })
     setSelectedVoiceId(voiceId)
     setShowVoices(false)
     notify('Voice updated successfully')
@@ -272,9 +287,10 @@ export default function Dashboard() {
     if (!jobTitle) return
     setGeneratingPreview(true)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/preview-script', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ candidateId, jobTitle, jobSalary })
       })
       const data = await res.json()
@@ -324,9 +340,10 @@ export default function Dashboard() {
     setShowJobModal(false)
     setShortlisting(jobModalCandidate.id)
     try {
+      const headers = await authHeaders()
       const res = await fetch('/api/shortlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           candidateId: jobModalCandidate.id,
           jobId: selectedJobId || undefined,
@@ -357,7 +374,12 @@ export default function Dashboard() {
         r.onerror = () => rej(new Error('Read failed'))
         r.readAsDataURL(file)
       })
-      const response = await fetch('/api/extract-cv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base64, filename: file.name }) })
+      const headers = await authHeaders()
+      const response = await fetch('/api/extract-cv', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ base64, filename: file.name })
+      })
       const data = await response.json()
       if (data.extracted) {
         const e = data.extracted
@@ -403,7 +425,8 @@ export default function Dashboard() {
   async function saveEdit() {
     if (!editingCandidate) return
     if (!editForm.name || !editForm.email || !editForm.role_applied || !editForm.experience_summary) { notify('Please fill in all required fields', 'error'); return }
-    const res = await fetch('/api/candidates', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId: editingCandidate.id, ...editForm, years_experience: parseInt(editForm.years_experience) || 0 }) })
+    const headers = await authHeaders()
+    const res = await fetch('/api/candidates', { method: 'PATCH', headers, body: JSON.stringify({ candidateId: editingCandidate.id, ...editForm, years_experience: parseInt(editForm.years_experience) || 0 }) })
     const data = await res.json()
     if (data.success) { setShowEdit(false); setEditingCandidate(null); fetchCandidates(); notify('Candidate updated') }
     else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
@@ -411,14 +434,16 @@ export default function Dashboard() {
 
   async function deleteCandidate(candidate: Candidate) {
     if (!confirm(`Delete ${candidate.name}? This cannot be undone.`)) return
-    const res = await fetch('/api/candidates', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId: candidate.id }) })
+    const headers = await authHeaders()
+    const res = await fetch('/api/candidates', { method: 'DELETE', headers, body: JSON.stringify({ candidateId: candidate.id }) })
     const data = await res.json()
     if (data.success) { fetchCandidates(); notify(`${candidate.name} deleted`) }
     else notify('Could not delete candidate', 'error')
   }
 
   async function moveCandidate(candidateId: string, newStatus: string) {
-    await fetch('/api/candidates', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId, status: newStatus }) })
+    const headers = await authHeaders()
+    await fetch('/api/candidates', { method: 'PATCH', headers, body: JSON.stringify({ candidateId, status: newStatus }) })
     fetchCandidates()
   }
 
@@ -439,9 +464,10 @@ export default function Dashboard() {
 
   async function addCandidate() {
     if (!form.name || !form.email || !form.role_applied || !form.experience_summary) { notify('Please fill in all required fields', 'error'); return }
+    const headers = await authHeaders()
     const res = await fetch('/api/candidates', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         ...form,
         years_experience: parseInt(form.years_experience) || 0,
@@ -758,8 +784,6 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {jobs.map(job => (
                     <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-
-                      {/* JOB HEADER */}
                       <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
                         {job.logo_url ? (
                           <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
@@ -783,18 +807,11 @@ export default function Dashboard() {
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           {matchResults[job.id] && (
-                            <button
-                              onClick={() => toggleJobExpanded(job.id)}
-                              style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                            >
+                            <button onClick={() => toggleJobExpanded(job.id)} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                               {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
                             </button>
                           )}
-                          <button
-                            onClick={() => findMatches(job)}
-                            disabled={matchingJob === job.id}
-                            style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}
-                          >
+                          <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
                             {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
                           </button>
                           <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
@@ -802,7 +819,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* REQUIRED SKILLS */}
                       {(job.required_skills || []).length > 0 && (
                         <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {(job.required_skills || []).map(skill => (
@@ -817,7 +833,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* MATCH RESULTS */}
                       {expandedJobs.has(job.id) && matchResults[job.id] && (
                         <div style={{ borderTop: '1px solid #f0f0f0' }}>
                           <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -825,21 +840,14 @@ export default function Dashboard() {
                               Match results — {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
-                                ✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match
-                              </span>
-                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
-                                {matchResults[job.id].filter(r => r.status === 'longlist').length} low match
-                              </span>
+                              <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong match</span>
+                              <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
                               {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
-                                <span style={{ fontSize: 11, background: '#FFF3E0', color: '#BA7517', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>
-                                  {matchResults[job.id].filter(r => r.already_sent).length} already sent
-                                </span>
+                                <span style={{ fontSize: 11, background: '#FFF3E0', color: '#BA7517', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.already_sent).length} already sent</span>
                               )}
                             </div>
                           </div>
 
-                          {/* STRONG MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
                             <div style={{ padding: '12px 20px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
@@ -851,15 +859,8 @@ export default function Dashboard() {
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                                        <div
-                                          onClick={() => openProfileFromMatch(match.candidate_id)}
-                                          style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}
-                                        >
-                                          {match.name}
-                                        </div>
-                                        {match.already_sent && (
-                                          <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>
-                                        )}
+                                        <div onClick={() => openProfileFromMatch(match.candidate_id)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{match.name}</div>
+                                        {match.already_sent && <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>}
                                       </div>
                                       <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
                                       {match.keyword_matches.length > 0 && (
@@ -870,19 +871,7 @@ export default function Dashboard() {
                                         </div>
                                       )}
                                     </div>
-                                    <button
-                                      onClick={() => sendVoiceNoteToMatch(match, job)}
-                                      disabled={shortlisting === match.candidate_id}
-                                      style={{
-                                        padding: '8px 16px',
-                                        background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7',
-                                        color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white',
-                                        border: match.already_sent ? '1px solid #f0d080' : 'none',
-                                        borderRadius: 8, fontSize: 12, fontWeight: 600,
-                                        cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer',
-                                        flexShrink: 0
-                                      }}
-                                    >
+                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white', border: match.already_sent ? '1px solid #f0d080' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
                                       {shortlisting === match.candidate_id ? '⟳' : match.already_sent ? '↺ Resend' : '🎙 Send'}
                                     </button>
                                   </div>
@@ -891,7 +880,6 @@ export default function Dashboard() {
                             </div>
                           )}
 
-                          {/* LOW MATCHES */}
                           {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
                             <div style={{ padding: '0 20px 16px' }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
@@ -902,19 +890,10 @@ export default function Dashboard() {
                                       <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div
-                                        onClick={() => openProfileFromMatch(match.candidate_id)}
-                                        style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}
-                                      >
-                                        {match.name}
-                                      </div>
+                                      <div onClick={() => openProfileFromMatch(match.candidate_id)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
                                       <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
                                     </div>
-                                    <button
-                                      onClick={() => sendVoiceNoteToMatch(match, job)}
-                                      disabled={shortlisting === match.candidate_id}
-                                      style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}
-                                    >
+                                    <button onClick={() => sendVoiceNoteToMatch(match, job)} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
                                       {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
                                     </button>
                                   </div>
@@ -1065,11 +1044,7 @@ export default function Dashboard() {
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Strength keywords</div>
-                <button
-                  onClick={() => regenerateKeywords(profileCandidate)}
-                  disabled={regeneratingKeywords}
-                  style={{ fontSize: 11, padding: '4px 10px', background: regeneratingKeywords ? '#f5f5f5' : '#f0eeff', color: regeneratingKeywords ? '#aaa' : '#534AB7', border: '1px solid #EEEDFE', borderRadius: 6, cursor: regeneratingKeywords ? 'not-allowed' : 'pointer', fontWeight: 600 }}
-                >
+                <button onClick={() => regenerateKeywords(profileCandidate)} disabled={regeneratingKeywords} style={{ fontSize: 11, padding: '4px 10px', background: regeneratingKeywords ? '#f5f5f5' : '#f0eeff', color: regeneratingKeywords ? '#aaa' : '#534AB7', border: '1px solid #EEEDFE', borderRadius: 6, cursor: regeneratingKeywords ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
                   {regeneratingKeywords ? '⟳ Regenerating...' : '⚡ Regenerate keywords'}
                 </button>
               </div>
@@ -1089,6 +1064,17 @@ export default function Dashboard() {
                 {((profileCandidate as any).qualifications || []).map((q: string) => (
                   <div key={q} style={{ fontSize: 12, color: '#555', marginBottom: 3 }}>• {q}</div>
                 ))}
+              </div>
+            )}
+            {(profileCandidate as any).last_script && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>
+                  Last voice note script
+                  {(profileCandidate as any).last_script_at && <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: 8 }}>— {new Date((profileCandidate as any).last_script_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                </div>
+                <div style={{ fontSize: 12, color: '#555', lineHeight: 1.7, background: '#f9f9f9', borderRadius: 8, padding: '12px 14px', fontStyle: 'italic' }}>
+                  {(profileCandidate as any).last_script}
+                </div>
               </div>
             )}
             {profileCandidate.voice_note_url && (
