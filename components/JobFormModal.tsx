@@ -16,6 +16,7 @@ type Job = {
   closes_at?: string | null
   work_type?: string
   match_priority?: string
+  match_threshold?: number
 }
 
 type Props = {
@@ -56,6 +57,13 @@ const WORK_TYPES = [
   { key: 'remote', label: 'Remote', icon: '🌍' }
 ]
 
+function getThresholdLabel(value: number): { label: string, color: string } {
+  if (value >= 85) return { label: 'Very strict — only the best matches', color: '#E24B4A' }
+  if (value >= 70) return { label: 'Standard — good quality matches', color: '#534AB7' }
+  if (value >= 55) return { label: 'Relaxed — broader pool of candidates', color: '#BA7517' }
+  return { label: 'Open — include all possible matches', color: '#1D9E75' }
+}
+
 export default function JobFormModal({ mode, job, onSave, onClose, notify }: Props) {
   const [form, setForm] = useState({
     title: job?.title || '',
@@ -70,7 +78,8 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     logo_url: job?.logo_url || '',
     closes_at: job?.closes_at ? job.closes_at.split('T')[0] : '',
     work_type: job?.work_type || 'office',
-    match_priority: job?.match_priority || 'skills'
+    match_priority: job?.match_priority || 'skills',
+    match_threshold: job?.match_threshold || 70
   })
   const [logoPreview, setLogoPreview] = useState<string>(job?.logo_url || '')
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -172,6 +181,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
   }
 
   const selectedPriority = MATCH_PRIORITIES.find(p => p.key === form.match_priority) || MATCH_PRIORITIES[0]
+  const thresholdInfo = getThresholdLabel(form.match_threshold)
 
   return (
     <div onMouseDown={overlayMouseDown} onMouseUp={overlayMouseUp} style={overlayStyle}>
@@ -239,8 +249,8 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           ))}
         </div>
 
-        {/* CLOSES AT + WORK TYPE */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        {/* CLOSES AT + STATUS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
           <div>
             <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Interview close date <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
             <input type="date" value={form.closes_at} onChange={e => setForm(p => ({ ...p, closes_at: e.target.value }))} style={inputStyle} />
@@ -273,7 +283,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
         </div>
 
         {/* REQUIRED SKILLS */}
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>
             Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span>
           </label>
@@ -304,6 +314,31 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
               <span style={{ fontSize: 11, background: '#E6F1FB', color: '#185FA5', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Sector {selectedPriority.weights.sector}%</span>
               <span style={{ fontSize: 11, background: '#FFF3E0', color: '#E65100', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Location {selectedPriority.weights.location}%</span>
             </div>
+          </div>
+        </div>
+
+        {/* MATCH THRESHOLD SLIDER */}
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 8, fontWeight: 500 }}>
+            Match threshold
+            <span style={{ float: 'right', fontWeight: 700, color: thresholdInfo.color, fontSize: 13 }}>{form.match_threshold}%</span>
+          </label>
+          <input
+            type="range"
+            min={50}
+            max={95}
+            step={5}
+            value={form.match_threshold}
+            onChange={e => setForm(p => ({ ...p, match_threshold: parseInt(e.target.value) }))}
+            style={{ width: '100%', accentColor: thresholdInfo.color, marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#bbb', marginBottom: 6 }}>
+            <span>50% — Open</span>
+            <span>70% — Standard</span>
+            <span>95% — Strict</span>
+          </div>
+          <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: thresholdInfo.color, fontWeight: 500 }}>
+            {thresholdInfo.label}
           </div>
         </div>
 
