@@ -18,13 +18,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
-      const { title, company, location, salary, description, required_skills, sector } = req.body
+      const { title, company, location, salary, description, required_skills, sector, status, logo_url } = req.body
       if (!title || !description) {
-        return res.status(400).json({ error: 'Title and description required' })
+        return res.status(400).json({ error: 'Title and description are required' })
       }
       const { data, error } = await supabase
         .from('jobs')
-        .insert({ title, company, location, salary, description, required_skills: required_skills || [], sector, status: 'active' })
+        .insert({
+          title,
+          company: company || null,
+          location: location || null,
+          salary: salary || null,
+          description,
+          required_skills: required_skills || [],
+          sector: sector || null,
+          status: status || 'active',
+          logo_url: logo_url || null
+        })
         .select()
         .single()
       if (error) throw error
