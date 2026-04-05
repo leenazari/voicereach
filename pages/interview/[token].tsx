@@ -72,16 +72,16 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
   }
 
   const SorryPage = ({ message }: { message: string }) => (
-    <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 24 }}>
-      <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+    <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex' as const, alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 24 }}>
+      <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' as const }}>
         <div style={{ fontSize: 64, marginBottom: 24 }}>😔</div>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 16, letterSpacing: '-0.5px' }}>This role has been filled</h1>
         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, lineHeight: 1.7, marginBottom: 32 }}>{message}</p>
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24 }}>
           <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>We have plenty more opportunities though!</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <a href="tel:07545812308" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>📞 07545 812308</a>
-            <a href="mailto:lee.nazari@gmail.com" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>✉ lee.nazari@gmail.com</a>
+          <div style={{ display: 'flex' as const, flexDirection: 'column' as const, gap: 10 }}>
+            <a href="tel:07545812308" style={{ display: 'flex' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>📞 07545 812308</a>
+            <a href="mailto:lee.nazari@gmail.com" style={{ display: 'flex' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', color: 'white', padding: '12px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>✉ lee.nazari@gmail.com</a>
           </div>
         </div>
       </div>
@@ -99,12 +99,11 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         @keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(102,126,234,0.4); } 50% { box-shadow: 0 0 40px rgba(102,126,234,0.8), 0 0 60px rgba(118,75,162,0.4); } }
-        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         * { box-sizing: border-box; margin: 0; padding: 0; }
       `}</style>
 
       {/* HEADER */}
-      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ padding: '20px 24px', display: 'flex' as const, alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px' }}>
           <span style={{ color: 'white' }}>Voice</span>
           <span style={{ background: 'linear-gradient(135deg, #667eea, #f093fb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Reach</span>
@@ -113,27 +112,27 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
 
       <div style={{ maxWidth: 620, margin: '0 auto', padding: '32px 20px 60px' }}>
 
-        {/* HERO — COMPANY + JOB */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        {/* HERO */}
+        <div style={{ textAlign: 'center' as const, marginBottom: 24 }}>
           {displayJob.logo_url ? (
-            <div style={{ display: 'inline-block', background: 'white', borderRadius: 20, padding: 12, marginBottom: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-              <img src={displayJob.logo_url} alt={displayJob.company} style={{ width: 72, height: 72, objectFit: 'contain', display: 'block' }} />
+            <div style={{ display: 'inline-block' as const, background: 'white', borderRadius: 20, padding: 12, marginBottom: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+              <img src={displayJob.logo_url} alt={displayJob.company} style={{ width: 72, height: 72, objectFit: 'contain' as const, display: 'block' }} />
             </div>
           ) : (
-            <div style={{ width: 88, height: 88, borderRadius: 20, background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, fontWeight: 800, color: 'white', margin: '0 auto 20px', boxShadow: '0 8px 32px rgba(102,126,234,0.4)' }}>
+            <div style={{ width: 88, height: 88, borderRadius: 20, background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex' as const, alignItems: 'center', justifyContent: 'center', fontSize: 36, fontWeight: 800, color: 'white', margin: '0 auto 20px', boxShadow: '0 8px 32px rgba(102,126,234,0.4)' }}>
               {(displayJob.company || displayJob.title || 'J')[0].toUpperCase()}
             </div>
           )}
 
           {displayJob.company && (
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, marginBottom: 10 }}>{displayJob.company}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 600, marginBottom: 10 }}>{displayJob.company}</div>
           )}
 
           <h1 style={{ fontSize: 32, fontWeight: 900, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.15, marginBottom: 16 }}>
             {displayJob.title}
           </h1>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+          <div style={{ display: 'flex' as const, gap: 10, justifyContent: 'center', flexWrap: 'wrap' as const, marginBottom: 8 }}>
             {displayJob.salary && (
               <span style={{ background: 'linear-gradient(135deg, #f093fb, #f5576c)', color: 'white', padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 700 }}>
                 💰 {displayJob.salary}
@@ -153,8 +152,8 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         </div>
 
         {/* PERSONAL MESSAGE + PLAY */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15))', border: '1px solid rgba(102,126,234,0.3)', borderRadius: 24, padding: '28px 24px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, rgba(102,126,234,0.15), transparent)', pointerEvents: 'none' }} />
+        <div style={{ background: 'linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15))', border: '1px solid rgba(102,126,234,0.3)', borderRadius: 24, padding: '28px 24px', marginBottom: 20, position: 'relative' as const, overflow: 'hidden' as const }}>
+          <div style={{ position: 'absolute' as const, top: -40, right: -40, width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, rgba(102,126,234,0.15), transparent)', pointerEvents: 'none' as const }} />
 
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'white', marginBottom: 8 }}>
@@ -166,13 +165,13 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
           </div>
 
           {/* PLAY BUTTON */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: '16px 20px' }}>
+          <div style={{ display: 'flex' as const, alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: '16px 20px' }}>
             <button
               onClick={togglePlay}
-              style={{ width: 64, height: 64, borderRadius: '50%', background: playing ? 'linear-gradient(135deg, #f5576c, #f093fb)' : 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: playing ? 'glow 2s ease-in-out infinite' : 'pulse 3s ease-in-out infinite', transition: 'all 0.3s' }}
+              style={{ width: 64, height: 64, borderRadius: '50%', background: playing ? 'linear-gradient(135deg, #f5576c, #f093fb)' : 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', cursor: 'pointer', display: 'flex' as const, alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: playing ? 'glow 2s ease-in-out infinite' : 'pulse 3s ease-in-out infinite', transition: 'all 0.3s' }}
             >
               {playing ? (
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ display: 'flex' as const, gap: 4 }}>
                   <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
                   <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
                 </div>
@@ -185,8 +184,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
               <div style={{ fontSize: 14, fontWeight: 700, color: 'white', marginBottom: 6 }}>
                 {playing ? 'Playing your personal message...' : 'Play your personal voice message'}
               </div>
-              {/* PROGRESS BAR */}
-              <div style={{ height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden' as const, marginBottom: 4 }}>
                 <div style={{ height: '100%', width: `${progress * 100}%`, background: 'linear-gradient(90deg, #667eea, #f093fb)', borderRadius: 4, transition: 'width 0.1s' }} />
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
@@ -195,7 +193,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
             </div>
 
             {playing && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <div style={{ display: 'flex' as const, alignItems: 'center', gap: 3 }}>
                 {[1,2,3,4,5].map(i => (
                   <div key={i} style={{ width: 3, borderRadius: 2, background: `hsl(${220 + i * 20}, 80%, 70%)`, animation: `wave 0.8s ease-in-out infinite`, animationDelay: `${i * 0.12}s`, height: 24 }} />
                 ))}
@@ -207,16 +205,16 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         {/* JOB DESCRIPTION */}
         {displayJob.description && (
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>About the role</div>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.85, whiteSpace: 'pre-line' }}>{displayJob.description}</p>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: 14 }}>About the role</div>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.85, whiteSpace: 'pre-line' as const }}>{displayJob.description}</p>
           </div>
         )}
 
         {/* REQUIRED SKILLS */}
         {(displayJob.required_skills || []).length > 0 && (
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '24px', marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>What they are looking for</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' as const, letterSpacing: '1.5px', marginBottom: 14 }}>What they are looking for</div>
+            <div style={{ display: 'flex' as const, flexWrap: 'wrap' as const, gap: 8 }}>
               {(displayJob.required_skills || []).map((skill, i) => (
                 <span key={skill} style={{ fontSize: 13, background: `linear-gradient(135deg, hsla(${200 + i * 25}, 70%, 50%, 0.2), hsla(${220 + i * 25}, 70%, 50%, 0.2))`, border: `1px solid hsla(${200 + i * 25}, 70%, 60%, 0.3)`, color: `hsl(${200 + i * 25}, 80%, 75%)`, padding: '6px 14px', borderRadius: 100, fontWeight: 500 }}>{skill}</span>
               ))}
@@ -225,9 +223,9 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         )}
 
         {/* CTA */}
-        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)', borderRadius: 24, padding: '32px 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)', pointerEvents: 'none' }} />
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 }}>🚀 This role is moving fast</div>
+        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)', borderRadius: 24, padding: '32px 28px', textAlign: 'center' as const, position: 'relative' as const, overflow: 'hidden' as const }}>
+          <div style={{ position: 'absolute' as const, inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)', pointerEvents: 'none' as const }} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' as const, letterSpacing: '2px', marginBottom: 10 }}>🚀 This role is moving fast</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: 'white', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
             Ready to go for it, {firstName}?
           </div>
@@ -236,7 +234,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
           </p>
           
             href={calUrl}
-            style={{ display: 'inline-block', background: 'white', color: '#5a4fcf', padding: '18px 48px', borderRadius: 14, textDecoration: 'none', fontWeight: 900, fontSize: 17, letterSpacing: '-0.3px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', animation: 'float 3s ease-in-out infinite' }}
+            style={{ display: 'inline-block' as const, background: 'white', color: '#5a4fcf', padding: '18px 48px', borderRadius: 14, textDecoration: 'none', fontWeight: 900, fontSize: 17, letterSpacing: '-0.3px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', animation: 'float 3s ease-in-out infinite' }}
           >
             Claim this opportunity →
           </a>
@@ -246,7 +244,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         </div>
 
         {/* FOOTER */}
-        <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
+        <div style={{ textAlign: 'center' as const, marginTop: 32, fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
           Powered by VoiceReach · voicereach.co.uk
         </div>
       </div>
