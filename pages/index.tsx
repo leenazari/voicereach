@@ -155,6 +155,11 @@ export default function Dashboard() {
     })
   }
 
+  function openProfileFromMatch(candidateId: string) {
+    const full = candidates.find(c => c.id === candidateId)
+    if (full) openProfile(full)
+  }
+
   async function regenerateKeywords(candidate: Candidate) {
     setRegeneratingKeywords(true)
     try {
@@ -543,19 +548,19 @@ export default function Dashboard() {
             { id: 'jobs', label: 'Jobs', icon: '◉' },
             { id: 'analytics', label: 'Analytics', icon: '◷' }
           ].map(tab => (
-            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#534AB7' : '#555', background: activeTab === tab.id ? '#f0eeff' : 'transparent', borderLeft: activeTab === tab.id ? '2px solid #534AB7' : '2px solid transparent', fontWeight: activeTab === tab.id ? 600 : 400, margin: '1px 0' }}>
-              <span>{tab.icon}</span>{tab.label}
+            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#534AB7' : '#888', background: activeTab === tab.id ? '#f0eeff' : 'transparent', borderLeft: activeTab === tab.id ? '3px solid #534AB7' : '3px solid transparent', fontWeight: activeTab === tab.id ? 700 : 400, margin: '1px 0' }}>
+              <span style={{ opacity: activeTab === tab.id ? 1 : 0.5 }}>{tab.icon}</span>{tab.label}
               {tab.id === 'jobs' && jobs.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>{jobs.filter(j => j.status === 'active').length}</span>}
             </div>
           ))}
           {profile?.role === 'admin' && (
-            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '2px solid transparent', margin: '1px 0' }}>
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
               <span>⊛</span>Admin panel
             </div>
           )}
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
-          <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#555', cursor: 'pointer', borderLeft: '2px solid transparent' }}>
-            <span>⊙</span>Voice selector
+          <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
+            <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
           </div>
         </div>
 
@@ -846,7 +851,12 @@ export default function Dashboard() {
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{match.name}</div>
+                                        <div
+                                          onClick={() => openProfileFromMatch(match.candidate_id)}
+                                          style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}
+                                        >
+                                          {match.name}
+                                        </div>
                                         {match.already_sent && (
                                           <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>
                                         )}
@@ -892,7 +902,12 @@ export default function Dashboard() {
                                       <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 1 }}>{match.name}</div>
+                                      <div
+                                        onClick={() => openProfileFromMatch(match.candidate_id)}
+                                        style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}
+                                      >
+                                        {match.name}
+                                      </div>
                                       <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
                                     </div>
                                     <button
