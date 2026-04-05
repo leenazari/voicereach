@@ -1,69 +1,82 @@
+import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-export function formatSalary(salary: string): string {
-  const cleaned = salary
-    .replace(/[£$€]/g, '')
-    .replace(/,/g, '')
-    .trim()
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const num = parseInt(cleaned)
-  if (isNaN(num)) return salary
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-  if (num >= 1000000) {
-    const millions = Math.floor(num / 1000000)
-    const remainder = num % 1000000
-    if (remainder === 0) return `${millions} million pounds`
-    const thousands = Math.floor(remainder / 1000)
-    const hundreds = remainder % 1000
-    if (hundreds === 0) return `${millions} million ${thousands} thousand pounds`
-    return `${millions} million ${thousands} thousand ${numberToWords(hundreds)} pounds`
+    const { candidateId, jobId } = req.body
+    if (!candidateId || !jobId) return res.status(400).json({ error: 'candidateId and jobId required' })
+
+    const [{ data: candidate }, { data: job }] = await Promise.all([
+      supabase.from('candidates').select('*').eq('id', candidateId).single(),
+      supabase.from('jobs').select('*').eq('id', jobId).single()
+    ])
+
+    if (!candidate || !job) return res.status(404).json({ error: 'Candidate or job not found' })
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `You are an enthusiastic, energetic recruitment consultant writing a personal voice message DIRECTLY TO the candidate. Your tone is warm, excited and confident — like a friend who has just found them their dream job. Everything must be written in second person — use "you", "your", "you have", "you are". Never use the candidate's name or third person (no "he", "she", "they", or the candidate's name).
+
+Match this candidate against this job and identify why they are a strong fit.
+
+Respond ONLY with valid JSON, no markdown, no backticks.
+
+CANDIDATE:
+Role: ${candidate.role_applied}
+Years experience: ${candidate.years_experience}
+Last employer: ${candidate.last_employer || 'unknown'}
+Skills: ${(candidate.skills || []).join(', ')}
+Summary: ${candidate.experience_summary}
+${candidate.candidate_summary ? 'Profile: ' + candidate.candidate_summary : ''}
+
+JOB:
+Title: ${job.title}
+Company: ${job.company || 'confidential client'}
+Sector: ${job.sector || 'unspecified'}
+Location: ${job.location || 'unspecified'}
+Salary: ${job.salary || 'competitive'}
+Required skills: ${(job.required_skills || []).join(', ')}
+Description: ${job.description}
+
+Return this exact JSON format:
+{
+  "match_score": number from 0 to 100,
+  "top_matches": ["specific skill or experience that matches", "another specific match", "third match"],
+  "pitch_hook": "one punchy, enthusiastic sentence in second person — sound excited, like you genuinely believe this is their perfect role. E.g. 'with your incredible track record in X and your hands-on experience at Y, this role was basically written for you'",
+  "urgency_line": "one energetic sentence in second person creating genuine urgency and excitement — make them feel this is a once in a while opportunity. E.g. 'this role is flying and they are ready to move fast for the right person, so do not let this one slip away'"
+}`
+        }]
+      })
+    })
+
+    const apiData = await response.json()
+    if (!response.ok) throw new Error(apiData.error?.message || 'Claude API error')
+
+    const text = apiData.content?.[0]?.text || ''
+    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
+    const matchData = JSON.parse(clean)
+
+    return res.status(200).json({ match: matchData, candidate, job })
+
+  } catch (err: any) {
+    console.error('Match error:', err)
+    return res.status(500).json({ error: err.message || 'Failed to match' })
   }
-
-  if (num >= 1000) {
-    const thousands = Math.floor(num / 1000)
-    const remainder = num % 1000
-    if (remainder === 0) return `${thousands} thousand pounds`
-    return `${thousands} thousand ${numberToWords(remainder)} pounds`
-  }
-
-  return `${numberToWords(num)} pounds`
 }
-
-function numberToWords(n: number): string {
-  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-    'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
-  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
-
-  if (n < 20) return ones[n]
-  if (n < 100) {
-    const t = Math.floor(n / 10)
-    const o = n % 10
-    return o === 0 ? tens[t] : `${tens[t]} ${ones[o]}`
-  }
-  if (n < 1000) {
-    const h = Math.floor(n / 100)
-    const remainder = n % 100
-    if (remainder === 0) return `${ones[h]} hundred`
-    return `${ones[h]} hundred and ${numberToWords(remainder)}`
-  }
-  return n.toString()
-}
-
-function trimToSixtySeconds(script: string): string {
-  const words = script.split(' ')
-  if (words.length <= 140) return script
-
-  const trimmed = words.slice(0, 140).join(' ')
-  const sentenceEnd = Math.max(
-    trimmed.lastIndexOf('. '),
-    trimmed.lastIndexOf('! '),
-    trimmed.lastIndexOf('? ')
-  )
-
-  if (sentenceEnd > 80) {
-    return trimmed.substring(0, sentenceEnd + 1).trim()
-  }
-
-  return trimmed + '.'
-}
-
