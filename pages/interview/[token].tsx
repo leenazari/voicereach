@@ -282,17 +282,13 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   try {
     const { data: candidate, error } = await supabaseAdmin
       .from('candidates')
-      .select('name, job_title, job_salary, status, updated_at, voice_note_url, job_id')
+      .select('name, job_title, job_salary, status, voice_note_url, job_id, interview_scheduled_at')
       .eq('interview_token', token)
       .single()
 
     if (error || !candidate) {
       return { props: { candidate: null, job: null, expired: false, notFound: true, calUrl } }
     }
-
-    const updatedAt = new Date(candidate.updated_at)
-    const expiryHours = parseInt(process.env.INTERVIEW_LINK_EXPIRY_HOURS || '24')
-    const expired = Date.now() - updatedAt.getTime() > expiryHours * 60 * 60 * 1000
 
     let job = null
     if (candidate.job_id) {
@@ -304,13 +300,6 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
       job = jobData
     }
 
-    if (!expired && candidate.status === 'voice_sent') {
-      await supabaseAdmin
-        .from('candidates')
-        .update({ status: 'interview_booked' })
-        .eq('interview_token', token)
-    }
-
     return {
       props: {
         candidate: {
@@ -320,7 +309,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
           voice_note_url: candidate.voice_note_url || ''
         },
         job,
-        expired,
+        expired: false,
         notFound: false,
         calUrl
       }
