@@ -54,6 +54,8 @@ export default function Dashboard() {
   const [showEditJob, setShowEditJob] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [jobForm, setJobForm] = useState({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active', logo_url: '' })
+  const [logoPreview, setLogoPreview] = useState<string>('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -83,6 +85,7 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const logoRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
@@ -123,6 +126,30 @@ export default function Dashboard() {
     setJobs(data.jobs || [])
   }
 
+  async function handleLogoUpload(file: File) {
+    setUploadingLogo(true)
+    setLogoPreview(URL.createObjectURL(file))
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = () => rej(new Error('Read failed'))
+        r.readAsDataURL(file)
+      })
+      const response = await fetch('/api/upload-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, filename: file.name, mimeType: file.type })
+      })
+      const data = await response.json()
+      if (data.url) {
+        setJobForm(p => ({ ...p, logo_url: data.url }))
+        notify('Logo uploaded successfully')
+      } else notify('Logo upload failed', 'error')
+    } catch { notify('Could not upload logo', 'error') }
+    finally { setUploadingLogo(false) }
+  }
+
   async function saveJob() {
     if (!jobForm.title || !jobForm.description) { notify('Title and description are required', 'error'); return }
     const payload = {
@@ -134,6 +161,7 @@ export default function Dashboard() {
     if (data.job) {
       setShowAddJob(false)
       setJobForm({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active', logo_url: '' })
+      setLogoPreview('')
       fetchJobs()
       notify('Job added successfully')
     } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
@@ -152,6 +180,7 @@ export default function Dashboard() {
     if (data.success) {
       setShowEditJob(false)
       setEditingJob(null)
+      setLogoPreview('')
       fetchJobs()
       notify('Job updated successfully')
     } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
@@ -178,6 +207,7 @@ export default function Dashboard() {
       status: job.status || 'active',
       logo_url: job.logo_url || ''
     })
+    setLogoPreview(job.logo_url || '')
     setShowEditJob(true)
   }
 
@@ -426,12 +456,12 @@ export default function Dashboard() {
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
   const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 
-  const jobFormFields = [
-    { key: 'title', label: 'Job title *', type: 'text', placeholder: 'e.g. Senior Sales Executive' },
-    { key: 'company', label: 'Company name', type: 'text', placeholder: 'e.g. Acme Corp' },
-    { key: 'location', label: 'Location', type: 'text', placeholder: 'e.g. London, UK' },
-    { key: 'salary', label: 'Salary', type: 'text', placeholder: 'e.g. £45,000' },
-    { key: 'sector', label: 'Sector', type: 'text', placeholder: 'e.g. Technology, Sales, Finance' },
+  const jobTextFields = [
+    { key: 'title', label: 'Job title *', placeholder: 'e.g. Senior Sales Executive' },
+    { key: 'company', label: 'Company name', placeholder: 'e.g. Acme Corp' },
+    { key: 'location', label: 'Location', placeholder: 'e.g. London, UK' },
+    { key: 'salary', label: 'Salary', placeholder: 'e.g. £45,000' },
+    { key: 'sector', label: 'Sector', placeholder: 'e.g. Technology, Sales' },
   ]
 
   const addFields = [
@@ -456,6 +486,26 @@ export default function Dashboard() {
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
 
+  const logoUploadUI = (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 500 }}>Company logo</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {logoPreview ? (
+          <img src={logoPreview} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e5e5e5', background: '#fafafa' }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏢</div>
+        )}
+        <div style={{ flex: 1 }}>
+          <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f) }} />
+          <button type="button" onClick={() => logoRef.current?.click()} disabled={uploadingLogo} style={{ padding: '7px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: uploadingLogo ? 'not-allowed' : 'pointer', background: uploadingLogo ? '#f5f5f5' : 'white', fontWeight: 500, color: '#555' }}>
+            {uploadingLogo ? '⟳ Uploading...' : logoPreview ? '↺ Change logo' : '↑ Upload logo'}
+          </button>
+          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>PNG, JPG or SVG — shown on the candidate landing page</div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
 
@@ -473,7 +523,6 @@ export default function Dashboard() {
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* SIDEBAR */}
       <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
@@ -539,7 +588,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
@@ -699,7 +747,7 @@ export default function Dashboard() {
                     <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
                       <div style={{ padding: '16px 18px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 12 }}>
                         {job.logo_url ? (
-                          <img src={job.logo_url} alt={job.company} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', border: '1px solid #f0f0f0' }} />
+                          <img src={job.logo_url} alt={job.company} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white' }} />
                         ) : (
                           <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
                             {(job.company || job.title)[0].toUpperCase()}
@@ -756,18 +804,19 @@ export default function Dashboard() {
 
       {/* ADD JOB MODAL */}
       {showAddJob && (
-        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => setShowAddJob(false))} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowAddJob(false); setLogoPreview('') })} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 560, maxHeight: '90vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Add Job</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {jobFormFields.map(f => (
-                <div key={f.key} style={{ marginBottom: 4 }}>
+            {logoUploadUI}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              {jobTextFields.map(f => (
+                <div key={f.key}>
                   <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>{f.label}</label>
-                  <input type={f.type} value={(jobForm as any)[f.key]} onChange={e => setJobForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
+                  <input type="text" value={(jobForm as any)[f.key]} onChange={e => setJobForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 14, marginBottom: 14 }}>
+            <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span></label>
               <input type="text" value={jobForm.required_skills} onChange={e => setJobForm(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Negotiation" style={inputStyle} />
             </div>
@@ -784,8 +833,10 @@ export default function Dashboard() {
               <textarea value={jobForm.description} onChange={e => setJobForm(p => ({ ...p, description: e.target.value }))} rows={5} placeholder="Describe the role, responsibilities and what you are looking for..." style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowAddJob(false)} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
-              <button onClick={saveJob} style={{ padding: '9px 18px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Save job</button>
+              <button onClick={() => { setShowAddJob(false); setLogoPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
+              <button onClick={saveJob} disabled={uploadingLogo} style={{ padding: '9px 18px', background: uploadingLogo ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo ? 'not-allowed' : 'pointer' }}>
+                {uploadingLogo ? 'Uploading...' : 'Save job'}
+              </button>
             </div>
           </div>
         </div>
@@ -793,18 +844,19 @@ export default function Dashboard() {
 
       {/* EDIT JOB MODAL */}
       {showEditJob && editingJob && (
-        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowEditJob(false); setEditingJob(null) })} style={overlayStyle}>
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowEditJob(false); setEditingJob(null); setLogoPreview('') })} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 560, maxHeight: '90vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>Edit Job — {editingJob.title}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {jobFormFields.map(f => (
-                <div key={f.key} style={{ marginBottom: 4 }}>
+            {logoUploadUI}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              {jobTextFields.map(f => (
+                <div key={f.key}>
                   <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>{f.label}</label>
-                  <input type={f.type} value={(jobForm as any)[f.key]} onChange={e => setJobForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
+                  <input type="text" value={(jobForm as any)[f.key]} onChange={e => setJobForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 14, marginBottom: 14 }}>
+            <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span></label>
               <input type="text" value={jobForm.required_skills} onChange={e => setJobForm(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Negotiation" style={inputStyle} />
             </div>
@@ -821,8 +873,10 @@ export default function Dashboard() {
               <textarea value={jobForm.description} onChange={e => setJobForm(p => ({ ...p, description: e.target.value }))} rows={5} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowEditJob(false); setEditingJob(null) }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
-              <button onClick={updateJob} style={{ padding: '9px 18px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Save changes</button>
+              <button onClick={() => { setShowEditJob(false); setEditingJob(null); setLogoPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
+              <button onClick={updateJob} disabled={uploadingLogo} style={{ padding: '9px 18px', background: uploadingLogo ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: uploadingLogo ? 'not-allowed' : 'pointer' }}>
+                {uploadingLogo ? 'Uploading...' : 'Save changes'}
+              </button>
             </div>
           </div>
         </div>
@@ -839,7 +893,6 @@ export default function Dashboard() {
                 <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>to {jobModalCandidate.name}</div>
               </div>
             </div>
-
             {jobs.filter(j => j.status === 'active').length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Match to a job <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
@@ -851,7 +904,6 @@ export default function Dashboard() {
                 </select>
               </div>
             )}
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Job title *</label>
@@ -862,7 +914,6 @@ export default function Dashboard() {
                 <input type="text" value={jobSendForm.jobSalary} onChange={e => handleJobSendFormChange('jobSalary', e.target.value)} placeholder="e.g. £45,000" style={inputStyle} />
               </div>
             </div>
-
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>Voice note script <span style={{ color: '#aaa', fontWeight: 400 }}>(edit if needed)</span></label>
