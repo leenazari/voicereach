@@ -1,4 +1,5 @@
-export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: any): string {
+import { Candidate } from './supabase'
+  export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: any): string {
   const firstName = candidate.name.split(' ')[0]
   const jobTitle = job?.title || candidate.job_title || candidate.role_applied
   const company = job?.company ? `at ${job.company}` : ''
