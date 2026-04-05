@@ -78,25 +78,13 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     ? `, paying ${formatSalary(job?.salary || candidate.job_salary)},`
     : ','
 
-  const yearsLine = candidate.years_experience > 0
-    ? `your ${candidate.years_experience} years of experience`
-    : `your background`
-
   const employerLine = (candidate as any).last_employer
     ? `your experience at ${(candidate as any).last_employer}`
-    : yearsLine
+    : candidate.years_experience > 0
+      ? `your ${candidate.years_experience} years of experience`
+      : `your background`
 
-  let matchLine = ''
-  if (matchData?.top_matches && matchData.top_matches.length > 0) {
-    const lastEmployer = ((candidate as any).last_employer || '').toLowerCase()
-    const filteredMatches = matchData.top_matches
-      .filter((m: string) => !lastEmployer || !m.toLowerCase().includes(lastEmployer))
-      .slice(0, 2)
-    if (filteredMatches.length > 0) {
-      matchLine = ` Your ${filteredMatches.join(' and ')} really stand out for this one.`
-    }
-  }
-
+  // Use pitch hook only — no matchLine to avoid repetition
   let hookLine = matchData?.pitch_hook || `with your background, you are exactly what this client is looking for`
   hookLine = hookLine
     .replace(new RegExp(`${firstName}\\s+has`, 'gi'), 'you have')
@@ -109,10 +97,12 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     .replace(new RegExp(`\\bhis `, 'gi'), 'your ')
     .replace(new RegExp(`\\bher `, 'gi'), 'your ')
     .replace(new RegExp(`\\bthey have\\b`, 'gi'), 'you have')
+    .replace(/with your \d+ years (of experience|experience)/gi, 'with your background')
+    .replace(/your \d+ years (of experience|experience) in [^,\.]+,?\s*/gi, '')
 
   const urgencyLine = matchData?.urgency_line || `this one is moving fast and they are ready to hire`
 
-  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}.${matchLine} ${employerLine} makes you a brilliant fit for what they need ${sector}. I have created a personal interview link just for you — you can do the interview right now, it takes less than ten minutes and fits around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link below, do the interview, and let us get you this job.`
+  const script = `Hi ${firstName}... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new ${jobTitle} role ${company}${salaryLine} and honestly, ${hookLine}. ${employerLine} makes you a brilliant fit for what they need ${sector}. I have created a personal interview link just for you — you can do the interview right now, it takes less than ten minutes and fits around your day. But do not leave it too long ${firstName}, ${urgencyLine}. Click the link below, do the interview, and let us get you this job.`
 
   return trimToSixtySeconds(script)
 }
