@@ -133,8 +133,12 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         {/* HERO */}
         <div style={{ textAlign: 'center', marginBottom: 24 } as React.CSSProperties}>
           {displayJob.logo_url ? (
-            <div style={{ display: 'inline-block', background: 'white', borderRadius: 20, padding: 12, marginBottom: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' } as React.CSSProperties}>
-              <img src={displayJob.logo_url} alt={displayJob.company} style={{ width: 72, height: 72, objectFit: 'contain', display: 'block' } as React.CSSProperties} />
+            <div style={{ display: 'inline-block', background: 'white', borderRadius: 20, padding: 16, marginBottom: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' } as React.CSSProperties}>
+              <img
+                src={displayJob.logo_url}
+                alt={displayJob.company || 'Company logo'}
+                style={{ width: 80, height: 80, objectFit: 'contain', display: 'block' } as React.CSSProperties}
+              />
             </div>
           ) : (
             <div style={{ width: 88, height: 88, borderRadius: 20, background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, fontWeight: 800, color: 'white', margin: '0 auto 20px', boxShadow: '0 8px 32px rgba(102,126,234,0.4)' } as React.CSSProperties}>
@@ -243,12 +247,12 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         {/* CTA */}
         <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)', borderRadius: 24, padding: '32px 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' } as React.CSSProperties}>
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)', pointerEvents: 'none' } as React.CSSProperties} />
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 } as React.CSSProperties}>🚀 This role is moving fast</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 } as React.CSSProperties}>🚀 Interviews have already started</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: 'white', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
             Ready to go for it, {firstName}?
           </div>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', marginBottom: 28, lineHeight: 1.6 }}>
-            Book your interview now — it takes less than 10 minutes and you can do it around your schedule. Do not let this one slip away!
+            This is your actual interview for this job. Click below and you are straight in. Spaces are filling up fast so do not wait!
           </p>
           <button
             onClick={() => window.open(calUrl, '_blank')}
@@ -257,7 +261,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
             Claim this opportunity →
           </button>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14 }}>
-            Pick a time that works for you — no pressure
+            Less than 10 minutes · Do it right now
           </div>
         </div>
 
@@ -282,7 +286,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   try {
     const { data: candidate, error } = await supabaseAdmin
       .from('candidates')
-      .select('name, job_title, job_salary, status, voice_note_url, job_id, interview_scheduled_at')
+      .select('name, job_title, job_salary, status, voice_note_url, job_id')
       .eq('interview_token', token)
       .single()
 
@@ -297,7 +301,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
         .select('title, company, location, salary, description, required_skills, logo_url, sector')
         .eq('id', candidate.job_id)
         .single()
-      job = jobData
+      if (jobData) job = jobData
     }
 
     return {
