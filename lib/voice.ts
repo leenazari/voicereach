@@ -68,6 +68,25 @@ function trimToSixtySeconds(script: string): string {
   return trimmed + '.'
 }
 
+function sanitiseHookLine(hook: string): string {
+  return hook
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/\[.*?\]/g, '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/#+/g, '')
+    .replace(/`/g, '')
+    .replace(/"/g, '')
+    .replace(/"/g, '')
+    .replace(/"/g, '')
+    .replace(/'/g, "'")
+    .replace(/'/g, "'")
+    .replace(/—/g, ',')
+    .replace(/–/g, ',')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: any): string {
   const firstName = candidate.name.split(' ')[0]
   const jobTitle = job?.title || candidate.job_title || candidate.role_applied
@@ -85,6 +104,8 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
       : `your background`
 
   let hookLine = matchData?.pitch_hook || `with your background you are exactly what this client is looking for`
+
+  // Second person replacements
   hookLine = hookLine
     .replace(new RegExp(`${firstName}\\s+has`, 'gi'), 'you have')
     .replace(new RegExp(`${firstName}\\s+is`, 'gi'), 'you are')
@@ -98,6 +119,9 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     .replace(new RegExp(`\\bthey have\\b`, 'gi'), 'you have')
     .replace(/with your \d+ years (of experience|experience)/gi, 'with your background')
     .replace(/your \d+ years (of experience|experience) in [^,\.]+,?\s*/gi, '')
+
+  // Sanitise any markdown, special chars or smart quotes that ElevenLabs would read aloud
+  hookLine = sanitiseHookLine(hookLine)
 
   const script = `Hi ${firstName}... I hope you are having a brilliant day! I have literally just seen your CV and I had to reach out straight away because I have got something really exciting for you. We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${employerLine} makes you such a strong fit for what they need ${sector} and I think you would absolutely love it. Now listen, interviews have already started on this one and I really want to get you on that list as quickly as possible. The link I have just sent you in this email is your actual interview for this job. Not a call with me, not a pre-screen, the real thing. You click it and you are straight in. As you can imagine there has been a huge amount of interest in this role and the interview spaces are filling up fast. They are going to make a decision very quickly so please do not sit on this one ${firstName}. Get in there today, do your interview, and I am really confident that with your skills and background you are exactly what they are looking for. Go and get it!`
 
@@ -156,7 +180,7 @@ async function generateAudio(script: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
-export async function generateVoiceNoteFromMatch(candidate: Candidate, matchData: any, job: any, customScript?: string): Promise<Buffer> {
+export async function generateVoiceNoteFromMatch(candidate: Candidate, matchData: any, job: any, customScript?: string): Promise<{ buffer: Buffer, script: string }> {
   const script = customScript || buildScriptFromMatch(candidate, matchData, job)
   const buffer = await generateAudio(script)
 
@@ -165,10 +189,10 @@ export async function generateVoiceNoteFromMatch(candidate: Candidate, matchData
     console.warn(`Voice note for ${candidate.name} is ${sizeMb.toFixed(2)}mb — over 2mb limit`)
   }
 
-  return buffer
+  return { buffer, script }
 }
 
-export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
+export async function generateVoiceNote(candidate: Candidate): Promise<{ buffer: Buffer, script: string }> {
   const script = buildScript(candidate)
   const buffer = await generateAudio(script)
 
@@ -177,7 +201,7 @@ export async function generateVoiceNote(candidate: Candidate): Promise<Buffer> {
     console.warn(`Voice note for ${candidate.name} is ${sizeMb.toFixed(2)}mb — over 2mb limit`)
   }
 
-  return buffer
+  return { buffer, script }
 }
 
 export function getAudioSizeMb(buffer: Buffer): number {
