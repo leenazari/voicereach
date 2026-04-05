@@ -32,10 +32,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `You are a recruitment expert. Match this candidate against this job and identify why they are a strong fit. Respond ONLY with valid JSON, no markdown, no backticks.
+          content: `You are a recruitment expert writing a personal voice message DIRECTLY TO the candidate. Everything must be written in second person — use "you", "your", "you have", "you are". Never use the candidate's name or third person (no "he", "she", "they", or the candidate's name).
+
+Match this candidate against this job and identify why they are a strong fit.
+
+Respond ONLY with valid JSON, no markdown, no backticks.
 
 CANDIDATE:
-Name: ${candidate.name}
 Role: ${candidate.role_applied}
 Years experience: ${candidate.years_experience}
 Last employer: ${candidate.last_employer || 'unknown'}
@@ -56,8 +59,8 @@ Return this exact JSON format:
 {
   "match_score": number from 0 to 100,
   "top_matches": ["specific skill or experience that matches", "another specific match", "third match"],
-  "pitch_hook": "one punchy sentence explaining why this candidate is perfect for this specific role, referencing their actual experience and the job",
-  "urgency_line": "one sentence creating genuine urgency specific to this role"
+  "pitch_hook": "one punchy sentence in second person explaining why YOU are perfect for this role — e.g. 'with your background in X and your experience at Y, you are exactly what they need'",
+  "urgency_line": "one sentence in second person creating genuine urgency — e.g. 'this role is moving fast and they want someone like you in place within the month'"
 }`
         }]
       })
@@ -71,6 +74,7 @@ Return this exact JSON format:
     const matchData = JSON.parse(clean)
 
     return res.status(200).json({ match: matchData, candidate, job })
+
   } catch (err: any) {
     console.error('Match error:', err)
     return res.status(500).json({ error: err.message || 'Failed to match' })
