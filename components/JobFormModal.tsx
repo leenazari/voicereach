@@ -110,8 +110,9 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     if (!form.title || !form.description) { notify('Title and description are required', 'error'); return }
     setSaving(true)
     try {
+      const { brief, ...formWithoutBrief } = form
       const payload = {
-        ...form,
+        ...formWithoutBrief,
         required_skills: form.required_skills
           ? form.required_skills.split(',').map(s => s.trim()).filter(Boolean)
           : [],
