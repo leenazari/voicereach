@@ -37,6 +37,19 @@ type Notification = {
   type: 'success' | 'error'
 }
 
+type Job = {
+  id: string
+  title: string
+  company: string
+  location: string
+  salary: string
+  description: string
+  required_skills: string[]
+  sector: string
+  status: string
+  created_at: string
+}
+
 export default function Dashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,6 +62,8 @@ export default function Dashboard() {
   const [showPlayer, setShowPlayer] = useState(false)
   const [showJobModal, setShowJobModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showAddJob, setShowAddJob] = useState(false)
+  const [showEditJob, setShowEditJob] = useState(false)
   const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null)
   const [jobModalCandidate, setJobModalCandidate] = useState<Candidate | null>(null)
   const [jobForm, setJobForm] = useState({ jobTitle: '', jobSalary: '' })
@@ -56,6 +71,9 @@ export default function Dashboard() {
   const [generatingPreview, setGeneratingPreview] = useState(false)
   const [playerCandidate, setPlayerCandidate] = useState<Candidate | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [editingJob, setEditingJob] = useState<Job | null>(null)
+  const [jobFormData, setJobFormData] = useState({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active' })
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
   const [activeTab, setActiveTab] = useState('pipeline')
@@ -68,6 +86,7 @@ export default function Dashboard() {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [savingJob, setSavingJob] = useState(false)
   const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -83,6 +102,7 @@ export default function Dashboard() {
     const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
     setProfile(data)
     fetchCandidates()
+    fetchJobs()
   }
 
   async function signOut() {
@@ -101,6 +121,59 @@ export default function Dashboard() {
     const data = await res.json()
     setCandidates(data.candidates || [])
     setLoading(false)
+  }
+
+  async function fetchJobs() {
+    const res = await fetch('/api/jobs')
+    const data = await res.json()
+    setJobs(data.jobs || [])
+  }
+
+  async function saveJob() {
+    setSavingJob(true)
+    try {
+      const payload = {
+        ...jobFormData,
+        required_skills: jobFormData.required_skills ? jobFormData.required_skills.split(',').map(s => s.trim()).filter(Boolean) : []
+      }
+      if (editingJob) {
+        const res = await fetch('/api/jobs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: editingJob.id, ...payload }) })
+        const data = await res.json()
+        if (data.success) { notify('Job updated'); setShowEditJob(false); setEditingJob(null); fetchJobs() }
+        else notify('Error: ' + data.error, 'error')
+      } else {
+        const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        const data = await res.json()
+        if (data.job) { notify('Job created'); setShowAddJob(false); fetchJobs() }
+        else notify('Error: ' + data.error, 'error')
+      }
+    } finally {
+      setSavingJob(false)
+      setJobFormData({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active' })
+    }
+  }
+
+  async function deleteJob(job: Job) {
+    if (!confirm(`Delete "${job.title}"? This cannot be undone.`)) return
+    const res = await fetch('/api/jobs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id }) })
+    const data = await res.json()
+    if (data.success) { notify('Job deleted'); fetchJobs() }
+    else notify('Could not delete job', 'error')
+  }
+
+  function openEditJob(job: Job) {
+    setEditingJob(job)
+    setJobFormData({
+      title: job.title || '',
+      company: job.company || '',
+      location: job.location || '',
+      salary: job.salary || '',
+      description: job.description || '',
+      required_skills: (job.required_skills || []).join(', '),
+      sector: job.sector || '',
+      status: job.status || 'active'
+    })
+    setShowEditJob(true)
   }
 
   async function fetchVoices() {
@@ -340,6 +413,14 @@ export default function Dashboard() {
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
   const modalStyle: React.CSSProperties = { background: 'white', borderRadius: 14, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 
+  const jobFields = [
+    { key: 'title', label: 'Job title *', type: 'text', placeholder: 'e.g. Senior Sales Executive' },
+    { key: 'company', label: 'Company name *', type: 'text', placeholder: 'e.g. Acme Ltd' },
+    { key: 'sector', label: 'Sector', type: 'text', placeholder: 'e.g. Technology, Finance, Retail' },
+    { key: 'location', label: 'Location', type: 'text', placeholder: 'e.g. London, Remote' },
+    { key: 'salary', label: 'Salary', type: 'text', placeholder: 'e.g. £45,000' },
+  ]
+
   const addFields = [
     { key: 'name', label: 'Full name *', type: 'text' },
     { key: 'email', label: 'Email *', type: 'email' },
@@ -361,6 +442,42 @@ export default function Dashboard() {
     { key: 'job_title', label: 'Job title', type: 'text' },
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
+
+  const JobFormModal = ({ onClose }: { onClose: () => void }) => (
+    <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, onClose)} style={overlayStyle}>
+      <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#1a1a1a' }}>{editingJob ? `Edit — ${editingJob.title}` : 'Add new job'}</h2>
+        {jobFields.map(f => (
+          <div key={f.key} style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>{f.label}</label>
+            <input type={f.type} value={(jobFormData as any)[f.key]} onChange={e => setJobFormData(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={inputStyle} />
+          </div>
+        ))}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span></label>
+          <input type="text" value={jobFormData.required_skills} onChange={e => setJobFormData(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Salesforce" style={inputStyle} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Job description *</label>
+          <textarea value={jobFormData.description} onChange={e => setJobFormData(p => ({ ...p, description: e.target.value }))} rows={5} placeholder="Describe the role, responsibilities and what makes it a great opportunity..." style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Status</label>
+          <select value={jobFormData.status} onChange={e => setJobFormData(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Cancel</button>
+          <button onClick={saveJob} disabled={savingJob || !jobFormData.title || !jobFormData.company} style={{ padding: '9px 18px', background: savingJob ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: savingJob ? 'not-allowed' : 'pointer' }}>
+            {savingJob ? 'Saving...' : editingJob ? 'Save changes' : 'Create job'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
@@ -394,6 +511,9 @@ export default function Dashboard() {
           ].map(tab => (
             <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#534AB7' : '#555', background: activeTab === tab.id ? '#f0eeff' : 'transparent', borderLeft: activeTab === tab.id ? '2px solid #534AB7' : '2px solid transparent', fontWeight: activeTab === tab.id ? 600 : 400, margin: '1px 0' }}>
               <span>{tab.icon}</span>{tab.label}
+              {tab.id === 'jobs' && jobs.filter(j => j.status === 'active').length > 0 && (
+                <span style={{ marginLeft: 'auto', fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>{jobs.filter(j => j.status === 'active').length}</span>
+              )}
             </div>
           ))}
           {profile?.role === 'admin' && (
@@ -433,9 +553,7 @@ export default function Dashboard() {
                   <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
                   </div>
-                  {creditsPercent >= 90 && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>Credits almost used up</div>
-                  )}
+                  {creditsPercent >= 90 && <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>Credits almost used up</div>}
                 </>
               )}
               {profile.credits_limit === 999999 && (
@@ -456,12 +574,16 @@ export default function Dashboard() {
               {activeTab === 'pipeline' ? 'Candidate Pipeline' : activeTab === 'candidates' ? 'All Candidates' : activeTab === 'jobs' ? 'Jobs' : 'Analytics'}
             </div>
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>
-              {activeTab === 'pipeline' ? 'Drag candidates between columns or click to shortlist' : activeTab === 'candidates' ? `${filteredAll.length} candidates total` : activeTab === 'jobs' ? 'Manage your job listings' : 'Performance overview'}
+              {activeTab === 'pipeline' ? 'Drag candidates between columns or click to shortlist' : activeTab === 'candidates' ? `${filteredAll.length} candidates total` : activeTab === 'jobs' ? `${jobs.length} jobs, ${jobs.filter(j => j.status === 'active').length} active` : 'Performance overview'}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />
-            <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Candidate</button>
+            {activeTab !== 'jobs' && <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />}
+            {activeTab === 'jobs' ? (
+              <button onClick={() => { setEditingJob(null); setJobFormData({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active' }); setShowAddJob(true) }} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Job</button>
+            ) : (
+              <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Candidate</button>
+            )}
           </div>
         </div>
 
@@ -590,10 +712,53 @@ export default function Dashboard() {
           )}
 
           {activeTab === 'jobs' && (
-            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 40, textAlign: 'center' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>◉</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>Jobs board coming soon</div>
-              <div style={{ fontSize: 13, color: '#aaa' }}>Add and manage job specs to power AI matched voice notes</div>
+            <div>
+              {jobs.length === 0 ? (
+                <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 60, textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>◉</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>No jobs yet</div>
+                  <div style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>Create your first job to start matching candidates</div>
+                  <button onClick={() => setShowAddJob(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add your first job</button>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {jobs.map(job => (
+                    <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 20, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 2 }}>{job.title}</div>
+                          <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 500 }}>{job.company}</div>
+                        </div>
+                        <span style={{ fontSize: 10, background: job.status === 'active' ? '#E1F5EE' : job.status === 'draft' ? '#f0f0f0' : '#fff0ee', color: job.status === 'active' ? '#1D9E75' : job.status === 'draft' ? '#888' : '#E24B4A', padding: '3px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize', flexShrink: 0 }}>
+                          {job.status}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                        {job.location && <span style={{ fontSize: 11, color: '#888' }}>📍 {job.location}</span>}
+                        {job.salary && <span style={{ fontSize: 11, color: '#888' }}>💷 {job.salary}</span>}
+                        {job.sector && <span style={{ fontSize: 11, color: '#888' }}>◈ {job.sector}</span>}
+                      </div>
+                      {job.description && (
+                        <div style={{ fontSize: 12, color: '#666', lineHeight: 1.6, marginBottom: 12, flex: 1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                          {job.description}
+                        </div>
+                      )}
+                      {(job.required_skills || []).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
+                          {(job.required_skills || []).slice(0, 4).map(skill => (
+                            <span key={skill} style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
+                          ))}
+                          {(job.required_skills || []).length > 4 && <span style={{ fontSize: 10, color: '#aaa' }}>+{(job.required_skills || []).length - 4} more</span>}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+                        <button onClick={() => openEditJob(job)} style={{ flex: 1, padding: '7px', border: '1px solid #e5e5e5', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
+                        <button onClick={() => deleteJob(job)} style={{ padding: '7px 12px', border: '1px solid #fdd', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -826,6 +991,11 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ADD / EDIT JOB MODAL */}
+      {showAddJob && <JobFormModal onClose={() => { setShowAddJob(false); setJobFormData({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active' }) }} />}
+      {showEditJob && editingJob && <JobFormModal onClose={() => { setShowEditJob(false); setEditingJob(null); setJobFormData({ title: '', company: '', location: '', salary: '', description: '', required_skills: '', sector: '', status: 'active' }) }} />}
+
     </div>
   )
 }
