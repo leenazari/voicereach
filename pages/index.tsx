@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
@@ -38,8 +38,6 @@ type Notification = {
 }
 
 export default function Dashboard() {
- import { supabase } from '../lib/supabase'
-
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -380,7 +378,6 @@ export default function Dashboard() {
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* SIDEBAR */}
       <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
@@ -412,7 +409,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* USER FOOTER */}
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
             <div style={{ marginBottom: 12 }}>
@@ -429,14 +425,14 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontSize: 10, color: '#aaa' }}>Credits</span>
-                <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit}</span>
+                <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit === 999999 ? '∞' : profile.credits_limit}</span>
               </div>
               <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
               </div>
-              {creditsPercent >= 90 && (
+              {creditsPercent >= 90 && profile.credits_limit !== 999999 && (
                 <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>
-                  Credits almost used up — <a href="/pricing" style={{ color: '#534AB7', textDecoration: 'none', fontWeight: 600 }}>upgrade</a>
+                  Credits almost used up
                 </div>
               )}
             </div>
@@ -447,7 +443,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
