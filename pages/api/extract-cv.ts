@@ -1,61 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { base64, filename } = req.body
-    const ext = filename?.toLowerCase().split('.').pop() || ''
-    const isPdf = ext === 'pdf'
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    const content: any[] = []
+    const { candidateId } = req.body
+    if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
 
-    if (isPdf) {
-      content.push({
-        type: 'document',
-        source: { type: 'base64', media_type: 'application/pdf', data: base64 }
-      })
-    } else {
-      const decoded = Buffer.from(base64, 'base64').toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
-      content.push({
-        type: 'text',
-        text: `Here is the raw CV content extracted from a ${ext} file:\n\n${decoded.substring(0, 8000)}`
-      })
-    }
+    const { data: candidate, error } = await supabase
+      .from('candidates')
+      .select('*')
+      .eq('id', candidateId)
+      .single()
 
-    content.push({
-      type: 'text',
-      text: `You are a recruitment assistant analysing a CV. Extract the following information and respond ONLY with a valid JSON object, no markdown, no backticks, no explanation, just raw JSON.
-
-Rules:
-- years_experience: only count roles relevant to the candidate primary career track, ignore unrelated jobs, add up only the relevant years
-- role: their most recent relevant job title
-- last_employer: the name of the most recent company they worked at, exactly as written on the CV
-- all_employers: list of all company names mentioned on the CV in order from most recent to oldest
-- skills: list of up to 10 key skills mentioned on the CV as short phrases
-- qualifications: list of any degrees, certifications or qualifications mentioned
-- location: their city or region if mentioned
-- candidate_summary: 3-4 natural sentences summarising their career, key skills, achievements and what kind of role they are best suited for. Written in third person, professional tone, for use in matching them to jobs.
-- experience_summary: 2-3 natural sentences summarising their relevant experience and skills, written in first person style for use in a voice note
-
-Respond with exactly this format:
-{
-  "name": "full name",
-  "email": "email or empty string",
-  "phone": "phone number or empty string",
-  "location": "city or region or empty string",
-  "role": "most recent relevant job title",
-  "years_experience": relevant years as integer,
-  "last_employer": "most recent company name exactly as on CV",
-  "all_employers": ["company1", "company2"],
-  "skills": ["skill1", "skill2", "skill3"],
-  "qualifications": ["qualification1", "qualification2"],
-  "candidate_summary": "3-4 sentence professional profile summary in third person",
-  "experience_summary": "2-3 sentence summary for voice note"
-}`
-    })
+    if (error || !candidate) return res.status(404).json({ error: 'Candidate not found' })
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -66,32 +30,60 @@ Respond with exactly this format:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content }]
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: `Based on this candidate profile, generate up to 20 keyword strengths for job matching. These keywords will be compared against job required skills so use standard industry terminology that recruiters actually use in job postings.
+
+CANDIDATE PROFILE:
+Name: ${candidate.name}
+Role: ${candidate.role_applied}
+Years experience: ${candidate.years_experience}
+Last employer: ${candidate.last_employer || 'unknown'}
+All employers: ${(candidate.all_employers || []).join(', ')}
+Skills: ${(candidate.skills || []).join(', ')}
+Experience summary: ${candidate.experience_summary}
+${candidate.candidate_summary ? 'Profile: ' + candidate.candidate_summary : ''}
+
+Generate up to 20 keywords. Include a mix of:
+- Core professional skills (e.g. "Team Leadership", "P&L Management", "Budget Control")
+- Industry sectors (e.g. "FMCG", "SaaS", "Logistics", "Warehousing", "Retail")
+- Role types (e.g. "Sales Manager", "Business Development", "Warehouse Manager")
+- Technical skills and systems (e.g. "WMS", "SAP", "Salesforce", "CRM", "ERP")
+- Key specialisms (e.g. "New Business Hunter", "Inventory Control", "Cost Reduction")
+- Seniority indicators if relevant (e.g. "Senior Management", "Director Level")
+- Location if relevant (e.g. "Manchester Based")
+
+CRITICAL: Think about what words a recruiter would put in a job description. Use BOTH variations of common terms:
+- Include "Business Development" AND "Sales" if relevant
+- Include "Team Leadership" AND "People Management" AND "Staff Management"
+- Include "Inventory Control" AND "Inventory Management" AND "Stock Management"
+- Include "Logistics" AND "Supply Chain" if relevant
+- Include actual system acronyms (WMS, CRM, ERP) AND full names
+
+Respond ONLY with valid JSON, no markdown, no backticks:
+{"strength_keywords": ["keyword1", "keyword2", ... up to 20 keywords]}`
+        }]
       })
     })
 
     const apiData = await response.json()
-
-    if (!response.ok) {
-      console.error('Anthropic API error:', apiData)
-      return res.status(500).json({ error: 'Claude API error: ' + (apiData.error?.message || 'Unknown') })
-    }
+    if (!response.ok) throw new Error(apiData.error?.message || 'Claude API error')
 
     const text = apiData.content?.[0]?.text || ''
     const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
+    const parsed = JSON.parse(clean)
+    const keywords = parsed.strength_keywords || []
 
-    let extracted
-    try {
-      extracted = JSON.parse(clean)
-    } catch {
-      console.error('Parse error, raw text:', text)
-      return res.status(500).json({ error: 'Could not parse CV data' })
-    }
+    await supabase
+      .from('candidates')
+      .update({ strength_keywords: keywords })
+      .eq('id', candidateId)
 
-    return res.status(200).json({ extracted })
+    return res.status(200).json({ success: true, strength_keywords: keywords })
+
   } catch (err: any) {
-    console.error('CV extraction error:', err)
-    return res.status(500).json({ error: err.message || 'Failed to extract CV' })
+    console.error('Regenerate keywords error:', err)
+    return res.status(500).json({ error: err.message || 'Failed to regenerate keywords' })
   }
 }
