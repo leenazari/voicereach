@@ -2,6 +2,11 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
+const NATALIE_IMG = 'https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png'
+
+type ChatMessage = { role: 'user' | 'assistant'; content: string }
+const SUGGESTED = ['How does it work?', 'What does it cost?', 'Can I try it free?', 'Will candidates know it\'s AI?', 'How personal does it sound?']
+
 export default function Home() {
   const audioRef1 = useRef<HTMLAudioElement>(null)
   const audioRef2 = useRef<HTMLAudioElement>(null)
@@ -10,6 +15,16 @@ export default function Home() {
   const [billing, setBilling] = useState<'annual' | 'monthly'>('annual')
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStarted, setVideoStarted] = useState(false)
+
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [showSuggested, setShowSuggested] = useState(true)
+  const [unread, setUnread] = useState(1)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -20,26 +35,75 @@ export default function Home() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    if (chatOpen) { setUnread(0); setTimeout(() => chatInputRef.current?.focus(), 100) }
+  }, [chatOpen])
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, chatLoading])
+
   const toggleAudio1 = () => {
     if (!audioRef1.current) return
     if (playing1) { audioRef1.current.pause(); setPlaying1(false) }
-    else {
-      audioRef2.current?.pause(); setPlaying2(false)
-      audioRef1.current.play(); setPlaying1(true)
-    }
+    else { audioRef2.current?.pause(); setPlaying2(false); audioRef1.current.play(); setPlaying1(true) }
   }
 
   const toggleAudio2 = () => {
     if (!audioRef2.current) return
     if (playing2) { audioRef2.current.pause(); setPlaying2(false) }
-    else {
-      audioRef1.current?.pause(); setPlaying1(false)
-      audioRef2.current.play(); setPlaying2(true)
-    }
+    else { audioRef1.current?.pause(); setPlaying1(false); audioRef2.current.play(); setPlaying2(true) }
   }
 
   const startVideo = () => {
     if (videoRef.current) { videoRef.current.play(); setVideoStarted(true) }
+  }
+
+  async function sendChat(text: string) {
+    if (!text.trim() || chatLoading) return
+    setShowSuggested(false)
+    const userMsg: ChatMessage = { role: 'user', content: text }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          system: `You are Natalie, a friendly and enthusiastic sales assistant for VoiceReach — an AI-powered voice outreach platform built for recruiters.
+
+Your job is to answer questions about VoiceReach and encourage people to sign up for a free account. Be warm, concise and conversational. Never use bullet points or long lists — keep responses to 2-3 short sentences max. No markdown.
+
+KEY FACTS:
+- VoiceReach generates personalised AI voice notes for every candidate, referencing their actual CV, experience and the specific role
+- Recruiters upload a CV, review a script, and send a personalised voice note via branded email in under 60 seconds
+- Candidates receive a branded landing page with a 24-hour interview link creating real urgency
+- Average email open rate 84%. Interview conversion rate 55%. Each voice note costs around 9p.
+- Integrates with ElevenLabs for voice, Cal.com for calendar, sends from custom email domain
+- PRICING: Free (3 voice notes, no card), Starter £29/mo annual or £35/mo monthly (100/month), Growth £99/mo annual or £119/mo monthly (500/month), Agency £179/mo annual or £215/mo monthly (1000/month), Enterprise contact us
+- Try completely free with 3 voice notes — no credit card required
+
+ON "WILL CANDIDATES KNOW IT'S AI?": The voice sounds completely natural. Candidates respond saying they felt genuinely seen. The personalisation is so specific — their actual CV, last employer, years of experience — that it feels like the recruiter actually read their profile. Most candidates have no idea. And even if they did, the message is still relevant and personal which is what matters.
+
+ON PRICING OBJECTIONS: Free plan requires no credit card. At 9p per voice note and thousands in placement fees per candidate, the ROI is extraordinary. One placed candidate pays for months of the platform.
+
+ON "IS IT REALLY AI?": Yes — ElevenLabs voice technology and Claude AI write personalised scripts from the candidate's actual CV. Not a template. Every word generated fresh for that specific candidate and role.
+
+Always end by nudging towards signing up. Use phrases like "Want to try it with your first 3 voice notes free?" — no card needed. Keep responses SHORT — max 3 sentences total.`,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content }))
+        })
+      })
+      const data = await res.json()
+      const reply = data.content?.[0]?.text || 'Sorry, something went wrong. Try again!'
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I hit a snag. Try again in a moment!' }])
+    }
+    setChatLoading(false)
   }
 
   const pricing = {
@@ -81,21 +145,21 @@ export default function Home() {
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body {
-          font-family: 'DM Sans', sans-serif;
-          background: var(--black);
-          color: var(--white);
-          overflow-x: hidden;
-        }
+        body { font-family: 'DM Sans', sans-serif; background: var(--black); color: var(--white); overflow-x: hidden; }
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.8)} }
         @keyframes wave { 0%,100%{transform:scaleY(0.35)} 50%{transform:scaleY(1)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-
+        @keyframes chatPop { from{opacity:0;transform:scale(0.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes chatBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        .chat-window { animation: chatPop 0.25s ease; }
+        .chat-bubble-btn { animation: chatBounce 2.5s ease-in-out infinite; }
+        .chat-bubble-btn:hover { animation: none; transform: scale(1.08); }
+        .chat-input:focus { outline: none; border-color: #7B73D4 !important; }
+        .chat-suggest:hover { background: rgba(83,74,183,0.3) !important; border-color: rgba(83,74,183,0.6) !important; }
         .natalie-label-overlay { display: flex; }
         .natalie-label-below { display: none; }
-
         @media (max-width: 768px) {
           .nav-links { display: none !important; }
           .nav-inner { padding: 16px 20px !important; }
@@ -121,7 +185,6 @@ export default function Home() {
           .example-section-inner { padding: 60px 20px !important; }
           .cta-section-inner { padding: 80px 20px !important; }
         }
-
         @media (max-width: 480px) {
           .features-grid { grid-template-columns: 1fr !important; }
           .steps-grid { grid-template-columns: 1fr !important; }
@@ -129,19 +192,11 @@ export default function Home() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(10,10,10,0.88)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <div className="nav-inner" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 48px', maxWidth: 1300, margin: '0 auto',
-        }}>
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,10,0.88)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="nav-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', maxWidth: 1300, margin: '0 auto' }}>
           <Link href="/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', textDecoration: 'none', color: 'white' }}>
-              Voice<span style={{ color: 'var(--purple-light)' }}>Reach</span>
-            </Link>
+            Voice<span style={{ color: 'var(--purple-light)' }}>Reach</span>
+          </Link>
           <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
             {[['#problem', 'The problem'], ['#how', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
               <a key={href} href={href} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color 0.2s' }}
@@ -150,106 +205,43 @@ export default function Home() {
               >{label}</a>
             ))}
           </div>
-          <Link href="/signup" style={{
-            background: 'var(--purple)', color: 'white', border: 'none',
-            padding: '10px 22px', borderRadius: 8, fontSize: 14, fontWeight: 600,
-            cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap',
-          }}>Get started free</Link>
+          <Link href="/signup" style={{ background: 'var(--purple)', color: 'white', border: 'none', padding: '10px 22px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>Get started free</Link>
         </div>
       </nav>
 
       {/* HERO */}
-      <section className="hero-section" style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-        padding: '120px 24px 80px', position: 'relative', overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(83,74,183,0.25) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+      <section className="hero-section" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '120px 24px 80px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(83,74,183,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          background: 'rgba(83,74,183,0.15)', border: '1px solid rgba(83,74,183,0.4)',
-          padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 500,
-          color: 'var(--purple-light)', marginBottom: 32,
-          animation: 'fadeUp 0.6s ease both',
-        }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(83,74,183,0.15)', border: '1px solid rgba(83,74,183,0.4)', padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: 500, color: 'var(--purple-light)', marginBottom: 32, animation: 'fadeUp 0.6s ease both' }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse 2s infinite' }} />
           Built for recruiters who want more interviews booked
         </div>
 
-        <h1 style={{
-          fontFamily: 'Montserrat, sans-serif',
-          fontSize: 'clamp(36px, 7vw, 78px)',
-          fontWeight: 800, lineHeight: 1.05, letterSpacing: '-1px',
-          maxWidth: 920, animation: 'fadeUp 0.6s 0.1s ease both',
-        }}>
+        <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(36px, 7vw, 78px)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-1px', maxWidth: 920, animation: 'fadeUp 0.6s 0.1s ease both' }}>
           Book more interviews<br />with <span style={{ color: 'var(--purple-light)' }}>personalised</span><br />voice notes.
         </h1>
 
-        <p style={{
-          fontSize: 'clamp(15px, 2.5vw, 20px)', color: 'rgba(255,255,255,0.55)',
-          maxWidth: 580, lineHeight: 1.65, marginTop: 24,
-          animation: 'fadeUp 0.6s 0.2s ease both', padding: '0 8px',
-        }}>
+        <p style={{ fontSize: 'clamp(15px, 2.5vw, 20px)', color: 'rgba(255,255,255,0.55)', maxWidth: 580, lineHeight: 1.65, marginTop: 24, animation: 'fadeUp 0.6s 0.2s ease both', padding: '0 8px' }}>
           VoiceReach automatically generates a personalised AI voice note for every candidate, referencing their CV, their experience and the specific role. Choose your voice, set the personality, and let it do the work. More responses. More interviews booked.
         </p>
 
-        <div className="hero-actions" style={{
-          display: 'flex', alignItems: 'center', gap: 14, marginTop: 40,
-          animation: 'fadeUp 0.6s 0.3s ease both', flexWrap: 'wrap', justifyContent: 'center',
-        }}>
-          <Link href="/signup" style={{
-            background: 'var(--purple)', color: 'white', border: 'none',
-            padding: '15px 32px', borderRadius: 10, fontSize: 16, fontWeight: 600,
-            textDecoration: 'none', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: 8,
-          }}>Start free — 3 voice notes on us →</Link>
+        <div className="hero-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 40, animation: 'fadeUp 0.6s 0.3s ease both', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Link href="/signup" style={{ background: 'var(--purple)', color: 'white', border: 'none', padding: '15px 32px', borderRadius: 10, fontSize: 16, fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: 8 }}>Start free — 3 voice notes on us →</Link>
           <a href="#how" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: 500, textDecoration: 'none' }}>See how it works ↓</a>
         </div>
 
         {/* NATALIE VIDEO */}
         <div style={{ width: '100%', maxWidth: 560, margin: '52px auto 0', animation: 'fadeUp 0.6s 0.4s ease both' }}>
-          <div style={{
-            position: 'relative', borderRadius: 20, overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
-            background: '#000',
-          }}>
-            {/* Label — desktop only overlay */}
-            <div className="natalie-label-overlay" style={{
-              position: 'absolute', top: 16, left: 16, zIndex: 10,
-              alignItems: 'center', gap: 10,
-              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-              padding: '8px 14px', borderRadius: 100,
-            }}>
-              <img
-                src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png"
-                alt="Natalie"
-                style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid var(--purple-light)' }}
-              />
+          <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 32px 80px rgba(0,0,0,0.5)', background: '#000' }}>
+            <div className="natalie-label-overlay" style={{ position: 'absolute', top: 16, left: 16, zIndex: 10, alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', padding: '8px 14px', borderRadius: 100 }}>
+              <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid var(--purple-light)' }} />
               <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Natalie · VoiceReach</span>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse 2s infinite', display: 'inline-block' }} />
             </div>
-
-            {/* Play button overlay */}
             {!videoStarted && (
-              <div onClick={startVideo} style={{
-                position: 'absolute', inset: 0, zIndex: 9,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%)',
-              }}>
-                <div style={{
-                  width: 80, height: 80, borderRadius: '50%',
-                  background: 'rgba(83,74,183,0.9)',
-                  backdropFilter: 'blur(8px)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 8px 32px rgba(83,74,183,0.6)',
-                  transition: 'transform 0.2s',
-                }}
+              <div onClick={startVideo} style={{ position: 'absolute', inset: 0, zIndex: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%)' }}>
+                <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(83,74,183,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(83,74,183,0.6)', transition: 'transform 0.2s' }}
                   onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
                   onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                 >
@@ -258,55 +250,24 @@ export default function Home() {
                 <span style={{ marginTop: 16, fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Press play</span>
               </div>
             )}
-
-            <video
-              ref={videoRef}
-              controls={videoStarted}
-              playsInline
-              style={{ width: '100%', display: 'block', borderRadius: 20 }}
-              poster="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png"
-            >
+            <video ref={videoRef} controls={videoStarted} playsInline style={{ width: '100%', display: 'block', borderRadius: 20 }} poster={NATALIE_IMG}>
               <source src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/voice%20reach%20advert%20(1).mp4" type="video/mp4" />
             </video>
           </div>
-
-          {/* Label — mobile only, below video */}
-          <div className="natalie-label-below" style={{
-            alignItems: 'center', justifyContent: 'center', gap: 10,
-            marginTop: 12,
-          }}>
-            <img
-              src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png"
-              alt="Natalie"
-              style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid var(--purple-light)' }}
-            />
+          <div className="natalie-label-below" style={{ alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 }}>
+            <img src={NATALIE_IMG} alt="Natalie" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid var(--purple-light)' }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Natalie · VoiceReach</span>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse 2s infinite', display: 'inline-block' }} />
           </div>
         </div>
 
-        {/* AUDIO PLAYERS ROW */}
-        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginTop: 40, marginBottom: 16, animation: 'fadeUp 0.6s 0.5s ease both' }}>
-          Real voice note examples
-        </div>
-        <div className="audio-row" style={{
-          display: 'flex', gap: 14, width: '100%', maxWidth: 700,
-          animation: 'fadeUp 0.6s 0.5s ease both',
-        }}>
+        {/* AUDIO PLAYERS */}
+        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginTop: 40, marginBottom: 16, animation: 'fadeUp 0.6s 0.5s ease both' }}>Real voice note examples</div>
+        <div className="audio-row" style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 700, animation: 'fadeUp 0.6s 0.5s ease both' }}>
           {/* Lee */}
-          <div style={{
-            flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <button onClick={toggleAudio1} style={{
-              width: 44, height: 44, flexShrink: 0, background: playing1 ? 'var(--purple-light)' : 'var(--purple)',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: 'none', transition: 'all 0.2s',
-            }}>
-              {playing1
-                ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span>
-                : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />
-              }
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button onClick={toggleAudio1} style={{ width: 44, height: 44, flexShrink: 0, background: playing1 ? 'var(--purple-light)' : 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'all 0.2s' }}>
+              {playing1 ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span> : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Lee N.</div>
@@ -314,31 +275,14 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 24, flexShrink: 0 }}>
               {[35, 65, 90, 50, 80, 40, 70].map((h, i) => (
-                <div key={i} style={{
-                  width: 2, borderRadius: 2,
-                  background: playing1 ? 'var(--purple-light)' : 'rgba(83,74,183,0.6)',
-                  height: `${h}%`,
-                  animation: playing1 ? `wave 1.4s ease-in-out infinite` : 'none',
-                  animationDelay: `${i * 0.1}s`,
-                }} />
+                <div key={i} style={{ width: 2, borderRadius: 2, background: playing1 ? 'var(--purple-light)' : 'rgba(83,74,183,0.6)', height: `${h}%`, animation: playing1 ? `wave 1.4s ease-in-out infinite` : 'none', animationDelay: `${i * 0.1}s` }} />
               ))}
             </div>
           </div>
-
           {/* Fred */}
-          <div style={{
-            flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <button onClick={toggleAudio2} style={{
-              width: 44, height: 44, flexShrink: 0, background: playing2 ? 'var(--purple-light)' : 'var(--purple)',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: 'none', transition: 'all 0.2s',
-            }}>
-              {playing2
-                ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span>
-                : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />
-              }
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button onClick={toggleAudio2} style={{ width: 44, height: 44, flexShrink: 0, background: playing2 ? 'var(--purple-light)' : 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'all 0.2s' }}>
+              {playing2 ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span> : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Fred T.</div>
@@ -346,13 +290,7 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 24, flexShrink: 0 }}>
               {[40, 70, 55, 85, 45, 75, 60].map((h, i) => (
-                <div key={i} style={{
-                  width: 2, borderRadius: 2,
-                  background: playing2 ? 'var(--purple-light)' : 'rgba(83,74,183,0.6)',
-                  height: `${h}%`,
-                  animation: playing2 ? `wave 1.4s ease-in-out infinite` : 'none',
-                  animationDelay: `${i * 0.1}s`,
-                }} />
+                <div key={i} style={{ width: 2, borderRadius: 2, background: playing2 ? 'var(--purple-light)' : 'rgba(83,74,183,0.6)', height: `${h}%`, animation: playing2 ? `wave 1.4s ease-in-out infinite` : 'none', animationDelay: `${i * 0.1}s` }} />
               ))}
             </div>
           </div>
@@ -361,23 +299,15 @@ export default function Home() {
         <audio ref={audioRef1} src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/job%20pitch%202%20.mp3" onEnded={() => setPlaying1(false)} />
         <audio ref={audioRef2} src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/70d0f53b-11a9-45bf-bfa9-e72adebfc6d6-1775470991128.mp3" onEnded={() => setPlaying2(false)} />
 
-        {/* Stats bar */}
-        <div className="stats-bar" style={{
-          display: 'flex', width: '100%', marginTop: 72,
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          animation: 'fadeUp 0.6s 0.6s ease both',
-        }}>
+        {/* STATS BAR */}
+        <div className="stats-bar" style={{ display: 'flex', width: '100%', marginTop: 72, borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', animation: 'fadeUp 0.6s 0.6s ease both' }}>
           {[
             { n: '84%', label: 'Average email open rate' },
             { n: '55%', label: 'Interview conversion rate' },
             { n: '3sec', label: 'To generate a voice note' },
             { n: '24hr', label: 'Interview link urgency window' },
           ].map(({ n, label }, i) => (
-            <div key={label} style={{
-              padding: '28px 0', textAlign: 'center', flex: 1,
-              borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            }}>
+            <div key={label} style={{ padding: '28px 0', textAlign: 'center', flex: 1, borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
               <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', color: 'white' }}>{n}</div>
               <div style={{ fontSize: 'clamp(11px, 1.5vw, 13px)', color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>{label}</div>
             </div>
@@ -390,12 +320,8 @@ export default function Home() {
         <div className="section-inner" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
           <div className="reveal">
             <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Sound familiar?</div>
-            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-              Why good candidates ghost you
-            </h2>
-            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 520, marginTop: 14 }}>
-              You are sending emails. They are ignoring them. Here is why your current outreach is not working.
-            </p>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>Why good candidates ghost you</h2>
+            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 520, marginTop: 14 }}>You are sending emails. They are ignoring them. Here is why your current outreach is not working.</p>
           </div>
           <div className="reveal problem-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 52 }}>
             {[
@@ -418,14 +344,9 @@ export default function Home() {
         <div className="section-inner" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
           <div className="reveal">
             <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>How VoiceReach works</div>
-            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-              From CV to booked interview in minutes
-            </h2>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>From CV to booked interview in minutes</h2>
           </div>
-          <div className="reveal steps-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, marginTop: 52,
-            background: 'rgba(255,255,255,0.05)', borderRadius: 16, overflow: 'hidden',
-          }}>
+          <div className="reveal steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, marginTop: 52, background: 'rgba(255,255,255,0.05)', borderRadius: 16, overflow: 'hidden' }}>
             {[
               { num: '01', icon: '📄', title: 'Upload the CV', desc: 'Drop in a PDF or Word doc. AI reads it instantly and pulls their name, experience, skills and last employer automatically.' },
               { num: '02', icon: '✏️', title: 'Review the script', desc: 'Add the job title and salary. A personalised script is generated instantly. Read it, tweak it if needed, then approve it.' },
@@ -452,9 +373,7 @@ export default function Home() {
           <div className="example-inner" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
             <div className="reveal">
               <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>What they actually hear</div>
-              <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(24px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, marginBottom: 32 }}>
-                A message that feels genuinely personal
-              </h2>
+              <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(24px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, marginBottom: 32 }}>A message that feels genuinely personal</h2>
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 28 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--purple-light)', marginBottom: 16 }}>Sample voice note script</div>
                 <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic' }}>
@@ -517,9 +436,7 @@ export default function Home() {
         <div className="section-inner" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
           <div className="reveal">
             <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Features</div>
-            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-              Everything a recruiter needs, nothing they do not
-            </h2>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>Everything a recruiter needs, nothing they do not</h2>
           </div>
           <div className="reveal features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 52 }}>
             {[
@@ -596,19 +513,10 @@ export default function Home() {
           </div>
           <div className="reveal pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginTop: 52, alignItems: 'stretch' }}>
             {plans.map((plan) => (
-              <div key={plan.label} style={{
-                background: plan.featured ? 'var(--purple)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${plan.featured ? 'var(--purple)' : 'rgba(255,255,255,0.08)'}`,
-                borderRadius: 16, padding: '34px 30px',
-                transform: plan.featured ? 'scale(1.04)' : 'none',
-                display: 'flex', flexDirection: 'column',
-              }}>
+              <div key={plan.label} style={{ background: plan.featured ? 'var(--purple)' : 'rgba(255,255,255,0.03)', border: `1px solid ${plan.featured ? 'var(--purple)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 16, padding: '34px 30px', transform: plan.featured ? 'scale(1.04)' : 'none', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: plan.featured ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)', marginBottom: 14 }}>{plan.label}</div>
                 <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 46, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
-                  {plan.price === null
-                    ? <span style={{ fontSize: 24 }}>Let's talk</span>
-                    : <><sup style={{ fontSize: 22, verticalAlign: 'super' }}>£</sup>{plan.price}<sub style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>/mo</sub></>
-                  }
+                  {plan.price === null ? <span style={{ fontSize: 24 }}>Let's talk</span> : <><sup style={{ fontSize: 22, verticalAlign: 'super' }}>£</sup>{plan.price}<sub style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>/mo</sub></>}
                 </div>
                 <p style={{ fontSize: 13, color: plan.featured ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.5)', margin: '12px 0 26px', lineHeight: 1.6 }}>{plan.desc}</p>
                 <ul style={{ listStyle: 'none', marginBottom: 28, flex: 1 }}>
@@ -618,13 +526,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link href={plan.btn === 'Contact us' ? 'mailto:hello@voicereach.co.uk' : '/signup'} style={{
-                  width: '100%', padding: 13, borderRadius: 8, fontSize: 14, fontWeight: 600,
-                  cursor: 'pointer', textAlign: 'center', textDecoration: 'none', display: 'block', transition: 'all 0.2s',
-                  background: plan.featured ? 'white' : 'transparent',
-                  border: plan.featured ? 'none' : '1px solid rgba(255,255,255,0.2)',
-                  color: plan.featured ? 'var(--purple)' : 'white',
-                }}>{plan.btn}</Link>
+                <Link href={plan.btn === 'Contact us' ? 'mailto:hello@voicereach.co.uk' : '/signup'} style={{ width: '100%', padding: 13, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'center', textDecoration: 'none', display: 'block', transition: 'all 0.2s', background: plan.featured ? 'white' : 'transparent', border: plan.featured ? 'none' : '1px solid rgba(255,255,255,0.2)', color: plan.featured ? 'var(--purple)' : 'white' }}>{plan.btn}</Link>
               </div>
             ))}
           </div>
@@ -636,18 +538,9 @@ export default function Home() {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 80% at 50% 50%, rgba(83,74,183,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div className="cta-section-inner" style={{ padding: '120px 48px', textAlign: 'center', position: 'relative' }}>
           <div className="reveal">
-            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 5vw, 58px)', fontWeight: 800, letterSpacing: '-1px', maxWidth: 700, margin: '0 auto 18px', lineHeight: 1.1 }}>
-              Stop chasing candidates.<br />Let them come to you.
-            </h2>
-            <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.65, padding: '0 16px' }}>
-              Try VoiceReach free today. No card needed. We will give you 3 voice notes to try it out — and you will see the difference immediately.
-            </p>
-            <Link href="/signup" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: 'var(--purple)', color: 'white', border: 'none',
-              padding: '18px 40px', borderRadius: 12, fontSize: 18, fontWeight: 600,
-              textDecoration: 'none', transition: 'all 0.2s',
-            }}>Start free — 3 voice notes on us →</Link>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 5vw, 58px)', fontWeight: 800, letterSpacing: '-1px', maxWidth: 700, margin: '0 auto 18px', lineHeight: 1.1 }}>Stop chasing candidates.<br />Let them come to you.</h2>
+            <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.65, padding: '0 16px' }}>Try VoiceReach free today. No card needed. We will give you 3 voice notes to try it out — and you will see the difference immediately.</p>
+            <Link href="/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--purple)', color: 'white', border: 'none', padding: '18px 40px', borderRadius: 12, fontSize: 18, fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s' }}>Start free — 3 voice notes on us →</Link>
           </div>
         </div>
       </section>
@@ -669,6 +562,111 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* NATALIE CHATBOT */}
+      <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 1000 }}>
+        {!chatOpen && (
+          <div style={{ position: 'relative' }}>
+            {unread > 0 && (
+              <div style={{ position: 'absolute', top: -4, right: -4, zIndex: 10, width: 18, height: 18, borderRadius: '50%', background: '#1D9E75', color: 'white', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unread}</div>
+            )}
+            <div style={{ position: 'absolute', bottom: 68, right: 0, background: 'white', color: '#1a1a1a', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 10, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', pointerEvents: 'none' }}>
+              Got questions? Ask Natalie 👋
+              <div style={{ position: 'absolute', bottom: -5, right: 20, width: 10, height: 10, background: 'white', transform: 'rotate(45deg)', boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }} />
+            </div>
+            <button className="chat-bubble-btn" onClick={() => setChatOpen(true)} style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, #534AB7, #7B73D4)', border: 'none', cursor: 'pointer', boxShadow: '0 8px 32px rgba(83,74,183,0.5)', padding: 0, overflow: 'hidden' }}>
+              <img src={NATALIE_IMG} alt="Natalie" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            </button>
+          </div>
+        )}
+
+        {chatOpen && (
+          <div className="chat-window" style={{ width: 360, height: 520, background: '#0f0c29', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, boxShadow: '0 24px 80px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, #534AB7, #302b63)', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ position: 'relative' }}>
+                <img src={NATALIE_IMG} alt="Natalie" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid rgba(255,255,255,0.3)' }} />
+                <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: '#1D9E75', border: '2px solid #302b63' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>Natalie</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>VoiceReach · Online now</div>
+              </div>
+              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: '0 4px' }}>×</button>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Welcome */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '0 12px 12px 12px', padding: '10px 14px', maxWidth: '82%' }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.9)', margin: 0 }}>Hi! I am Natalie from VoiceReach 👋 I can answer any questions about the platform and help you get started. What would you like to know?</p>
+                </div>
+              </div>
+
+              {/* Suggested */}
+              {showSuggested && messages.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 36 }}>
+                  {SUGGESTED.map(q => (
+                    <button key={q} className="chat-suggest" onClick={() => sendChat(q)} style={{ background: 'rgba(83,74,183,0.15)', border: '1px solid rgba(83,74,183,0.35)', borderRadius: 10, padding: '7px 12px', fontSize: 12, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', fontFamily: 'inherit' }}>{q}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Conversation */}
+              {messages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
+                  {m.role === 'assistant' && <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0, marginTop: 2 }} />}
+                  <div style={{ background: m.role === 'user' ? '#534AB7' : 'rgba(255,255,255,0.08)', borderRadius: m.role === 'user' ? '12px 0 12px 12px' : '0 12px 12px 12px', padding: '10px 14px', maxWidth: '82%' }}>
+                    <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.9)', margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Loading */}
+              {chatLoading && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0 }} />
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '0 12px 12px 12px', padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      {[0, 0.2, 0.4].map((delay, i) => (
+                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', animation: 'chatBounce 1s ease-in-out infinite', animationDelay: `${delay}s` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Signup nudge */}
+            <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <Link href="/signup" style={{ display: 'block', textAlign: 'center', background: 'rgba(29,158,117,0.15)', border: '1px solid rgba(29,158,117,0.3)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#1D9E75', textDecoration: 'none' }}>
+                Start free — 3 voice notes, no card needed →
+              </Link>
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '10px 14px 14px', display: 'flex', gap: 8 }}>
+              <input
+                ref={chatInputRef}
+                className="chat-input"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(chatInput) } }}
+                placeholder="Ask me anything..."
+                style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: 'white', fontFamily: 'inherit' }}
+              />
+              <button onClick={() => sendChat(chatInput)} disabled={chatLoading || !chatInput.trim()} style={{ width: 40, height: 40, flexShrink: 0, background: chatInput.trim() ? '#534AB7' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, cursor: chatInput.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="white" opacity={chatInput.trim() ? 1 : 0.3} />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   )
 }
