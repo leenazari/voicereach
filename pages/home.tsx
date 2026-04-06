@@ -6,6 +6,8 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [billing, setBilling] = useState<'annual' | 'monthly'>('annual')
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoStarted, setVideoStarted] = useState(false)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -24,6 +26,13 @@ export default function Home() {
     } else {
       audioRef.current.play()
       setPlaying(true)
+    }
+  }
+
+  const startVideo = () => {
+    if (videoRef.current) {
+      videoRef.current.play()
+      setVideoStarted(true)
     }
   }
 
@@ -211,7 +220,7 @@ export default function Home() {
             color: 'var(--green)', padding: '3px 10px', borderRadius: 100, whiteSpace: 'nowrap',
           }}>LIVE</span>
         </div>
-        <audio ref={audioRef} src="/sample-voice-note.mp3" onEnded={() => setPlaying(false)} />
+        <audio ref={audioRef} src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/job%20pitch%202%20.mp3" onEnded={() => setPlaying(false)} />
 
         {/* Stats bar */}
         <div className="stats-bar" style={{
@@ -413,6 +422,79 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* NATALIE VIDEO SECTION */}
+      <section style={{ padding: '100px 48px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(83,74,183,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div className="reveal" style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Why recruiters are switching</div>
+          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, marginBottom: 40 }}>
+            Why recruiters are switching to voice outreach
+          </h2>
+
+          <div style={{
+            position: 'relative', borderRadius: 20, overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+            background: '#000',
+            maxWidth: 560, margin: '0 auto',
+          }}>
+            {/* Natalie avatar header */}
+            <div style={{
+              position: 'absolute', top: 16, left: 16, zIndex: 10,
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+              padding: '8px 14px', borderRadius: 100,
+            }}>
+              <img
+                src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png"
+                alt="Natalie"
+                style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid var(--purple-light)' }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Natalie · VoiceReach</span>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', animation: 'pulse 2s infinite', display: 'inline-block' }} />
+            </div>
+
+            {/* Play button overlay */}
+            {!videoStarted && (
+              <div
+                onClick={startVideo}
+                style={{
+                  position: 'absolute', inset: 0, zIndex: 9,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%)',
+                }}
+              >
+                <div style={{
+                  width: 80, height: 80, borderRadius: '50%',
+                  background: 'rgba(83,74,183,0.9)',
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 8px 32px rgba(83,74,183,0.6)',
+                  transition: 'transform 0.2s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  <div style={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: '22px solid white', marginLeft: 5 }} />
+                </div>
+                <span style={{ marginTop: 16, fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: 0.3 }}>Press play</span>
+              </div>
+            )}
+
+            <video
+              ref={videoRef}
+              controls={videoStarted}
+              playsInline
+              style={{ width: '100%', display: 'block', borderRadius: 20 }}
+              poster="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png"
+            >
+              <source src="https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/voice%20reach%20advert%20(1).mp4" type="video/mp4" />
+            </video>
           </div>
         </div>
       </section>
