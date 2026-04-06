@@ -120,11 +120,11 @@ export default function Dashboard() {
     }
   }
 
-  aasync function checkAuth() {
+  async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { window.location.href = '/login'; return }
-    setUser(session.user)
-    const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+    setUser(user)
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     setProfile(data)
     fetchCandidates()
     fetchJobs()
