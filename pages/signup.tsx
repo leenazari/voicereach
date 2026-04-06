@@ -20,7 +20,7 @@ export default function Signup() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` }
+      options: { redirectTo: `${window.location.origin}/dashboard``
     })
     if (error) { setError(error.message); setLoading(false) }
   }
@@ -51,7 +51,7 @@ export default function Signup() {
 
     // If user is confirmed immediately (email confirmation disabled)
     if (data.session) {
-      router.push('/')
+      router.push('/dashboard')
       return
     }
 
