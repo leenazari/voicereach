@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -56,7 +55,7 @@ export default function AdminPanel() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-    if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'
+    if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'; return }
     loadData()
   }
 
@@ -140,7 +139,7 @@ export default function AdminPanel() {
 
       <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/" style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>← Back to dashboard</a>
+          <a href="/dashboard" style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>← Back to dashboard</a>
           <div style={{ width: 1, height: 16, background: '#e5e5e5' }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>Admin Panel</div>
           <span style={{ fontSize: 11, background: '#fff0ee', color: '#E24B4A', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>Admin only</span>
