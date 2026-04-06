@@ -29,18 +29,18 @@ export default function Home() {
 
   const pricing = {
     annual: [
-      { label: 'Free', price: '0', desc: 'Try VoiceReach with no commitment.', features: ['3 voice note credits', 'AI script generation', 'Candidate landing page', 'Email delivery'], btn: 'Start for free', featured: false },
-      { label: 'Starter', price: '29', desc: 'For recruiters getting started with voice outreach.', features: ['100 credits/month', 'Everything in Free', 'Custom voice selection', 'Analytics dashboard'], btn: 'Get started', featured: false },
-      { label: 'Growth', price: '99', desc: 'For busy recruiters filling roles at volume.', features: ['500 credits/month', 'Everything in Starter', 'Priority support', 'Team collaboration'], btn: 'Get started', featured: true },
-      { label: 'Agency', price: '179', desc: 'For agencies managing multiple clients.', features: ['1,000 credits/month', 'Everything in Growth', 'White-label options', 'Dedicated account manager'], btn: 'Get started', featured: false },
-      { label: 'Enterprise', price: null, desc: 'Unlimited credits, custom integrations, SLA.', features: ['Unlimited credits', 'Custom integrations', 'SLA guarantee', 'Dedicated support'], btn: 'Contact us', featured: false },
+      { label: 'Free', price: '0', desc: 'Try it for free. No card needed. See exactly how it works before you commit.', features: ['3 voice notes to try it out', 'AI CV extraction', 'Personalised voice notes', 'Script preview and edit', 'Candidate pipeline', 'Your own integrations'], btn: 'Start free — no card', featured: false },
+      { label: 'Starter', price: '29', desc: 'Billed annually. Perfect for solo recruiters just getting started.', features: ['100 CV matches and voice notes', 'Everything in Free', '100 voice notes per month', 'Your own email integration', 'Your own calendar integration', 'Email support'], btn: 'Get started', featured: false },
+      { label: 'Growth', price: '99', desc: 'Billed annually. For agencies placing candidates consistently.', features: ['500 CV matches and voice notes', 'Everything in Starter', 'AI job matching engine', 'Full candidate profiles', 'Voice selector', 'Priority support'], btn: 'Get started', featured: true },
+      { label: 'Agency', price: '179', desc: 'Billed annually. For busy agencies running multiple consultants.', features: ['1,000 CV matches and voice notes', 'Everything in Growth', 'Bulk shortlisting', 'Analytics dashboard', 'Priority support'], btn: 'Get started', featured: false },
+      { label: 'Enterprise', price: null, desc: 'For large agencies and enterprise teams with 1,000+ candidates a month.', features: ['1,000+ CV matches and voice notes', 'Everything in Agency', 'Unlimited voice notes', 'White label option', 'SMS delivery', 'Dedicated account manager'], btn: 'Contact us', featured: false },
     ],
     monthly: [
-      { label: 'Free', price: '0', desc: 'Try VoiceReach with no commitment.', features: ['3 voice note credits', 'AI script generation', 'Candidate landing page', 'Email delivery'], btn: 'Start for free', featured: false },
-      { label: 'Starter', price: '35', desc: 'For recruiters getting started with voice outreach.', features: ['100 credits/month', 'Everything in Free', 'Custom voice selection', 'Analytics dashboard'], btn: 'Get started', featured: false },
-      { label: 'Growth', price: '119', desc: 'For busy recruiters filling roles at volume.', features: ['500 credits/month', 'Everything in Starter', 'Priority support', 'Team collaboration'], btn: 'Get started', featured: true },
-      { label: 'Agency', price: '215', desc: 'For agencies managing multiple clients.', features: ['1,000 credits/month', 'Everything in Growth', 'White-label options', 'Dedicated account manager'], btn: 'Get started', featured: false },
-      { label: 'Enterprise', price: null, desc: 'Unlimited credits, custom integrations, SLA.', features: ['Unlimited credits', 'Custom integrations', 'SLA guarantee', 'Dedicated support'], btn: 'Contact us', featured: false },
+      { label: 'Free', price: '0', desc: 'Try it for free. No card needed. See exactly how it works before you commit.', features: ['3 voice notes to try it out', 'AI CV extraction', 'Personalised voice notes', 'Script preview and edit', 'Candidate pipeline', 'Your own integrations'], btn: 'Start free — no card', featured: false },
+      { label: 'Starter', price: '35', desc: 'Perfect for solo recruiters just getting started.', features: ['100 CV matches and voice notes', 'Everything in Free', '100 voice notes per month', 'Your own email integration', 'Your own calendar integration', 'Email support'], btn: 'Get started', featured: false },
+      { label: 'Growth', price: '119', desc: 'For agencies placing candidates consistently.', features: ['500 CV matches and voice notes', 'Everything in Starter', 'AI job matching engine', 'Full candidate profiles', 'Voice selector', 'Priority support'], btn: 'Get started', featured: true },
+      { label: 'Agency', price: '215', desc: 'For busy agencies running multiple consultants.', features: ['1,000 CV matches and voice notes', 'Everything in Growth', 'Bulk shortlisting', 'Analytics dashboard', 'Priority support'], btn: 'Get started', featured: false },
+      { label: 'Enterprise', price: null, desc: 'For large agencies and enterprise teams with 1,000+ candidates a month.', features: ['1,000+ CV matches and voice notes', 'Everything in Agency', 'Unlimited voice notes', 'White label option', 'SMS delivery', 'Dedicated account manager'], btn: 'Contact us', featured: false },
     ],
   }
 
@@ -174,35 +174,12 @@ export default function Home() {
           <a href="#how" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: 500, textDecoration: 'none' }}>See how it works ↓</a>
         </div>
 
-        {/* Stats bar */}
-        <div className="stats-bar" style={{
-          display: 'flex', width: '100%', marginTop: 72,
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          animation: 'fadeUp 0.6s 0.4s ease both',
-        }}>
-          {[
-            { n: '3x', label: 'More replies vs cold email' },
-            { n: '60s', label: 'To generate a voice note' },
-            { n: '89%', label: 'Open rate on voice messages' },
-            { n: '5min', label: 'To set up your first campaign' },
-          ].map(({ n, label }, i) => (
-            <div key={label} style={{
-              padding: '28px 0', textAlign: 'center', flex: 1,
-              borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            }}>
-              <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 36, fontWeight: 800, letterSpacing: '-1px', color: 'var(--purple-light)' }}>{n}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
         {/* Audio demo */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 16, padding: '24px 28px', maxWidth: 520, margin: '52px auto 0',
           display: 'flex', alignItems: 'center', gap: 18,
-          animation: 'fadeUp 0.6s 0.5s ease both',
+          animation: 'fadeUp 0.6s 0.4s ease both',
         }}>
           <button onClick={toggleAudio} style={{
             width: 50, height: 50, flexShrink: 0, background: 'var(--purple)',
@@ -215,8 +192,8 @@ export default function Home() {
             }
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Sample voice note — Sarah, Software Engineer</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Personalised from CV in 60 seconds</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Lee N. — Sales Manager, EPOS and Payments</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Real AI voice note · Generated from CV · Fully personalised</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 28 }}>
             {[35, 65, 90, 50, 80, 40, 70, 55].map((h, i) => (
@@ -235,24 +212,47 @@ export default function Home() {
           }}>LIVE</span>
         </div>
         <audio ref={audioRef} src="/sample-voice-note.mp3" onEnded={() => setPlaying(false)} />
+
+        {/* Stats bar */}
+        <div className="stats-bar" style={{
+          display: 'flex', width: '100%', marginTop: 72,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          animation: 'fadeUp 0.6s 0.5s ease both',
+        }}>
+          {[
+            { n: '84%', label: 'Average email open rate' },
+            { n: '55%', label: 'Interview conversion rate' },
+            { n: '3sec', label: 'To generate a voice note' },
+            { n: '24hr', label: 'Interview link urgency window' },
+          ].map(({ n, label }, i) => (
+            <div key={label} style={{
+              padding: '28px 0', textAlign: 'center', flex: 1,
+              borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+            }}>
+              <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 36, fontWeight: 800, letterSpacing: '-1px', color: 'white' }}>{n}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* PROBLEM */}
       <section id="problem" className="section" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div className="reveal">
-          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>The problem</div>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Sound familiar?</div>
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-            Candidates are ignoring your outreach
+            Why good candidates ghost you
           </h2>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 520, marginTop: 14 }}>
-            Cold emails get deleted. InMails go unread. Generic templates feel exactly like what they are. The best candidates have options and they know when they are being copy-pasted.
+            You are sending emails. They are ignoring them. Here is why your current outreach is not working.
           </p>
         </div>
         <div className="reveal problem-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 52 }}>
           {[
-            { emoji: '📭', title: 'Low response rates', desc: 'The average recruiter cold email gets less than 5% response. Your best candidates are completely tuned out.' },
-            { emoji: '🤖', title: 'Generic outreach', desc: 'Copy-paste messages with [FIRST NAME] placeholders do nothing to stand out in a crowded inbox.' },
-            { emoji: '⏱️', title: 'Time-consuming personalisation', desc: 'Writing genuinely personalised messages for every candidate takes hours you simply do not have.' },
+            { emoji: '📧', title: 'Generic emails get ignored', desc: 'Candidates receive dozens of templated emails a week. Yours looks exactly like everyone else\'s. They do not even open it.' },
+            { emoji: '⏳', title: 'No urgency, no action', desc: 'Without a reason to act now, candidates put it off. By the time they get round to it the opportunity has gone or they have taken another role.' },
+            { emoji: '📞', title: 'Phone calls go unanswered', desc: 'Cold calling candidates works less and less. People screen unknown numbers and never call back. You need a better way to reach them.' },
           ].map(({ emoji, title, desc }) => (
             <div key={title} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 28 }}>
               <span style={{ fontSize: 28, marginBottom: 14, display: 'block' }}>{emoji}</span>
@@ -266,9 +266,9 @@ export default function Home() {
       {/* HOW IT WORKS */}
       <section id="how" className="section" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div className="reveal">
-          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>How it works</div>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>How VoiceReach works</div>
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-            From CV to voice note in minutes
+            From CV to booked interview in minutes
           </h2>
         </div>
         <div className="reveal steps-grid" style={{
@@ -276,10 +276,10 @@ export default function Home() {
           background: 'rgba(255,255,255,0.05)', borderRadius: 16, overflow: 'hidden',
         }}>
           {[
-            { num: '01', icon: '📋', title: 'Upload the job', desc: 'Add a job description or let VoiceReach generate one from a quick brief.' },
-            { num: '02', icon: '📄', title: 'Add candidates', desc: 'Upload CVs individually or in bulk. VoiceReach extracts the key details automatically.' },
-            { num: '03', icon: '🎙️', title: 'Generate voice notes', desc: 'AI writes a personalised script for each candidate and converts it to a natural voice note.' },
-            { num: '04', icon: '📩', title: 'Send and track', desc: 'Candidates receive a branded landing page with their voice note. You see who listens and who responds.' },
+            { num: '01', icon: '📄', title: 'Upload the CV', desc: 'Drop in a PDF or Word doc. AI reads it instantly and pulls their name, experience, skills and last employer automatically.' },
+            { num: '02', icon: '✏️', title: 'Review the script', desc: 'Add the job title and salary. A personalised script is generated instantly. Read it, tweak it if needed, then approve it.' },
+            { num: '03', icon: '🎙', title: 'Voice note generated', desc: 'An AI voice reads the script naturally. Sent via branded email with a big play button. No clunky attachments.' },
+            { num: '04', icon: '📅', title: 'Interview booked', desc: 'Candidates click the 24-hour interview link, hear something personal and book straight into your calendar. Done.' },
           ].map(({ num, icon, title, desc }) => (
             <div key={num} style={{ background: 'rgba(255,255,255,0.02)', padding: '36px 26px', transition: 'background 0.2s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(83,74,183,0.12)')}
@@ -297,23 +297,29 @@ export default function Home() {
       {/* EXAMPLE SCRIPT */}
       <section style={{ background: 'rgba(83,74,183,0.07)', borderTop: '1px solid rgba(83,74,183,0.15)', borderBottom: '1px solid rgba(83,74,183,0.15)', padding: '80px 48px' }}>
         <div className="example-inner" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
-          <div className="reveal" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 28 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--purple-light)', marginBottom: 16 }}>Generated script</div>
-            <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.75)' }}>
-              "Hi <strong style={{ color: 'var(--purple-light)' }}>Sarah</strong> — I came across your profile and your background in <strong style={{ color: 'var(--purple-light)' }}>React and Node.js</strong> really stood out. We are hiring a Senior Engineer at <strong style={{ color: 'var(--purple-light)' }}>Acme</strong> and I think you would be a genuinely great fit. Interviews are already underway — if this sounds interesting, your personal link is below. Go get it."
-            </p>
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, background: 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '10px solid white', marginLeft: 2 }} />
+          <div className="reveal">
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>What they actually hear</div>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, marginBottom: 32 }}>
+              A message that feels genuinely personal
+            </h2>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--purple-light)', marginBottom: 16 }}>Sample voice note script</div>
+              <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic' }}>
+                "Hi <strong style={{ color: 'var(--purple-light)', fontStyle: 'normal' }}>David</strong>... I hope you are well today. I have just had your CV come across my desk and the timing is perfect. We have a brand new <strong style={{ color: 'var(--purple-light)', fontStyle: 'normal' }}>Fleet Operations Manager</strong> role, paying <strong style={{ color: 'var(--purple-light)', fontStyle: 'normal' }}>45 thousand pounds</strong>, and honestly, with your <strong style={{ color: 'var(--purple-light)', fontStyle: 'normal' }}>12 years in fleet management</strong>, you are exactly what this client is looking for. Your time at <strong style={{ color: 'var(--purple-light)', fontStyle: 'normal' }}>DHL Logistics</strong> is a brilliant fit for what they need. I have created a personal interview link just for you. You can do the interview right now, it takes less than ten minutes. But do not leave it too long David, this one is moving fast. Click the link, do the interview, and let us get you this job."
+              </p>
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, background: 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '10px solid white', marginLeft: 2 }} />
+                </div>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>28 seconds · Generated in 3 seconds · 0.47mb</span>
               </div>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>0:28 — personalised from CV</span>
             </div>
           </div>
           <div className="reveal" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { icon: '🎯', title: 'References their actual experience', desc: 'Every script pulls real details from the CV. No generic filler, no hallucinated claims.' },
-              { icon: '⚡', title: 'Generated in under 60 seconds', desc: 'Upload a CV and a job, click generate. Done. No prompt engineering required.' },
-              { icon: '🎙️', title: 'Sounds like a real person', desc: 'Choose a voice, set a tone. The AI delivers it naturally — warm, confident, and urgent.' },
+              { icon: '🎯', title: 'References their actual experience', desc: 'Mentions their years in the field, their last employer and why that makes them right for this specific role.' },
+              { icon: '⚡', title: 'Creates real urgency', desc: 'The 24-hour interview link makes them feel like this is a real opportunity that will not wait around.' },
+              { icon: '✅', title: 'You approve it before it goes', desc: 'Read the script in the dashboard. Edit anything you want. Then hit send. You are always in control.' },
             ].map(({ icon, title, desc }) => (
               <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
                 <div style={{ width: 44, height: 44, flexShrink: 0, background: 'rgba(83,74,183,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{icon}</div>
@@ -330,15 +336,15 @@ export default function Home() {
       {/* RESULTS */}
       <section className="section" style={{ padding: '100px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div className="reveal">
-          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Results</div>
-          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>Numbers that matter</h2>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>The results</div>
+          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>Numbers that matter to recruiters</h2>
         </div>
         <div className="reveal results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginTop: 52 }}>
           {[
-            { n: '3x', label: 'More interview bookings', desc: 'Recruiters using VoiceReach report three times as many candidates accepting interview slots.' },
-            { n: '89%', label: 'Voice note open rate', desc: 'Candidates are far more likely to listen to a personal voice message than open a cold email.' },
-            { n: '60s', label: 'Per personalised note', desc: 'What used to take 15 minutes of research and writing now takes less than a minute.' },
-            { n: '5min', label: 'Setup time', desc: 'From sign up to your first voice note sent. No complex configuration, no training required.' },
+            { n: '3x', label: 'More interviews booked', desc: 'Recruiters using VoiceReach are booking three times more interviews compared to email-only outreach. Candidates respond when they hear something personal.' },
+            { n: '84%', label: 'Email open rate', desc: 'A subject line that says "we left you a personal voice message" gets opened. Average industry email open rate is under 20%. Ours is over 80%.' },
+            { n: '55%', label: 'Interview conversion', desc: 'Of candidates who click play on their voice note, over half go on to book an interview. The personalisation creates a connection before you even speak.' },
+            { n: '~9p', label: 'Cost per voice note', desc: 'Each personalised voice note costs around 9p to generate and send, dropping on higher volume plans. The ROI on a single placed candidate makes this one of the most cost-effective tools in recruitment.' },
           ].map(({ n, label, desc }) => (
             <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 32, position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--purple)' }} />
@@ -355,17 +361,20 @@ export default function Home() {
         <div className="reveal">
           <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Features</div>
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1, maxWidth: 620 }}>
-            Everything you need to fill roles faster
+            Everything a recruiter needs, nothing they do not
           </h2>
         </div>
         <div className="reveal features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 52 }}>
           {[
-            { icon: '🎙️', title: 'AI Voice Generation', desc: 'Natural-sounding voices that feel human. Choose from a range of styles and tones.' },
-            { icon: '📄', title: 'CV Parsing', desc: 'Upload any PDF CV and let VoiceReach extract skills, experience and achievements automatically.' },
-            { icon: '🎯', title: 'Semantic Matching', desc: 'Smart keyword matching ensures every script references what actually matters for the role.' },
-            { icon: '📱', title: 'Candidate Landing Page', desc: 'Each candidate gets a branded page with their personal voice note and a one-click response.' },
-            { icon: '📊', title: 'Analytics', desc: 'See who listened, who clicked, and who responded. Know exactly where to follow up.' },
-            { icon: '✉️', title: 'Email Delivery', desc: 'VoiceReach sends everything for you from a branded domain. Just review and click send.' },
+            { icon: '🤖', title: 'AI CV extraction', desc: 'Upload any CV. Name, experience, skills, companies and location are pulled out automatically. No manual data entry.' },
+            { icon: '🎙️', title: 'Personalised voice notes', desc: 'Every note references the candidate by name, their specific experience, last employer and the exact role. Nothing generic.' },
+            { icon: '✏️', title: 'Script preview and edit', desc: 'Read and edit the script before it goes out. You always approve what gets said before hitting send.' },
+            { icon: '📧', title: 'Branded email delivery', desc: 'A clean branded email goes out with a big play button for the voice note and a 24-hour interview link attached.' },
+            { icon: '📅', title: 'Calendar integration', desc: 'Candidates book straight into your calendar via Cal.com. A calendar invite is attached to every email automatically.' },
+            { icon: '⚡', title: 'Drag and drop pipeline', desc: 'Applied, Shortlisted, Voice Sent, Interview Booked. Move candidates through your pipeline in one click or drag.' },
+            { icon: '👤', title: 'Candidate profiles', desc: 'Full profile with skills, qualifications, employment history and voice note playback all in one place.' },
+            { icon: '🔊', title: 'Custom voice and personality', desc: 'Choose your voice from ElevenLabs, adjust the tone, energy and pacing to match your brand. Sounds like your team, not a robot.' },
+            { icon: '🔒', title: '24-hour interview links', desc: 'Every link expires after 24 hours creating genuine urgency. Candidates who click late see a branded page with your contact details.' },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 26, transition: 'all 0.2s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(83,74,183,0.1)'; e.currentTarget.style.borderColor = 'rgba(83,74,183,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
@@ -383,22 +392,20 @@ export default function Home() {
       <section style={{ padding: '80px 48px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
           <div className="reveal">
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>What recruiters say</div>
-            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.5px' }}>Results speak for themselves</h2>
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>What recruiters are saying</div>
+            <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.5px' }}>Recruiters who switched to voice outreach</h2>
           </div>
           <div className="reveal testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 48 }}>
             {[
-              { quote: 'I sent 20 voice notes on Monday. By Wednesday I had 11 replies and 7 interviews booked. Nothing I have ever done has worked this well.', name: 'James T.', role: 'Senior Recruiter, Tech' },
-              { quote: 'Candidates actually respond saying they appreciated how personal it felt. They had no idea it was AI. That is the magic of VoiceReach.', name: 'Priya M.', role: 'Talent Partner, FinTech' },
-              { quote: 'I was sceptical about AI outreach but this is different. It references the actual CV. Candidates feel seen. Response rates have doubled.', name: 'Dan F.', role: 'Agency Director' },
-            ].map(({ quote, name, role }) => (
+              { quote: 'We went from a 20% interview show rate to over 60% in two weeks. Candidates call us back because they feel like we actually read their CV.', name: 'James Richardson', role: 'Director, Apex Recruitment', initials: 'JR' },
+              { quote: 'I used to spend an hour a day chasing candidates by phone. Now I upload the CV, approve the script and one click does everything. The time saving alone is worth it.', name: 'Sarah Khalid', role: 'Senior Recruiter, TechTalent UK', initials: 'SK' },
+              { quote: 'The 24-hour link creates real urgency. Candidates who would normally sit on it for a week are booking interviews the same day. It has changed our pipeline speed.', name: 'Marcus Patel', role: 'Managing Director, Peak Talent', initials: 'MP' },
+            ].map(({ quote, name, role, initials }) => (
               <div key={name} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 26, textAlign: 'left' }}>
                 <div style={{ color: '#FFB800', fontSize: 13, letterSpacing: 2, marginBottom: 14 }}>★★★★★</div>
                 <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginBottom: 20, fontStyle: 'italic' }}>"{quote}"</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', fontSize: 13, fontWeight: 700 }}>
-                    {name.split(' ')[0][0]}{name.split(' ')[1][0]}
-                  </div>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', fontSize: 13, fontWeight: 700 }}>{initials}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{name}</div>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{role}</div>
@@ -414,15 +421,20 @@ export default function Home() {
       <section id="pricing" className="section" style={{ padding: '100px 48px', maxWidth: 1300, margin: '0 auto' }}>
         <div className="reveal" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'var(--purple-light)', marginBottom: 14 }}>Pricing</div>
-          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1 }}>Simple, credit-based pricing</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 480, margin: '14px auto 0' }}>One credit = one voice note. No hidden fees, no per-seat charges.</p>
+          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1 }}>Start free. Scale when you are ready.</h2>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 480, margin: '14px auto 0' }}>No setup fees. Cancel any time.</p>
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 24 }}>
             <span style={{ fontSize: 14, fontWeight: billing === 'annual' ? 600 : 500, color: billing === 'annual' ? 'white' : 'rgba(255,255,255,0.5)' }}>Annual</span>
             <button onClick={() => setBilling(b => b === 'annual' ? 'monthly' : 'annual')} style={{ width: 48, height: 26, background: 'var(--purple)', borderRadius: 100, cursor: 'pointer', border: 'none', position: 'relative' }}>
               <div style={{ position: 'absolute', top: 3, left: 3, width: 20, height: 20, background: 'white', borderRadius: '50%', transition: 'transform 0.2s', transform: billing === 'monthly' ? 'translateX(22px)' : 'translateX(0)' }} />
             </button>
             <span style={{ fontSize: 14, fontWeight: billing === 'monthly' ? 600 : 500, color: billing === 'monthly' ? 'white' : 'rgba(255,255,255,0.5)' }}>Monthly</span>
-            {billing === 'annual' && <span style={{ background: 'rgba(29,158,117,0.2)', color: 'var(--green)', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100, border: '1px solid rgba(29,158,117,0.3)' }}>Save up to 20%</span>}
+            {billing === 'annual' && <span style={{ background: 'rgba(29,158,117,0.2)', color: 'var(--green)', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100, border: '1px solid rgba(29,158,117,0.3)' }}>Save 20%</span>}
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 20px', maxWidth: 700, margin: '20px auto 0', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+            💡 Bring your own integrations. All plans include your own email, calendar and ElevenLabs account so you stay in full control of your data and branding. No lock-in.
           </div>
         </div>
 
@@ -438,20 +450,20 @@ export default function Home() {
               <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px', color: plan.featured ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)', marginBottom: 14 }}>{plan.label}</div>
               <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 46, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
                 {plan.price === null
-                  ? <span style={{ fontSize: 24 }}>Custom</span>
+                  ? <span style={{ fontSize: 24 }}>Let's talk</span>
                   : <><sup style={{ fontSize: 22, verticalAlign: 'super' }}>£</sup>{plan.price}<sub style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>/mo</sub></>
                 }
               </div>
-              <p style={{ fontSize: 14, color: plan.featured ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.5)', margin: '12px 0 26px', lineHeight: 1.6 }}>{plan.desc}</p>
+              <p style={{ fontSize: 13, color: plan.featured ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.5)', margin: '12px 0 26px', lineHeight: 1.6 }}>{plan.desc}</p>
               <ul style={{ listStyle: 'none', marginBottom: 28, flex: 1 }}>
                 {plan.features.map((f) => (
-                  <li key={f} style={{ fontSize: 14, color: plan.featured ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.65)', padding: '7px 0', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${plan.featured ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+                  <li key={f} style={{ fontSize: 13, color: plan.featured ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.65)', padding: '7px 0', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${plan.featured ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
                     <span style={{ color: 'var(--green)', fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
                   </li>
                 ))}
               </ul>
               <Link href={plan.btn === 'Contact us' ? 'mailto:hello@voicereach.co.uk' : '/signup'} style={{
-                width: '100%', padding: 13, borderRadius: 8, fontSize: 15, fontWeight: 600,
+                width: '100%', padding: 13, borderRadius: 8, fontSize: 14, fontWeight: 600,
                 cursor: 'pointer', textAlign: 'center', textDecoration: 'none', display: 'block', transition: 'all 0.2s',
                 background: plan.featured ? 'white' : 'transparent',
                 border: plan.featured ? 'none' : '1px solid rgba(255,255,255,0.2)',
@@ -467,17 +479,17 @@ export default function Home() {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 80% at 50% 50%, rgba(83,74,183,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div className="reveal">
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'clamp(34px, 5vw, 58px)', fontWeight: 800, letterSpacing: '-1px', maxWidth: 700, margin: '0 auto 18px', lineHeight: 1.1 }}>
-            Start booking more interviews today
+            Stop chasing candidates.<br />Let them come to you.
           </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', maxWidth: 460, margin: '0 auto 40px', lineHeight: 1.65 }}>
-            3 free voice notes. No credit card. No setup call. Just results.
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.65 }}>
+            Try VoiceReach free today. No card needed. We will give you 3 voice notes to try it out — and you will see the difference immediately.
           </p>
           <Link href="/signup" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'var(--purple)', color: 'white', border: 'none',
             padding: '18px 40px', borderRadius: 12, fontSize: 18, fontWeight: 600,
             textDecoration: 'none', transition: 'all 0.2s',
-          }}>Get started free →</Link>
+          }}>Start free — 3 voice notes on us →</Link>
         </div>
       </section>
 
