@@ -73,7 +73,7 @@ export default function Login() {
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={inputStyle} />
             </div>
             <div style={{ textAlign: 'right', marginBottom: 20 }}>
-              <span style={{ fontSize: 12, color: '#534AB7', cursor: 'pointer', fontWeight: 500 }}>Forgot password?</span>
+              <a href="/reset-password" style={{ fontSize: 12, color: '#534AB7', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Forgot password?</a>
             </div>
             {error && <div style={{ fontSize: 13, color: '#E24B4A', marginBottom: 14, background: '#fff8f8', border: '1px solid #fdd', borderRadius: 8, padding: '10px 12px' }}>{error}</div>}
             <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: loading ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}>
