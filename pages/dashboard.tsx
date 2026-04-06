@@ -1,3 +1,6 @@
+Here's the full `pages/dashboard.tsx`:
+
+```tsx
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
@@ -109,8 +112,46 @@ export default function Dashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
+  const initialized = useRef(false)
 
-  useEffect(() => { checkAuth() }, [])
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && !initialized.current) {
+        initialized.current = true
+        setUser(session.user)
+        supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
+          setProfile(data)
+        })
+        fetchCandidates()
+        fetchJobs()
+      } else if (event === 'SIGNED_OUT') {
+        window.location.href = '/login'
+      }
+    })
+
+    // Also check immediately in case session already exists
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && !initialized.current) {
+        initialized.current = true
+        setUser(session.user)
+        supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
+          setProfile(data)
+        })
+        fetchCandidates()
+        fetchJobs()
+      } else if (!session) {
+        // Wait 3 seconds for OAuth redirect to complete before giving up
+        setTimeout(async () => {
+          if (!initialized.current) {
+            const { data: { session: retrySession } } = await supabase.auth.getSession()
+            if (!retrySession) window.location.href = '/login'
+          }
+        }, 3000)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function authHeaders(): Promise<Record<string, string>> {
     const { data: { session } } = await supabase.auth.getSession()
@@ -118,16 +159,6 @@ export default function Dashboard() {
       'Content-Type': 'application/json',
       ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
     }
-  }
-
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { window.location.href = '/login'; return }
-    setUser(user)
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    setProfile(data)
-    fetchCandidates()
-    fetchJobs()
   }
 
   async function signOut() {
@@ -1195,3 +1226,4 @@ export default function Dashboard() {
     </div>
   )
 }
+```
