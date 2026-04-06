@@ -35,6 +35,7 @@ export default function AdminPanel() {
   const [knowledge, setKnowledge] = useState('')
   const [knowledgeLoading, setKnowledgeLoading] = useState(false)
   const [knowledgeSaving, setKnowledgeSaving] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
 
   useEffect(() => { checkAdminAndLoad() }, [])
 
@@ -47,10 +48,11 @@ export default function AdminPanel() {
 
   async function checkAdminAndLoad() {
     const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { window.location.href = '/login'; return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) { window.location.href = '/login'; return }
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'; return }
+    setAuthChecking(false)
     loadData()
     loadKnowledge()
   }
@@ -126,6 +128,15 @@ export default function AdminPanel() {
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
+
+  // Don't render anything until auth check is complete — prevents flash of content before redirect
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+        <div style={{ fontSize: 13, color: '#aaa' }}>Checking access...</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f7', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
@@ -248,7 +259,6 @@ export default function AdminPanel() {
                 This is the information Natalie uses to answer questions on the marketing page. Edit it here and save — changes take effect immediately with no redeploy needed. Write in plain English, organised by topic with clear headings in capitals.
               </div>
             </div>
-
             {knowledgeLoading ? (
               <div style={{ fontSize: 13, color: '#aaa', padding: 24, textAlign: 'center' }}>Loading...</div>
             ) : (
@@ -257,21 +267,11 @@ export default function AdminPanel() {
                   value={knowledge}
                   onChange={e => setKnowledge(e.target.value)}
                   rows={32}
-                  style={{
-                    width: '100%', padding: '14px 16px',
-                    border: '1px solid #e5e5e5', borderRadius: 10,
-                    fontSize: 13, lineHeight: 1.7, fontFamily: 'monospace',
-                    outline: 'none', resize: 'vertical', boxSizing: 'border-box',
-                    color: '#1a1a1a', background: '#fafafa',
-                  }}
+                  style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e5e5', borderRadius: 10, fontSize: 13, lineHeight: 1.7, fontFamily: 'monospace', outline: 'none', resize: 'vertical', boxSizing: 'border-box', color: '#1a1a1a', background: '#fafafa' }}
                 />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
                   <div style={{ fontSize: 12, color: '#aaa' }}>{knowledge.length} characters · Changes save instantly, no redeploy needed</div>
-                  <button onClick={saveKnowledge} disabled={knowledgeSaving} style={{
-                    padding: '10px 24px', background: knowledgeSaving ? '#aaa' : '#534AB7',
-                    color: 'white', border: 'none', borderRadius: 8,
-                    fontSize: 13, fontWeight: 600, cursor: knowledgeSaving ? 'not-allowed' : 'pointer',
-                  }}>
+                  <button onClick={saveKnowledge} disabled={knowledgeSaving} style={{ padding: '10px 24px', background: knowledgeSaving ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: knowledgeSaving ? 'not-allowed' : 'pointer' }}>
                     {knowledgeSaving ? 'Saving...' : 'Save knowledge base'}
                   </button>
                 </div>
