@@ -56,7 +56,7 @@ export default function AdminPanel() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-    if (!profile || profile.role !== 'admin') { window.location.href = '/'; return }
+    if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'
     loadData()
   }
 
