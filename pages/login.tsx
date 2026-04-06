@@ -13,7 +13,7 @@ export default function Login() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` }
+      options: { redirectTo: `${window.location.origin}/dashboard``
     })
     if (error) { setError(error.message); setLoading(false) }
   }
@@ -26,7 +26,7 @@ export default function Login() {
       setError(error.message === 'Invalid login credentials' ? 'Incorrect email or password. Try again or sign up.' : error.message)
       setLoading(false)
     } else if (data.session) {
-      router.push('/')
+      router.push('/dashboard')
     } else {
       setError('Could not sign in. Please try again.')
       setLoading(false)
