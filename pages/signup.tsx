@@ -1,11 +1,6 @@
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/router'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export default function Signup() {
   const router = useRouter()
@@ -20,7 +15,7 @@ export default function Signup() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard``
+      options: { redirectTo: `${window.location.origin}/dashboard` }
     })
     if (error) { setError(error.message); setLoading(false) }
   }
@@ -49,13 +44,11 @@ export default function Signup() {
       return
     }
 
-    // If user is confirmed immediately (email confirmation disabled)
     if (data.session) {
       router.push('/dashboard')
       return
     }
 
-    // If email confirmation is required
     setSuccess(true)
     setLoading(false)
   }
