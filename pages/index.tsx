@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 const NATALIE_IMG = 'https://xmdttsekkjbcuiwudtvh.supabase.co/storage/v1/object/public/audio/Screenshot%202026-04-06%20at%2011.43.55.png'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
-const SUGGESTED = ['How does it work?', 'What does it cost?', 'Can I try it free?', 'Will candidates know it\'s AI?', 'How personal does it sound?']
+const SUGGESTED = ['How does it work?', 'What does it cost?', 'Can I try it free?', "Will candidates know it's AI?", 'How personal does it sound?']
 
 export default function Home() {
   const audioRef1 = useRef<HTMLAudioElement>(null)
@@ -16,7 +16,6 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStarted, setVideoStarted] = useState(false)
 
-  // Chat state
   const [chatOpen, setChatOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
@@ -68,38 +67,15 @@ export default function Home() {
     setChatInput('')
     setChatLoading(true)
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 400,
-          system: `You are Natalie, a friendly and enthusiastic sales assistant for VoiceReach — an AI-powered voice outreach platform built for recruiters.
-
-Your job is to answer questions about VoiceReach and encourage people to sign up for a free account. Be warm, concise and conversational. Never use bullet points or long lists — keep responses to 2-3 short sentences max. No markdown.
-
-KEY FACTS:
-- VoiceReach generates personalised AI voice notes for every candidate, referencing their actual CV, experience and the specific role
-- Recruiters upload a CV, review a script, and send a personalised voice note via branded email in under 60 seconds
-- Candidates receive a branded landing page with a 24-hour interview link creating real urgency
-- Average email open rate 84%. Interview conversion rate 55%. Each voice note costs around 9p.
-- Integrates with ElevenLabs for voice, Cal.com for calendar, sends from custom email domain
-- PRICING: Free (3 voice notes, no card), Starter £29/mo annual or £35/mo monthly (100/month), Growth £99/mo annual or £119/mo monthly (500/month), Agency £179/mo annual or £215/mo monthly (1000/month), Enterprise contact us
-- Try completely free with 3 voice notes — no credit card required
-
-ON "WILL CANDIDATES KNOW IT'S AI?": The voice sounds completely natural. Candidates respond saying they felt genuinely seen. The personalisation is so specific — their actual CV, last employer, years of experience — that it feels like the recruiter actually read their profile. Most candidates have no idea. And even if they did, the message is still relevant and personal which is what matters.
-
-ON PRICING OBJECTIONS: Free plan requires no credit card. At 9p per voice note and thousands in placement fees per candidate, the ROI is extraordinary. One placed candidate pays for months of the platform.
-
-ON "IS IT REALLY AI?": Yes — ElevenLabs voice technology and Claude AI write personalised scripts from the candidate's actual CV. Not a template. Every word generated fresh for that specific candidate and role.
-
-Always end by nudging towards signing up. Use phrases like "Want to try it with your first 3 voice notes free?" — no card needed. Keep responses SHORT — max 3 sentences total.`,
           messages: newMessages.map(m => ({ role: m.role, content: m.content }))
         })
       })
       const data = await res.json()
-      const reply = data.content?.[0]?.text || 'Sorry, something went wrong. Try again!'
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I hit a snag. Try again in a moment!' }])
     }
@@ -264,7 +240,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
         {/* AUDIO PLAYERS */}
         <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginTop: 40, marginBottom: 16, animation: 'fadeUp 0.6s 0.5s ease both' }}>Real voice note examples</div>
         <div className="audio-row" style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 700, animation: 'fadeUp 0.6s 0.5s ease both' }}>
-          {/* Lee */}
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <button onClick={toggleAudio1} style={{ width: 44, height: 44, flexShrink: 0, background: playing1 ? 'var(--purple-light)' : 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'all 0.2s' }}>
               {playing1 ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span> : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />}
@@ -279,7 +254,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
               ))}
             </div>
           </div>
-          {/* Fred */}
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <button onClick={toggleAudio2} style={{ width: 44, height: 44, flexShrink: 0, background: playing2 ? 'var(--purple-light)' : 'var(--purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'all 0.2s' }}>
               {playing2 ? <span style={{ fontSize: 14, color: 'white' }}>⏸</span> : <div style={{ width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '12px solid white', marginLeft: 2 }} />}
@@ -325,7 +299,7 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
           </div>
           <div className="reveal problem-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 52 }}>
             {[
-              { emoji: '📧', title: 'Generic emails get ignored', desc: 'Candidates receive dozens of templated emails a week. Yours looks exactly like everyone else\'s. They do not even open it.' },
+              { emoji: '📧', title: 'Generic emails get ignored', desc: "Candidates receive dozens of templated emails a week. Yours looks exactly like everyone else's. They do not even open it." },
               { emoji: '⏳', title: 'No urgency, no action', desc: 'Without a reason to act now, candidates put it off. By the time they get round to it the opportunity has gone or they have taken another role.' },
               { emoji: '📞', title: 'Phone calls go unanswered', desc: 'Cold calling candidates works less and less. People screen unknown numbers and never call back. You need a better way to reach them.' },
             ].map(({ emoji, title, desc }) => (
@@ -444,7 +418,7 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
               { icon: '🎙️', title: 'Personalised voice notes', desc: 'Every note references the candidate by name, their specific experience, last employer and the exact role. Nothing generic.' },
               { icon: '✏️', title: 'Script preview and edit', desc: 'Read and edit the script before it goes out. You always approve what gets said before hitting send.' },
               { icon: '📧', title: 'Branded email delivery', desc: 'A clean branded email goes out with a big play button for the voice note and a 24-hour interview link attached.' },
-              { icon: '📅', title: 'Calendar integration', desc: 'Candidates book straight into your calendar via Cal.com. A calendar invite is attached to every email automatically.' },
+              { icon: '📅', title: 'Calendar integration', desc: 'Candidates book straight into your calendar via Cal.com. A calendar invite is automatically attached to every email.' },
               { icon: '⚡', title: 'Drag and drop pipeline', desc: 'Applied, Shortlisted, Voice Sent, Interview Booked. Move candidates through your pipeline in one click or drag.' },
               { icon: '👤', title: 'Candidate profiles', desc: 'Full profile with skills, qualifications, employment history and voice note playback all in one place.' },
               { icon: '🔊', title: 'Custom voice and personality', desc: 'Choose your voice from ElevenLabs, adjust the tone, energy and pacing to match your brand. Sounds like your team, not a robot.' },
@@ -582,7 +556,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
 
         {chatOpen && (
           <div className="chat-window" style={{ width: 360, height: 520, background: '#0f0c29', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, boxShadow: '0 24px 80px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* Header */}
             <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, #534AB7, #302b63)', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <div style={{ position: 'relative' }}>
                 <img src={NATALIE_IMG} alt="Natalie" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', border: '2px solid rgba(255,255,255,0.3)' }} />
@@ -595,9 +568,7 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
               <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: '0 4px' }}>×</button>
             </div>
 
-            {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Welcome */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '0 12px 12px 12px', padding: '10px 14px', maxWidth: '82%' }}>
@@ -605,7 +576,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
                 </div>
               </div>
 
-              {/* Suggested */}
               {showSuggested && messages.length === 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 36 }}>
                   {SUGGESTED.map(q => (
@@ -614,7 +584,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
                 </div>
               )}
 
-              {/* Conversation */}
               {messages.map((m, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
                   {m.role === 'assistant' && <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0, marginTop: 2 }} />}
@@ -624,7 +593,6 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
                 </div>
               ))}
 
-              {/* Loading */}
               {chatLoading && (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <img src={NATALIE_IMG} alt="Natalie" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0 }} />
@@ -640,14 +608,12 @@ Always end by nudging towards signing up. Use phrases like "Want to try it with 
               <div ref={chatBottomRef} />
             </div>
 
-            {/* Signup nudge */}
             <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <Link href="/signup" style={{ display: 'block', textAlign: 'center', background: 'rgba(29,158,117,0.15)', border: '1px solid rgba(29,158,117,0.3)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#1D9E75', textDecoration: 'none' }}>
                 Start free — 3 voice notes, no card needed →
               </Link>
             </div>
 
-            {/* Input */}
             <div style={{ padding: '10px 14px 14px', display: 'flex', gap: 8 }}>
               <input
                 ref={chatInputRef}
