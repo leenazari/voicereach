@@ -1,6 +1,3 @@
-Here's the full `pages/dashboard.tsx`:
-
-```tsx
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
@@ -1226,4 +1223,3 @@ export default function Dashboard() {
     </div>
   )
 }
-```
