@@ -44,6 +44,7 @@ export async function sendVoiceOutreachEmail(
   const interviewLink = buildInterviewLink(token)
   const firstName = candidate.name.split(' ')[0]
   const calendarIcs = buildCalendarInvite(candidate, interviewLink)
+  const jobTitle = candidate.job_title || candidate.role_applied
 
   const html = `
 <!DOCTYPE html>
@@ -58,7 +59,7 @@ export async function sendVoiceOutreachEmail(
     </div>
     <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1.5px;">Personal message for</p>
     <h1 style="font-size: 26px; font-weight: 900; color: white; margin: 0 0 6px; letter-spacing: -0.5px;">${firstName}</h1>
-    <p style="font-size: 16px; color: rgba(255,255,255,0.7); margin: 0 0 20px;">${candidate.job_title || candidate.role_applied}${candidate.job_salary ? ` · ${candidate.job_salary}` : ''}</p>
+    <p style="font-size: 16px; color: rgba(255,255,255,0.7); margin: 0 0 20px;">${jobTitle}${candidate.job_salary ? ` · ${candidate.job_salary}` : ''}</p>
 
     <!-- PLAY BUTTON -->
     <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 17px; letter-spacing: 0.3px; box-shadow: 0 8px 24px rgba(102,126,234,0.4);">
@@ -93,11 +94,17 @@ export async function sendVoiceOutreachEmail(
 
   <!-- FOOTER -->
   <div style="padding: 20px 32px 32px; border-top: 1px solid #eee; text-align: center;">
-    <p style="font-size: 12px; color: #bbb; margin: 0;">Sent by VoiceReach · Personalised for ${candidate.name}</p>
+    <p style="font-size: 12px; color: #bbb; margin: 0 0 8px;">Sent by VoiceReach · Personalised for ${candidate.name}</p>
+    <p style="font-size: 11px; color: #ccc; margin: 0;">
+      You are receiving this because a recruiter identified you as a potential fit for this role.<br/>
+      <a href="mailto:outreach@voicereach.co.uk?subject=Unsubscribe&body=Please remove me from future outreach" style="color: #ccc;">Unsubscribe</a>
+    </p>
   </div>
 
 </body>
 </html>`
+
+  const text = `Hi ${firstName}, I recorded a personal message for you about a ${jobTitle} role I think you would be a strong fit for. Listen here: ${interviewLink}`
 
   const attachments: any[] = [
     {
@@ -111,8 +118,13 @@ export async function sendVoiceOutreachEmail(
   await resend.emails.send({
     from: FROM,
     to: candidate.email,
-    subject: `NEW JOB OPPORTUNITY — ${firstName}, we have a personal message for you`,
+    subject: `${firstName}, I recorded a personal message for you`,
     html,
+    text,
+    headers: {
+      'List-Unsubscribe': `<mailto:outreach@voicereach.co.uk?subject=Unsubscribe>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
     attachments
   })
 
