@@ -574,9 +574,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {showSuggested && messages.length === 0 && (
+               {SUGGESTED.filter(q => !messages.some(m => m.role === 'user' && m.content === q)).length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 36 }}>
-                  {SUGGESTED.map(q => (
+                  {SUGGESTED.filter(q => !messages.some(m => m.role === 'user' && m.content === q)).map(q => (
                     <button key={q} className="chat-suggest" onClick={() => sendChat(q)} style={{ background: 'rgba(83,74,183,0.15)', border: '1px solid rgba(83,74,183,0.35)', borderRadius: 10, padding: '7px 12px', fontSize: 12, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', fontFamily: 'inherit' }}>{q}</button>
                   ))}
                 </div>
