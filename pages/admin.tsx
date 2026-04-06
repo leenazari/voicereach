@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 
 type Profile = {
   id: string
@@ -39,24 +39,8 @@ export default function AdminPanel() {
 
   useEffect(() => { checkAdminAndLoad() }, [])
 
-  function getSupabase() {
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  }
-
   async function checkAdminAndLoad() {
-    const supabase = getSupabase()
-
-    // Retry up to 3 times with 500ms gap to allow session to hydrate
-    let user = null
-    for (let i = 0; i < 3; i++) {
-      const { data } = await supabase.auth.getUser()
-      if (data.user) { user = data.user; break }
-      await new Promise(r => setTimeout(r, 500))
-    }
-
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) { window.location.href = '/login'; return }
 
     const { data: profile } = await supabase
@@ -74,7 +58,6 @@ export default function AdminPanel() {
 
   async function loadData() {
     setLoading(true)
-    const supabase = getSupabase()
     const { data: profileData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
     if (profileData) {
       setProfiles(profileData)
@@ -90,7 +73,6 @@ export default function AdminPanel() {
 
   async function loadKnowledge() {
     setKnowledgeLoading(true)
-    const supabase = getSupabase()
     const { data } = await supabase.from('settings').select('value').eq('key', 'chatbot_knowledge').single()
     if (data) setKnowledge(data.value)
     setKnowledgeLoading(false)
@@ -98,7 +80,6 @@ export default function AdminPanel() {
 
   async function saveKnowledge() {
     setKnowledgeSaving(true)
-    const supabase = getSupabase()
     const { error } = await supabase
       .from('settings')
       .upsert({ key: 'chatbot_knowledge', value: knowledge, updated_at: new Date().toISOString() }, { onConflict: 'key' })
@@ -124,7 +105,6 @@ export default function AdminPanel() {
   async function saveUser() {
     if (!editingUser) return
     setSaving(true)
-    const supabase = getSupabase()
     const { error } = await supabase.from('profiles').update({ plan: editPlan, credits_limit: parseInt(editCredits) || 3, role: editRole }).eq('id', editingUser.id)
     if (error) notify('Error saving: ' + error.message, 'error')
     else { notify('User updated successfully'); setEditingUser(null); loadData() }
@@ -132,7 +112,6 @@ export default function AdminPanel() {
   }
 
   async function signOut() {
-    const supabase = getSupabase()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
