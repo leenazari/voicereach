@@ -15,6 +15,7 @@ export default function Home() {
   const [billing, setBilling] = useState<'annual' | 'monthly'>('annual')
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStarted, setVideoStarted] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const [chatOpen, setChatOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -134,8 +135,11 @@ export default function Home() {
         .chat-suggest:hover { background: rgba(83,74,183,0.3) !important; border-color: rgba(83,74,183,0.6) !important; }
         .natalie-label-overlay { display: flex; }
         .natalie-label-below { display: none; }
+        .hamburger { display: none; }
         @media (max-width: 768px) {
           .nav-links { display: none !important; }
+          .nav-cta { display: none !important; }
+          .hamburger { display: flex !important; }
           .nav-inner { padding: 16px 20px !important; }
           .hero-section { padding: 100px 20px 60px !important; }
           .hero-actions { flex-direction: column !important; align-items: stretch !important; width: 100% !important; max-width: 320px !important; }
@@ -179,8 +183,30 @@ export default function Home() {
               >{label}</a>
             ))}
           </div>
-          <Link href="/signup" style={{ background: 'var(--purple)', color: 'white', border: 'none', padding: '10px 22px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>Get started free</Link>
+          <Link href="/signup" className="nav-cta" style={{ background: 'var(--purple)', color: 'white', border: 'none', padding: '10px 22px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>Get started free</Link>
+
+          {/* Hamburger — mobile only */}
+          <button
+            className="hamburger"
+            onClick={() => setMenuOpen(m => !m)}
+            style={{ flexDirection: 'column', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+          >
+            <div style={{ width: 22, height: 2, background: 'white', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+            <div style={{ width: 22, height: 2, background: 'white', borderRadius: 2, transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
+            <div style={{ width: 22, height: 2, background: 'white', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+          </button>
         </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div style={{ background: 'rgba(10,10,10,0.98)', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {[['#problem', 'The problem'], ['#how', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
+              <a key={href} href={href} onClick={() => setMenuOpen(false)} style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 16, fontWeight: 500, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'block' }}>{label}</a>
+            ))}
+            <Link href="/signup" onClick={() => setMenuOpen(false)} style={{ marginTop: 16, background: 'var(--purple)', color: 'white', padding: '13px 20px', borderRadius: 8, fontSize: 15, fontWeight: 600, textDecoration: 'none', textAlign: 'center', display: 'block' }}>Get started free →</Link>
+            <Link href="/login" onClick={() => setMenuOpen(false)} style={{ marginTop: 8, color: 'rgba(255,255,255,0.5)', padding: '13px 20px', borderRadius: 8, fontSize: 15, fontWeight: 500, textDecoration: 'none', textAlign: 'center', display: 'block' }}>Sign in</Link>
+          </div>
+        )}
       </nav>
 
       {/* HERO */}
@@ -574,7 +600,7 @@ export default function Home() {
                 </div>
               </div>
 
-               {SUGGESTED.filter(q => !messages.some(m => m.role === 'user' && m.content === q)).length > 0 && (
+              {SUGGESTED.filter(q => !messages.some(m => m.role === 'user' && m.content === q)).length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 36 }}>
                   {SUGGESTED.filter(q => !messages.some(m => m.role === 'user' && m.content === q)).map(q => (
                     <button key={q} className="chat-suggest" onClick={() => sendChat(q)} style={{ background: 'rgba(83,74,183,0.15)', border: '1px solid rgba(83,74,183,0.35)', borderRadius: 10, padding: '7px 12px', fontSize: 12, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', fontFamily: 'inherit' }}>{q}</button>
