@@ -139,9 +139,9 @@ export default function Home() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 48px', maxWidth: 1300, margin: '0 auto',
         }}>
-          <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>
-            Voice<span style={{ color: 'var(--purple-light)' }}>Reach</span>
-          </div>
+          <Link href="/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', textDecoration: 'none', color: 'white' }}>
+              Voice<span style={{ color: 'var(--purple-light)' }}>Reach</span>
+            </Link>
           <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
             {[['#problem', 'The problem'], ['#how', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
               <a key={href} href={href} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color 0.2s' }}
