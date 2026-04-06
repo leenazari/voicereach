@@ -1,11 +1,6 @@
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/router'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export default function Login() {
   const router = useRouter()
@@ -26,12 +21,15 @@ export default function Login() {
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(error.message === 'Invalid login credentials' ? 'Incorrect email or password. Try again or sign up.' : error.message)
       setLoading(false)
-    } else {
+    } else if (data.session) {
       router.push('/')
+    } else {
+      setError('Could not sign in. Please try again.')
+      setLoading(false)
     }
   }
 
