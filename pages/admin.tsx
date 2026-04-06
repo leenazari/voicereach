@@ -13,19 +13,10 @@ type Profile = {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  free: '#888',
-  starter: '#185FA5',
-  growth: '#534AB7',
-  agency: '#1D9E75',
-  enterprise: '#639922'
+  free: '#888', starter: '#185FA5', growth: '#534AB7', agency: '#1D9E75', enterprise: '#639922'
 }
-
 const PLAN_BG: Record<string, string> = {
-  free: '#f0f0f0',
-  starter: '#E6F1FB',
-  growth: '#EEEDFE',
-  agency: '#E1F5EE',
-  enterprise: '#EAF3DE'
+  free: '#f0f0f0', starter: '#E6F1FB', growth: '#EEEDFE', agency: '#E1F5EE', enterprise: '#EAF3DE'
 }
 
 export default function AdminPanel() {
@@ -40,6 +31,10 @@ export default function AdminPanel() {
   const [search, setSearch] = useState('')
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: string }[]>([])
   const [notifCounter, setNotifCounter] = useState(0)
+  const [activeTab, setActiveTab] = useState<'users' | 'chatbot'>('users')
+  const [knowledge, setKnowledge] = useState('')
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false)
+  const [knowledgeSaving, setKnowledgeSaving] = useState(false)
 
   useEffect(() => { checkAdminAndLoad() }, [])
 
@@ -57,16 +52,13 @@ export default function AdminPanel() {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
     if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'; return }
     loadData()
+    loadKnowledge()
   }
 
   async function loadData() {
     setLoading(true)
     const supabase = getSupabase()
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
+    const { data: profileData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
     if (profileData) {
       setProfiles(profileData)
       setStats({
@@ -77,6 +69,25 @@ export default function AdminPanel() {
       })
     }
     setLoading(false)
+  }
+
+  async function loadKnowledge() {
+    setKnowledgeLoading(true)
+    const supabase = getSupabase()
+    const { data } = await supabase.from('settings').select('value').eq('key', 'chatbot_knowledge').single()
+    if (data) setKnowledge(data.value)
+    setKnowledgeLoading(false)
+  }
+
+  async function saveKnowledge() {
+    setKnowledgeSaving(true)
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key: 'chatbot_knowledge', value: knowledge, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    if (error) notify('Error saving: ' + error.message, 'error')
+    else notify('Chatbot knowledge updated successfully')
+    setKnowledgeSaving(false)
   }
 
   function notify(message: string, type = 'success') {
@@ -97,15 +108,7 @@ export default function AdminPanel() {
     if (!editingUser) return
     setSaving(true)
     const supabase = getSupabase()
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        plan: editPlan,
-        credits_limit: parseInt(editCredits) || 3,
-        role: editRole
-      })
-      .eq('id', editingUser.id)
-
+    const { error } = await supabase.from('profiles').update({ plan: editPlan, credits_limit: parseInt(editCredits) || 3, role: editRole }).eq('id', editingUser.id)
     if (error) notify('Error saving: ' + error.message, 'error')
     else { notify('User updated successfully'); setEditingUser(null); loadData() }
     setSaving(false)
@@ -118,9 +121,7 @@ export default function AdminPanel() {
   }
 
   const filtered = profiles.filter(p =>
-    !search ||
-    p.email?.toLowerCase().includes(search.toLowerCase()) ||
-    p.full_name?.toLowerCase().includes(search.toLowerCase())
+    !search || p.email?.toLowerCase().includes(search.toLowerCase()) || p.full_name?.toLowerCase().includes(search.toLowerCase())
   )
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
@@ -137,6 +138,7 @@ export default function AdminPanel() {
         ))}
       </div>
 
+      {/* HEADER */}
       <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/dashboard" style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>← Back to dashboard</a>
@@ -145,13 +147,14 @@ export default function AdminPanel() {
           <span style={{ fontSize: 11, background: '#fff0ee', color: '#E24B4A', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>Admin only</span>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input type="text" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          {activeTab === 'users' && <input type="text" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, width: 200 }} />}
           <button onClick={signOut} style={{ fontSize: 13, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>Sign out</button>
         </div>
       </div>
 
       <div style={{ padding: 32, maxWidth: 1300, margin: '0 auto' }}>
 
+        {/* STATS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
           {[
             { label: 'Total accounts', value: stats.total, color: '#534AB7' },
@@ -166,72 +169,119 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>All users ({filtered.length})</div>
-            <button onClick={loadData} style={{ fontSize: 12, color: '#534AB7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>↺ Refresh</button>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#fafafa', borderBottom: '1px solid #ebebeb' }}>
-                {['User', 'Plan', 'Credits', 'Usage', 'Role', 'Joined', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '11px 16px', fontSize: 11, fontWeight: 700, color: '#888', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#ccc', fontSize: 13 }}>Loading users...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#ccc', fontSize: 13 }}>No users found</td></tr>
-              ) : filtered.map((p, i) => {
-                const creditsPercent = Math.min((p.credits_used / p.credits_limit) * 100, 100)
-                const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#1D9E75'
-                return (
-                  <tr key={p.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{p.full_name || '—'}</div>
-                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{p.email}</div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 11, background: PLAN_BG[p.plan] || '#f0f0f0', color: PLAN_COLORS[p.plan] || '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600, textTransform: 'capitalize' }}>
-                        {p.plan}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>
-                      {p.credits_limit === 999999 ? 'Unlimited' : p.credits_limit}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden', minWidth: 60 }}>
-                          <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4 }} />
-                        </div>
-                        <span style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap' }}>{p.credits_used}/{p.credits_limit === 999999 ? '∞' : p.credits_limit}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 11, background: p.role === 'admin' ? '#fff0ee' : '#f0f0f0', color: p.role === 'admin' ? '#E24B4A' : '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600, textTransform: 'capitalize' }}>
-                        {p.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>
-                      {new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button onClick={() => openEdit(p)} style={{ fontSize: 11, padding: '4px 12px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 600 }}>
-                        Manage
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        {/* TABS */}
+        <div style={{ display: 'flex', gap: 2, marginBottom: 20, background: 'white', border: '1px solid #ebebeb', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+          {[['users', '👥 Users'], ['chatbot', '🤖 Chatbot knowledge']].map(([id, label]) => (
+            <button key={id} onClick={() => setActiveTab(id as any)} style={{
+              padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              background: activeTab === id ? '#534AB7' : 'transparent',
+              color: activeTab === id ? 'white' : '#888',
+              transition: 'all 0.15s',
+            }}>{label}</button>
+          ))}
         </div>
+
+        {/* USERS TAB */}
+        {activeTab === 'users' && (
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>All users ({filtered.length})</div>
+              <button onClick={loadData} style={{ fontSize: 12, color: '#534AB7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>↺ Refresh</button>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#fafafa', borderBottom: '1px solid #ebebeb' }}>
+                  {['User', 'Plan', 'Credits', 'Usage', 'Role', 'Joined', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '11px 16px', fontSize: 11, fontWeight: 700, color: '#888', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#ccc', fontSize: 13 }}>Loading users...</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#ccc', fontSize: 13 }}>No users found</td></tr>
+                ) : filtered.map((p, i) => {
+                  const creditsPercent = Math.min((p.credits_used / p.credits_limit) * 100, 100)
+                  const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#1D9E75'
+                  return (
+                    <tr key={p.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{p.full_name || '—'}</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{p.email}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ fontSize: 11, background: PLAN_BG[p.plan] || '#f0f0f0', color: PLAN_COLORS[p.plan] || '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600, textTransform: 'capitalize' }}>{p.plan}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>{p.credits_limit === 999999 ? 'Unlimited' : p.credits_limit}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1, height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden', minWidth: 60 }}>
+                            <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap' }}>{p.credits_used}/{p.credits_limit === 999999 ? '∞' : p.credits_limit}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ fontSize: 11, background: p.role === 'admin' ? '#fff0ee' : '#f0f0f0', color: p.role === 'admin' ? '#E24B4A' : '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600, textTransform: 'capitalize' }}>{p.role}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <button onClick={() => openEdit(p)} style={{ fontSize: 11, padding: '4px 12px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 600 }}>Manage</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* CHATBOT TAB */}
+        {activeTab === 'chatbot' && (
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 28 }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>Natalie chatbot knowledge base</div>
+              <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6 }}>
+                This is the information Natalie uses to answer questions on the marketing page. Edit it here and save — changes take effect immediately with no redeploy needed. Write in plain English, organised by topic with clear headings in capitals.
+              </div>
+            </div>
+
+            {knowledgeLoading ? (
+              <div style={{ fontSize: 13, color: '#aaa', padding: 24, textAlign: 'center' }}>Loading...</div>
+            ) : (
+              <>
+                <textarea
+                  value={knowledge}
+                  onChange={e => setKnowledge(e.target.value)}
+                  rows={32}
+                  style={{
+                    width: '100%', padding: '14px 16px',
+                    border: '1px solid #e5e5e5', borderRadius: 10,
+                    fontSize: 13, lineHeight: 1.7, fontFamily: 'monospace',
+                    outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+                    color: '#1a1a1a', background: '#fafafa',
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+                  <div style={{ fontSize: 12, color: '#aaa' }}>{knowledge.length} characters · Changes save instantly, no redeploy needed</div>
+                  <button onClick={saveKnowledge} disabled={knowledgeSaving} style={{
+                    padding: '10px 24px', background: knowledgeSaving ? '#aaa' : '#534AB7',
+                    color: 'white', border: 'none', borderRadius: 8,
+                    fontSize: 13, fontWeight: 600, cursor: knowledgeSaving ? 'not-allowed' : 'pointer',
+                  }}>
+                    {knowledgeSaving ? 'Saving...' : 'Save knowledge base'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* EDIT USER MODAL */}
       {editingUser && (
         <div onClick={() => setEditingUser(null)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 14, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
