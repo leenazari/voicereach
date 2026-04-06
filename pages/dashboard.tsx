@@ -120,9 +120,9 @@ export default function Dashboard() {
     }
   }
 
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { window.location.href = '/login'; return }
+  aasync function checkAuth() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { window.location.href = '/login'; return }
     setUser(session.user)
     const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
     setProfile(data)
