@@ -48,10 +48,25 @@ export default function AdminPanel() {
 
   async function checkAdminAndLoad() {
     const supabase = getSupabase()
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) { window.location.href = '/login'; return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+
+    // Retry up to 3 times with 500ms gap to allow session to hydrate
+    let user = null
+    for (let i = 0; i < 3; i++) {
+      const { data } = await supabase.auth.getUser()
+      if (data.user) { user = data.user; break }
+      await new Promise(r => setTimeout(r, 500))
+    }
+
+    if (!user) { window.location.href = '/login'; return }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
     if (!profile || profile.role !== 'admin') { window.location.href = '/dashboard'; return }
+
     setAuthChecking(false)
     loadData()
     loadKnowledge()
@@ -129,7 +144,6 @@ export default function AdminPanel() {
   const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
 
-  // Don't render anything until auth check is complete — prevents flash of content before redirect
   if (authChecking) {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
