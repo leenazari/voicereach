@@ -1,17 +1,15 @@
 import type { AppProps } from 'next/app'
-import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useEffect } from 'react'
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignore SIGNED_OUT during OAuth callback — the hash contains the token
-      if (event === 'SIGNED_OUT') {
-        const hash = window.location.hash
-        const params = new URLSearchParams(window.location.search)
-        const isOAuthCallback = hash.includes('access_token') || params.has('code')
-        if (!isOAuthCallback) {
-          window.location.href = '/login'
+      if (event === 'SIGNED_IN' && session) {
+        // Only redirect to dashboard on sign in if we're on the login or signup page
+        const path = window.location.pathname
+        if (path === '/login' || path === '/signup') {
+          window.location.href = '/dashboard'
         }
       }
     })
