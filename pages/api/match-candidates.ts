@@ -63,55 +63,38 @@ function getWordArray(str: string): string[] {
 function semanticMatch(candidateKeyword: string, jobSkill: string): boolean {
   const ck = normalise(candidateKeyword)
   const js = normalise(jobSkill)
-
-  // Exact match
   if (ck === js) return true
-
-  // One contains the other
   if (ck.includes(js) || js.includes(ck)) return true
-
-  // Word level overlap — if 50%+ of words match
   const ckWords = getWordArray(ck)
   const jsWords = getWordArray(js)
   const jsWordSet = new Set(jsWords)
   const overlap = ckWords.filter(w => jsWordSet.has(w)).length
   const minLen = Math.min(ckWords.length, jsWords.length)
   if (minLen > 0 && overlap / minLen >= 0.5) return true
-
-  // Synonym check
   const synonymList = SYNONYMS[ck] || []
   if (synonymList.some(s => normalise(s) === js || js.includes(normalise(s)) || normalise(s).includes(js))) return true
-
-  // Reverse synonym check
   const reverseSynonyms = SYNONYMS[js] || []
   if (reverseSynonyms.some(s => normalise(s) === ck || ck.includes(normalise(s)) || normalise(s).includes(ck))) return true
-
   return false
 }
 
 function calculateMatch(candidate: any, job: any, priority: string): { score: number, matches: string[] } {
   const weights = MATCH_WEIGHTS[priority as keyof typeof MATCH_WEIGHTS] || MATCH_WEIGHTS.skills
-
   const candidateKeywords = (candidate.strength_keywords || [])
   const candidateSkills = (candidate.skills || [])
   const allCandidateKeywords = Array.from(new Set([...candidateKeywords, ...candidateSkills]))
-
   const jobSkills = (job.required_skills || [])
   const jobSector = (job.sector || '').toLowerCase()
   const jobLocation = (job.location || '').toLowerCase()
   const jobTitle = (job.title || '').toLowerCase()
 
-  // KEYWORD MATCH — semantic
   const keywordMatches: string[] = []
   let keywordScore = 0
-
   if (jobSkills.length > 0) {
     for (const jobSkill of jobSkills) {
       for (const candidateKeyword of allCandidateKeywords) {
         if (semanticMatch(candidateKeyword, jobSkill)) {
-          if (!keywordMatches.includes(candidateKeyword)) {
-            keywordMatches.push(candidateKeyword)
-          }
+          if (!keywordMatches.includes(candidateKeyword)) keywordMatches.push(candidateKeyword)
           break
         }
       }
@@ -121,7 +104,6 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
     keywordScore = 50
   }
 
-  // EXPERIENCE MATCH
   let experienceScore = 50
   const years = candidate.years_experience || 0
   if (jobTitle.includes('senior') || jobTitle.includes('lead') || jobTitle.includes('head') || jobTitle.includes('director')) {
@@ -134,12 +116,10 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
     experienceScore = years >= 2 ? 100 : years >= 1 ? 75 : 50
   }
 
-  // SECTOR MATCH — semantic
   let sectorScore = 50
   if (jobSector) {
     const jobSectorNorm = normalise(jobSector)
     const jobSectorWords = getWordArray(jobSectorNorm)
-
     const sectorMatch = allCandidateKeywords.some((ck: string) => {
       const ckNorm = normalise(ck)
       if (ckNorm.includes(jobSectorNorm) || jobSectorNorm.includes(ckNorm)) return true
@@ -147,11 +127,9 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
       const jobSectorWordSet = new Set(jobSectorWords)
       return ckWords.some(w => jobSectorWordSet.has(w))
     })
-
     sectorScore = sectorMatch ? 100 : 30
   }
 
-  // LOCATION MATCH
   let locationScore = 50
   if (job.work_type === 'remote') {
     locationScore = 100
@@ -165,16 +143,11 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
       } else {
         const jobCity = jobLocation.split(',')[0].trim()
         const candidateCity = candidateLocation.split(',')[0].trim()
-        if (jobCity && candidateCity && (jobCity.includes(candidateCity) || candidateCity.includes(jobCity))) {
-          locationScore = 100
-        } else {
-          locationScore = 20
-        }
+        locationScore = (jobCity && candidateCity && (jobCity.includes(candidateCity) || candidateCity.includes(jobCity))) ? 100 : 20
       }
     }
   }
 
-  // WEIGHTED TOTAL
   const total = Math.round(
     (keywordScore * weights.keywords / 100) +
     (experienceScore * weights.experience / 100) +
@@ -189,6 +162,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
+    // Auth check
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return res.status(401).json({ error: 'Unauthorised' })
+
+    const authClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { user } } = await authClient.auth.getUser(token)
+    if (!user) return res.status(401).json({ error: 'Unauthorised' })
+    const userId = user.id
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -197,17 +182,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { jobId } = req.body
     if (!jobId) return res.status(400).json({ error: 'jobId required' })
 
+    // Verify job belongs to this user
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('*')
       .eq('id', jobId)
+      .eq('user_id', userId)
       .single()
 
     if (jobError || !job) return res.status(404).json({ error: 'Job not found' })
 
+    // Only fetch THIS user's candidates
     const { data: candidates, error: candError } = await supabase
       .from('candidates')
       .select('*')
+      .eq('user_id', userId)
 
     if (candError) throw candError
 
@@ -228,13 +217,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const candidate of candidates || []) {
       const { score, matches } = calculateMatch(candidate, job, priority)
-
       const existingStatus = existingStatusMap[candidate.id]
       const alreadySent = existingStatus && SENT_STATUSES.includes(existingStatus)
-
-      const newStatus = alreadySent
-        ? existingStatus
-        : score >= threshold ? 'shortlist' : 'longlist'
+      const newStatus = alreadySent ? existingStatus : score >= threshold ? 'shortlist' : 'longlist'
 
       await supabase
         .from('job_candidates')
