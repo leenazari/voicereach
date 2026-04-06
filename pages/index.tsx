@@ -20,7 +20,6 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
-  const [showSuggested, setShowSuggested] = useState(true)
   const [unread, setUnread] = useState(1)
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const chatInputRef = useRef<HTMLInputElement>(null)
