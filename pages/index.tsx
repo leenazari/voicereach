@@ -60,7 +60,6 @@ export default function Home() {
 
   async function sendChat(text: string) {
     if (!text.trim() || chatLoading) return
-    setShowSuggested(false)
     const userMsg: ChatMessage = { role: 'user', content: text }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
