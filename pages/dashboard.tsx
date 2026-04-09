@@ -1105,14 +1105,128 @@ export default function Dashboard() {
                 </button>
               </div>
               {((profileCandidate as any).strength_keywords || []).length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
-                    <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
-              )}
+  <>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
+        <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+      ))}
+    </div>
+    {(() => {
+      const SYNONYMS: Record<string, string[]> = {
+        'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
+        'business development': ['sales', 'new business', 'revenue generation', 'commercial development'],
+        'account management': ['key account management', 'client management', 'account manager', 'client services'],
+        'lead generation': ['demand generation', 'pipeline generation', 'prospecting', 'new business'],
+        'cold calling': ['outbound sales', 'telemarketing', 'telesales', 'prospecting'],
+        'telesales': ['cold calling', 'telemarketing', 'outbound sales', 'inside sales'],
+        'field sales': ['territory sales', 'area sales', 'regional sales', 'outside sales'],
+        'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales'],
+        'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales'],
+        'enterprise sales': ['b2b sales', 'corporate sales', 'large account sales', 'strategic sales'],
+        'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy', 'campaign management'],
+        'digital marketing': ['online marketing', 'performance marketing', 'growth marketing', 'marketing analytics'],
+        'seo': ['seo optimisation', 'search engine optimisation', 'organic search', 'seo management'],
+        'seo optimisation': ['seo', 'search engine optimisation', 'organic search', 'seo management'],
+        'ppc': ['ppc management', 'paid search', 'google ads', 'paid advertising', 'performance marketing'],
+        'ppc management': ['ppc', 'paid search', 'google ads', 'paid advertising'],
+        'google ads': ['ppc', 'paid search', 'adwords', 'paid advertising'],
+        'social media': ['social media management', 'social media marketing', 'community management'],
+        'social media management': ['social media marketing', 'community management', 'community engagement', 'content creation'],
+        'content creation': ['copywriting', 'content marketing', 'content strategy', 'blog writing'],
+        'copywriting': ['content creation', 'content marketing', 'creative writing', 'brand copywriting'],
+        'email marketing': ['email campaigns', 'crm marketing', 'email automation', 'newsletter'],
+        'campaign management': ['marketing campaigns', 'campaign delivery', 'campaign planning'],
+        'brand management': ['brand strategy', 'branding', 'brand marketing', 'brand development'],
+        'hubspot': ['crm', 'marketing automation', 'inbound marketing', 'email marketing'],
+        'salesforce': ['crm', 'customer relationship management', 'sfdc', 'sales cloud'],
+        'social care': ['care work', 'social work', 'care management', 'health and social care'],
+        'care work': ['care assistant', 'support worker', 'care worker', 'personal care'],
+        'care assistant': ['care worker', 'support worker', 'healthcare assistant', 'hca'],
+        'support worker': ['care worker', 'care assistant', 'mental health support'],
+        'social work': ['case management', 'safeguarding', 'child protection', 'adult social care'],
+        'safeguarding': ['child protection', 'adult safeguarding', 'dbs', 'child welfare'],
+        'mental health': ['mental health support', 'psychiatric care', 'psychological support', 'wellbeing'],
+        'learning disabilities': ['learning disability support', 'special needs', 'supported living'],
+        'dementia care': ['elderly care', 'residential care', 'nursing care', 'memory care'],
+        'elderly care': ['residential care', 'nursing home', 'dementia care', 'older people'],
+        'domiciliary care': ['home care', 'care at home', 'community care', 'personal care'],
+        'software development': ['software engineering', 'programming', 'coding', 'development'],
+        'software engineering': ['software development', 'programming', 'engineering', 'development'],
+        'programming': ['coding', 'software development', 'software engineering'],
+        'coding': ['programming', 'software development', 'development'],
+        'full stack development': ['full stack', 'front end', 'back end', 'web development'],
+        'front end development': ['frontend', 'ui development', 'web development'],
+        'back end development': ['backend', 'server side development', 'api development'],
+        'web development': ['front end development', 'back end development', 'full stack development'],
+        'javascript': ['js', 'nodejs', 'react', 'vue', 'angular', 'typescript'],
+        'typescript': ['javascript', 'typed javascript', 'angular', 'react typescript'],
+        'react': ['reactjs', 'react native', 'frontend development', 'javascript'],
+        'vue': ['vuejs', 'frontend development', 'javascript framework'],
+        'angular': ['angularjs', 'typescript', 'frontend development'],
+        'nodejs': ['node.js', 'javascript', 'backend development'],
+        'python': ['django', 'flask', 'data science', 'machine learning'],
+        'java': ['spring boot', 'spring', 'java development'],
+        'php': ['laravel', 'symfony', 'wordpress development'],
+        'c#': ['dotnet', '.net', 'asp.net', 'microsoft development'],
+        'aws': ['amazon web services', 'cloud computing', 'cloud infrastructure'],
+        'azure': ['microsoft azure', 'cloud computing', 'azure devops'],
+        'devops': ['ci/cd', 'continuous integration', 'docker', 'kubernetes'],
+        'docker': ['containerisation', 'containers', 'kubernetes'],
+        'kubernetes': ['k8s', 'container orchestration', 'docker'],
+        'sql': ['mysql', 'postgresql', 'database', 'relational database'],
+        'agile': ['scrum', 'kanban', 'agile methodology', 'sprint'],
+        'scrum': ['agile', 'sprint', 'scrum master', 'agile methodology'],
+        'machine learning': ['ml', 'artificial intelligence', 'data science', 'deep learning'],
+        'data science': ['machine learning', 'data analysis', 'python', 'statistics'],
+        'team leadership': ['people management', 'staff management', 'team management', 'line management'],
+        'people management': ['team leadership', 'staff management', 'managing people', 'line management'],
+        'operations management': ['operations', 'operational management', 'multi-site operations'],
+        'logistics': ['supply chain', 'logistics management', 'distribution', 'transport'],
+        'supply chain': ['logistics', 'supply chain management', 'distribution'],
+        'warehouse management': ['warehousing', 'warehouse operations', 'wms'],
+        'inventory management': ['inventory control', 'stock management', 'stock control'],
+        'project management': ['project delivery', 'programme management', 'pmo'],
+        'financial management': ['finance', 'financial planning', 'p&l', 'fp&a'],
+        'budget management': ['budgeting', 'financial management', 'cost management', 'p&l'],
+        'recruitment': ['talent acquisition', 'hiring', 'resourcing', 'talent management'],
+        'hr management': ['human resources', 'hr', 'people management', 'hrbp'],
+        'retail': ['retail management', 'retail operations', 'store management', 'fmcg'],
+        'fmcg': ['retail', 'consumer goods', 'fast moving consumer goods'],
+        'customer service': ['customer support', 'client services', 'customer success'],
+        'health and safety': ['safety compliance', 'hse', 'safety management', 'nebosh'],
+        'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
+        'excel': ['microsoft excel', 'spreadsheets', 'data analysis', 'pivot tables'],
+      }
+      const existingKeywords = new Set(
+        ((profileCandidate as any).strength_keywords || []).map((k: string) => k.toLowerCase().trim())
+      )
+      const expanded = new Set<string>()
+      for (const kw of ((profileCandidate as any).strength_keywords || [])) {
+        const kwLower = kw.toLowerCase().trim()
+        const synonyms = SYNONYMS[kwLower] || []
+        for (const s of synonyms) {
+          if (!existingKeywords.has(s.toLowerCase().trim())) {
+            expanded.add(s)
+          }
+        }
+      }
+      const expandedList = Array.from(expanded).slice(0, 24)
+      if (expandedList.length === 0) return null
+      return (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 10, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 6 }}>Also matches roles looking for</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {expandedList.map((kw: string) => (
+              <span key={kw} style={{ fontSize: 11, background: '#f5f5f5', color: '#aaa', padding: '3px 8px', borderRadius: 8, fontWeight: 400, border: '1px solid #ebebeb' }}>{kw}</span>
+            ))}
+          </div>
+        </div>
+      )
+    })()}
+  </>
+) : (
+  <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
+)}
             </div>
             {((profileCandidate as any).qualifications || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
