@@ -35,7 +35,7 @@ const STEPS = [
     color: '#185FA5',
     bg: '#E6F1FB',
     tips: [
-      'Bulk upload — zip up to 50 PDFs and upload in one go',
+      'Bulk upload — zip up to 250 PDFs and upload in one go',
       'PDFs only for bulk upload — convert Word docs first',
       'Keywords are auto-generated and used for job matching',
     ]
