@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
 import JobFormModal from '../components/JobFormModal'
 import BulkUploadModal from '../components/BulkUploadModal'
+import OnboardingModal from '../components/OnboardingModal'
 import { useBulkUpload } from '../context/BulkUploadContext'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
@@ -63,6 +64,8 @@ type MatchResult = {
   already_sent: boolean
 }
 
+type OnboardingSteps = { job: boolean; candidates: boolean; voice_note: boolean }
+
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
 const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 
@@ -87,6 +90,9 @@ export default function Dashboard() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingMode, setOnboardingMode] = useState<'auto' | 'manual'>('auto')
+  const [onboardingSteps, setOnboardingSteps] = useState<OnboardingSteps>({ job: false, candidates: false, voice_note: false })
   const [bulkJobId, setBulkJobId] = useState<string | undefined>()
   const [bulkJobTitle, setBulkJobTitle] = useState<string | undefined>()
   const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null)
@@ -126,6 +132,15 @@ export default function Dashboard() {
         setSessionToken(session.access_token)
         supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
           setProfile(data)
+          if (data) {
+            const onboarding = data.onboarding || { seen: false, steps: { job: false, candidates: false, voice_note: false } }
+            setOnboardingSteps(onboarding.steps || { job: false, candidates: false, voice_note: false })
+            if (!onboarding.seen) {
+              setOnboardingMode('auto')
+              setShowOnboarding(true)
+              supabase.from('profiles').update({ onboarding: { ...onboarding, seen: true } }).eq('id', session.user.id)
+            }
+          }
         })
         fetchCandidates()
         fetchJobs()
@@ -141,6 +156,15 @@ export default function Dashboard() {
         setSessionToken(session.access_token)
         supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
           setProfile(data)
+          if (data) {
+            const onboarding = data.onboarding || { seen: false, steps: { job: false, candidates: false, voice_note: false } }
+            setOnboardingSteps(onboarding.steps || { job: false, candidates: false, voice_note: false })
+            if (!onboarding.seen) {
+              setOnboardingMode('auto')
+              setShowOnboarding(true)
+              supabase.from('profiles').update({ onboarding: { ...onboarding, seen: true } }).eq('id', session.user.id)
+            }
+          }
         })
         fetchCandidates()
         fetchJobs()
@@ -157,10 +181,22 @@ export default function Dashboard() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Refresh candidates when bulk upload completes
   useEffect(() => {
-    if (bulkState.done) fetchCandidates()
+    if (bulkState.done) {
+      fetchCandidates()
+      markOnboardingStep('candidates')
+    }
   }, [bulkState.done])
+
+  async function markOnboardingStep(step: 'job' | 'candidates' | 'voice_note') {
+    const newSteps = { ...onboardingSteps, [step]: true }
+    setOnboardingSteps(newSteps)
+    if (user) {
+      const { data } = await supabase.from('profiles').select('onboarding').eq('id', user.id).single()
+      const current = data?.onboarding || { seen: true, steps: {} }
+      await supabase.from('profiles').update({ onboarding: { ...current, steps: newSteps } }).eq('id', user.id)
+    }
+  }
 
   async function authHeaders(): Promise<Record<string, string>> {
     const { data: { session } } = await supabase.auth.getSession()
@@ -275,6 +311,7 @@ export default function Dashboard() {
         }))
         fetchCandidates()
         if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+        markOnboardingStep('voice_note')
       } else notify('Error: ' + data.error, 'error')
     } finally { setShortlisting(null) }
   }
@@ -397,6 +434,7 @@ export default function Dashboard() {
         notify(`Voice note sent to ${jobModalCandidate.name} ✓`)
         fetchCandidates()
         if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+        markOnboardingStep('voice_note')
       } else notify('Error: ' + data.error, 'error')
     } finally { setShortlisting(null); setJobModalCandidate(null); setScriptPreview('') }
   }
@@ -521,7 +559,9 @@ export default function Dashboard() {
     if (data.candidate) {
       setShowAdd(false); setCvFile(null)
       setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
-      fetchCandidates(); notify('Candidate added successfully')
+      fetchCandidates()
+      notify('Candidate added successfully')
+      markOnboardingStep('candidates')
     } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
   }
 
@@ -542,6 +582,7 @@ export default function Dashboard() {
 
   const creditsPercent = profile && profile.credits_limit !== 999999 ? Math.min((profile.credits_used / profile.credits_limit) * 100, 100) : 0
   const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#534AB7'
+  const onboardingDoneCount = Object.values(onboardingSteps).filter(Boolean).length
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
@@ -606,7 +647,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
           <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
         </div>
-        <div style={{ padding: '12px 0', flex: 1 }}>
+        <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
           {[
             { id: 'pipeline', label: 'Pipeline', icon: '◈' },
@@ -624,9 +665,35 @@ export default function Dashboard() {
               <span>⊛</span>Admin panel
             </div>
           )}
+
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
           <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
             <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
+          </div>
+
+          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
+
+          <div onClick={() => { setOnboardingMode('manual'); setShowOnboarding(true) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.5 }}>◎</span>
+            <span style={{ flex: 1 }}>Getting started</span>
+            {onboardingDoneCount < 3 && (
+              <span style={{ fontSize: 10, background: '#534AB7', color: 'white', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>{onboardingDoneCount}/3</span>
+            )}
+            {onboardingDoneCount === 3 && (
+              <span style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>✓</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◷</span>
+            <span>FAQ</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◈</span>
+            <span>Support chat</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
           </div>
         </div>
 
@@ -680,7 +747,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {activeTab !== 'jobs' && <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />}
             {activeTab === 'jobs' ? (
-              <button onClick={() => setShowAddJob(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Job</button>
+              <button onClick={() => { setShowAddJob(true) }} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Job</button>
             ) : (
               <>
                 <button onClick={() => { setBulkJobId(undefined); setBulkJobTitle(undefined); setShowBulkUpload(true) }} style={{ background: 'white', color: '#534AB7', border: '1px solid #534AB7', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📦 Bulk upload</button>
@@ -967,7 +1034,7 @@ export default function Dashboard() {
       </div>
 
       {/* JOB MODALS */}
-      {showAddJob && <JobFormModal mode="add" onSave={fetchJobs} onClose={() => setShowAddJob(false)} notify={notify} />}
+      {showAddJob && <JobFormModal mode="add" onSave={() => { fetchJobs(); markOnboardingStep('job') }} onClose={() => setShowAddJob(false)} notify={notify} />}
       {showEditJob && editingJob && <JobFormModal mode="edit" job={editingJob} onSave={fetchJobs} onClose={() => { setShowEditJob(false); setEditingJob(null) }} notify={notify} />}
 
       {/* BULK UPLOAD MODAL */}
@@ -977,6 +1044,15 @@ export default function Dashboard() {
           jobId={bulkJobId}
           jobTitle={bulkJobTitle}
           onClose={() => setShowBulkUpload(false)}
+        />
+      )}
+
+      {/* ONBOARDING MODAL */}
+      {showOnboarding && (
+        <OnboardingModal
+          mode={onboardingMode}
+          completedSteps={onboardingSteps}
+          onClose={() => setShowOnboarding(false)}
         />
       )}
 
@@ -1105,128 +1181,106 @@ export default function Dashboard() {
                 </button>
               </div>
               {((profileCandidate as any).strength_keywords || []).length > 0 ? (
-  <>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-      {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
-        <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
-      ))}
-    </div>
-    {(() => {
-      const SYNONYMS: Record<string, string[]> = {
-        'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
-        'business development': ['sales', 'new business', 'revenue generation', 'commercial development'],
-        'account management': ['key account management', 'client management', 'account manager', 'client services'],
-        'lead generation': ['demand generation', 'pipeline generation', 'prospecting', 'new business'],
-        'cold calling': ['outbound sales', 'telemarketing', 'telesales', 'prospecting'],
-        'telesales': ['cold calling', 'telemarketing', 'outbound sales', 'inside sales'],
-        'field sales': ['territory sales', 'area sales', 'regional sales', 'outside sales'],
-        'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales'],
-        'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales'],
-        'enterprise sales': ['b2b sales', 'corporate sales', 'large account sales', 'strategic sales'],
-        'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy', 'campaign management'],
-        'digital marketing': ['online marketing', 'performance marketing', 'growth marketing', 'marketing analytics'],
-        'seo': ['seo optimisation', 'search engine optimisation', 'organic search', 'seo management'],
-        'seo optimisation': ['seo', 'search engine optimisation', 'organic search', 'seo management'],
-        'ppc': ['ppc management', 'paid search', 'google ads', 'paid advertising', 'performance marketing'],
-        'ppc management': ['ppc', 'paid search', 'google ads', 'paid advertising'],
-        'google ads': ['ppc', 'paid search', 'adwords', 'paid advertising'],
-        'social media': ['social media management', 'social media marketing', 'community management'],
-        'social media management': ['social media marketing', 'community management', 'community engagement', 'content creation'],
-        'content creation': ['copywriting', 'content marketing', 'content strategy', 'blog writing'],
-        'copywriting': ['content creation', 'content marketing', 'creative writing', 'brand copywriting'],
-        'email marketing': ['email campaigns', 'crm marketing', 'email automation', 'newsletter'],
-        'campaign management': ['marketing campaigns', 'campaign delivery', 'campaign planning'],
-        'brand management': ['brand strategy', 'branding', 'brand marketing', 'brand development'],
-        'hubspot': ['crm', 'marketing automation', 'inbound marketing', 'email marketing'],
-        'salesforce': ['crm', 'customer relationship management', 'sfdc', 'sales cloud'],
-        'social care': ['care work', 'social work', 'care management', 'health and social care'],
-        'care work': ['care assistant', 'support worker', 'care worker', 'personal care'],
-        'care assistant': ['care worker', 'support worker', 'healthcare assistant', 'hca'],
-        'support worker': ['care worker', 'care assistant', 'mental health support'],
-        'social work': ['case management', 'safeguarding', 'child protection', 'adult social care'],
-        'safeguarding': ['child protection', 'adult safeguarding', 'dbs', 'child welfare'],
-        'mental health': ['mental health support', 'psychiatric care', 'psychological support', 'wellbeing'],
-        'learning disabilities': ['learning disability support', 'special needs', 'supported living'],
-        'dementia care': ['elderly care', 'residential care', 'nursing care', 'memory care'],
-        'elderly care': ['residential care', 'nursing home', 'dementia care', 'older people'],
-        'domiciliary care': ['home care', 'care at home', 'community care', 'personal care'],
-        'software development': ['software engineering', 'programming', 'coding', 'development'],
-        'software engineering': ['software development', 'programming', 'engineering', 'development'],
-        'programming': ['coding', 'software development', 'software engineering'],
-        'coding': ['programming', 'software development', 'development'],
-        'full stack development': ['full stack', 'front end', 'back end', 'web development'],
-        'front end development': ['frontend', 'ui development', 'web development'],
-        'back end development': ['backend', 'server side development', 'api development'],
-        'web development': ['front end development', 'back end development', 'full stack development'],
-        'javascript': ['js', 'nodejs', 'react', 'vue', 'angular', 'typescript'],
-        'typescript': ['javascript', 'typed javascript', 'angular', 'react typescript'],
-        'react': ['reactjs', 'react native', 'frontend development', 'javascript'],
-        'vue': ['vuejs', 'frontend development', 'javascript framework'],
-        'angular': ['angularjs', 'typescript', 'frontend development'],
-        'nodejs': ['node.js', 'javascript', 'backend development'],
-        'python': ['django', 'flask', 'data science', 'machine learning'],
-        'java': ['spring boot', 'spring', 'java development'],
-        'php': ['laravel', 'symfony', 'wordpress development'],
-        'c#': ['dotnet', '.net', 'asp.net', 'microsoft development'],
-        'aws': ['amazon web services', 'cloud computing', 'cloud infrastructure'],
-        'azure': ['microsoft azure', 'cloud computing', 'azure devops'],
-        'devops': ['ci/cd', 'continuous integration', 'docker', 'kubernetes'],
-        'docker': ['containerisation', 'containers', 'kubernetes'],
-        'kubernetes': ['k8s', 'container orchestration', 'docker'],
-        'sql': ['mysql', 'postgresql', 'database', 'relational database'],
-        'agile': ['scrum', 'kanban', 'agile methodology', 'sprint'],
-        'scrum': ['agile', 'sprint', 'scrum master', 'agile methodology'],
-        'machine learning': ['ml', 'artificial intelligence', 'data science', 'deep learning'],
-        'data science': ['machine learning', 'data analysis', 'python', 'statistics'],
-        'team leadership': ['people management', 'staff management', 'team management', 'line management'],
-        'people management': ['team leadership', 'staff management', 'managing people', 'line management'],
-        'operations management': ['operations', 'operational management', 'multi-site operations'],
-        'logistics': ['supply chain', 'logistics management', 'distribution', 'transport'],
-        'supply chain': ['logistics', 'supply chain management', 'distribution'],
-        'warehouse management': ['warehousing', 'warehouse operations', 'wms'],
-        'inventory management': ['inventory control', 'stock management', 'stock control'],
-        'project management': ['project delivery', 'programme management', 'pmo'],
-        'financial management': ['finance', 'financial planning', 'p&l', 'fp&a'],
-        'budget management': ['budgeting', 'financial management', 'cost management', 'p&l'],
-        'recruitment': ['talent acquisition', 'hiring', 'resourcing', 'talent management'],
-        'hr management': ['human resources', 'hr', 'people management', 'hrbp'],
-        'retail': ['retail management', 'retail operations', 'store management', 'fmcg'],
-        'fmcg': ['retail', 'consumer goods', 'fast moving consumer goods'],
-        'customer service': ['customer support', 'client services', 'customer success'],
-        'health and safety': ['safety compliance', 'hse', 'safety management', 'nebosh'],
-        'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
-        'excel': ['microsoft excel', 'spreadsheets', 'data analysis', 'pivot tables'],
-      }
-      const existingKeywords = new Set(
-        ((profileCandidate as any).strength_keywords || []).map((k: string) => k.toLowerCase().trim())
-      )
-      const expanded = new Set<string>()
-      for (const kw of ((profileCandidate as any).strength_keywords || [])) {
-        const kwLower = kw.toLowerCase().trim()
-        const synonyms = SYNONYMS[kwLower] || []
-        for (const s of synonyms) {
-          if (!existingKeywords.has(s.toLowerCase().trim())) {
-            expanded.add(s)
-          }
-        }
-      }
-      const expandedList = Array.from(expanded).slice(0, 24)
-      if (expandedList.length === 0) return null
-      return (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 10, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 6 }}>Also matches roles looking for</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {expandedList.map((kw: string) => (
-              <span key={kw} style={{ fontSize: 11, background: '#f5f5f5', color: '#aaa', padding: '3px 8px', borderRadius: 8, fontWeight: 400, border: '1px solid #ebebeb' }}>{kw}</span>
-            ))}
-          </div>
-        </div>
-      )
-    })()}
-  </>
-) : (
-  <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
-)}
+                <>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
+                      <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+                    ))}
+                  </div>
+                  {(() => {
+                    const SYNONYMS: Record<string, string[]> = {
+                      'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
+                      'business development': ['sales', 'new business', 'revenue generation', 'commercial development'],
+                      'account management': ['key account management', 'client management', 'account manager', 'client services'],
+                      'lead generation': ['demand generation', 'pipeline generation', 'prospecting', 'new business'],
+                      'cold calling': ['outbound sales', 'telemarketing', 'telesales', 'prospecting'],
+                      'telesales': ['cold calling', 'telemarketing', 'outbound sales', 'inside sales'],
+                      'field sales': ['territory sales', 'area sales', 'regional sales', 'outside sales'],
+                      'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales'],
+                      'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales'],
+                      'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy', 'campaign management'],
+                      'digital marketing': ['online marketing', 'performance marketing', 'growth marketing', 'marketing analytics'],
+                      'seo': ['seo optimisation', 'search engine optimisation', 'organic search'],
+                      'seo optimisation': ['seo', 'search engine optimisation', 'organic search'],
+                      'ppc': ['ppc management', 'paid search', 'google ads', 'paid advertising'],
+                      'ppc management': ['ppc', 'paid search', 'google ads', 'paid advertising'],
+                      'social media': ['social media management', 'social media marketing', 'community management'],
+                      'social media management': ['social media marketing', 'community management', 'community engagement', 'content creation'],
+                      'content creation': ['copywriting', 'content marketing', 'content strategy', 'blog writing'],
+                      'copywriting': ['content creation', 'content marketing', 'creative writing', 'brand copywriting'],
+                      'email marketing': ['email campaigns', 'crm marketing', 'email automation', 'newsletter'],
+                      'campaign management': ['marketing campaigns', 'campaign delivery', 'campaign planning'],
+                      'brand management': ['brand strategy', 'branding', 'brand marketing', 'brand development'],
+                      'hubspot': ['crm', 'marketing automation', 'inbound marketing', 'email marketing'],
+                      'salesforce': ['crm', 'customer relationship management', 'sfdc'],
+                      'social care': ['care work', 'social work', 'care management', 'health and social care'],
+                      'care work': ['care assistant', 'support worker', 'care worker', 'personal care'],
+                      'care assistant': ['care worker', 'support worker', 'healthcare assistant', 'hca'],
+                      'support worker': ['care worker', 'care assistant', 'mental health support'],
+                      'safeguarding': ['child protection', 'adult safeguarding', 'dbs', 'child welfare'],
+                      'mental health': ['mental health support', 'psychiatric care', 'psychological support', 'wellbeing'],
+                      'learning disabilities': ['learning disability support', 'special needs', 'supported living'],
+                      'dementia care': ['elderly care', 'residential care', 'memory care'],
+                      'domiciliary care': ['home care', 'care at home', 'community care', 'personal care'],
+                      'software development': ['software engineering', 'programming', 'coding', 'development'],
+                      'programming': ['coding', 'software development', 'software engineering'],
+                      'web development': ['front end development', 'back end development', 'full stack development'],
+                      'javascript': ['nodejs', 'react', 'vue', 'angular', 'typescript'],
+                      'react': ['reactjs', 'react native', 'frontend development', 'javascript'],
+                      'python': ['django', 'flask', 'data science', 'machine learning'],
+                      'java': ['spring boot', 'spring', 'java development'],
+                      'aws': ['amazon web services', 'cloud computing', 'cloud infrastructure'],
+                      'azure': ['microsoft azure', 'cloud computing', 'azure devops'],
+                      'devops': ['ci/cd', 'docker', 'kubernetes'],
+                      'sql': ['mysql', 'postgresql', 'database', 'relational database'],
+                      'agile': ['scrum', 'kanban', 'agile methodology', 'sprint'],
+                      'machine learning': ['ml', 'artificial intelligence', 'data science'],
+                      'team leadership': ['people management', 'staff management', 'team management', 'line management'],
+                      'people management': ['team leadership', 'staff management', 'managing people', 'line management'],
+                      'operations management': ['operations', 'operational management', 'multi-site operations'],
+                      'logistics': ['supply chain', 'logistics management', 'distribution', 'transport'],
+                      'warehouse management': ['warehousing', 'warehouse operations', 'wms'],
+                      'inventory management': ['inventory control', 'stock management', 'stock control'],
+                      'project management': ['project delivery', 'programme management', 'pmo'],
+                      'financial management': ['finance', 'financial planning', 'p&l'],
+                      'budget management': ['budgeting', 'financial management', 'cost management'],
+                      'recruitment': ['talent acquisition', 'hiring', 'resourcing'],
+                      'hr management': ['human resources', 'hr', 'people management'],
+                      'retail': ['retail management', 'retail operations', 'store management', 'fmcg'],
+                      'fmcg': ['retail', 'consumer goods', 'fast moving consumer goods'],
+                      'customer service': ['customer support', 'client services', 'customer success'],
+                      'health and safety': ['safety compliance', 'hse', 'safety management', 'nebosh'],
+                      'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
+                      'excel': ['microsoft excel', 'spreadsheets', 'data analysis', 'pivot tables'],
+                    }
+                    const existingKeywords = new Set(
+                      ((profileCandidate as any).strength_keywords || []).map((k: string) => k.toLowerCase().trim())
+                    )
+                    const expanded = new Set<string>()
+                    for (const kw of ((profileCandidate as any).strength_keywords || [])) {
+                      const kwLower = kw.toLowerCase().trim()
+                      const synonyms = SYNONYMS[kwLower] || []
+                      for (const s of synonyms) {
+                        if (!existingKeywords.has(s.toLowerCase().trim())) expanded.add(s)
+                      }
+                    }
+                    const expandedList = Array.from(expanded).slice(0, 24)
+                    if (expandedList.length === 0) return null
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 10, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 6 }}>Also matches roles looking for</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                          {expandedList.map((kw: string) => (
+                            <span key={kw} style={{ fontSize: 11, background: '#f5f5f5', color: '#aaa', padding: '3px 8px', borderRadius: 8, fontWeight: 400, border: '1px solid #ebebeb' }}>{kw}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic' }}>No keywords yet — click Regenerate to generate them</div>
+              )}
             </div>
             {((profileCandidate as any).qualifications || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
