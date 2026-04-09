@@ -9,8 +9,6 @@ type Props = {
   onClose: () => void
 }
 
-const ALLOWED_EXT = ['.pdf', '.doc', '.docx']
-
 export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Props) {
   const { startUpload } = useBulkUpload()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -29,8 +27,8 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
         const filename = path.split('/').pop() || path
         if (filename.startsWith('__MACOSX') || filename.startsWith('.')) return
         const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-        if (!ALLOWED_EXT.includes(ext)) {
-          entries.push({ name: filename, valid: false, reason: 'Wrong format' })
+        if (ext !== '.pdf') {
+          entries.push({ name: filename, valid: false, reason: ext === '.doc' || ext === '.docx' ? 'Word docs not supported — convert to PDF' : 'Wrong format — PDF only' })
         } else {
           entries.push({ name: filename, valid: true })
         }
@@ -53,15 +51,10 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
       const filename = path.split('/').pop() || path
       if (filename.startsWith('__MACOSX') || filename.startsWith('.')) return
       const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-      if (!ALLOWED_EXT.includes(ext)) return
+      if (ext !== '.pdf') return
 
       const p = entry.async('blob').then(blob => {
-        const mimeMap: Record<string, string> = {
-          '.pdf': 'application/pdf',
-          '.doc': 'application/msword',
-          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        }
-        files.push(new File([blob], filename, { type: mimeMap[ext] || 'application/octet-stream' }))
+        files.push(new File([blob], filename, { type: 'application/pdf' }))
       })
       promises.push(p)
     })
@@ -85,6 +78,10 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa', lineHeight: 1 }}>×</button>
         </div>
 
+        <div style={{ background: '#f0eeff', border: '1px solid #EEEDFE', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: '#534AB7' }}>
+          📄 ZIP file must contain PDF files only. Word documents (.doc/.docx) are not supported — please convert them to PDF first.
+        </div>
+
         {!zipFile ? (
           <div
             onClick={() => fileRef.current?.click()}
@@ -95,7 +92,7 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
             <input ref={fileRef} type="file" accept=".zip" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleZip(f) }} />
             <div style={{ fontSize: 32, marginBottom: 12 }}>📦</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Drop your ZIP file here</div>
-            <div style={{ fontSize: 12, color: '#aaa' }}>ZIP must contain PDF, DOC or DOCX files</div>
+            <div style={{ fontSize: 12, color: '#aaa' }}>ZIP must contain PDF files only</div>
           </div>
         ) : parsing ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 13 }}>⟳ Reading ZIP file...</div>
@@ -108,7 +105,7 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
               </div>
               <div style={{ background: invalidCount > 0 ? '#fff0ee' : '#f5f5f5', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 24, fontWeight: 700, color: invalidCount > 0 ? '#E24B4A' : '#aaa' }}>{invalidCount}</div>
-                <div style={{ fontSize: 11, color: invalidCount > 0 ? '#E24B4A' : '#aaa', fontWeight: 600 }}>Wrong format — skipped</div>
+                <div style={{ fontSize: 11, color: invalidCount > 0 ? '#E24B4A' : '#aaa', fontWeight: 600 }}>Skipped</div>
               </div>
             </div>
 
