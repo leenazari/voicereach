@@ -25,23 +25,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-    const mediaTypeMap: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    }
-    const mediaType = mediaTypeMap[ext]
-    if (!mediaType) return res.json({ success: false, reason: 'Wrong format' })
+    const allowedExts = ['.pdf', '.doc', '.docx']
+    if (!allowedExts.includes(ext)) return res.json({ success: false, reason: 'Wrong format' })
 
-    const message = await anthropic.messages.create({
+    // Use same approach as extract-cv.ts — send as PDF source
+    const message = await (anthropic.messages.create as any)({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
       messages: [{
         role: 'user',
         content: [
           {
-            type: 'document' as any,
-            source: { type: 'base64', media_type: mediaType, data: base64 }
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: base64
+            }
           },
           {
             type: 'text',
