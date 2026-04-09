@@ -16,7 +16,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-  // Credit check
   const { data: profile } = await supabase.from('profiles').select('credits_used, credits_limit').eq('id', user.id).single()
   if (!profile) return res.status(400).json({ success: false, reason: 'Profile not found' })
   if (profile.credits_used >= profile.credits_limit) return res.status(400).json({ success: false, reason: 'Insufficient credits' })
@@ -24,7 +23,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { base64, filename, jobId } = req.body
   if (!base64 || !filename) return res.status(400).json({ success: false, reason: 'Missing file data' })
 
-  // Check existing candidates for duplicate detection (done client side but double check here)
   try {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
     const mediaTypeMap: Record<string, string> = {
@@ -35,7 +33,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const mediaType = mediaTypeMap[ext]
     if (!mediaType) return res.json({ success: false, reason: 'Wrong format' })
 
-    // Extract CV with Claude
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
@@ -75,11 +72,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!extracted.email) return res.json({ success: false, reason: 'No email found in CV' })
 
-    // Check for duplicate
     const { data: existing } = await supabase.from('candidates').select('id').eq('user_id', user.id).eq('email', extracted.email).single()
     if (existing) return res.json({ success: false, reason: 'Duplicate — already in system' })
 
-    // Insert candidate
     const candidateData: any = {
       user_id: user.id,
       name: extracted.name || filename,
@@ -106,12 +101,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error } = await supabase.from('candidates').insert(candidateData)
     if (error) return res.json({ success: false, reason: 'Database error' })
 
-    // Increment credits
     await supabase.from('profiles').update({ credits_used: profile.credits_used + 1 }).eq('id', user.id)
 
     return res.json({ success: true, name: extracted.name, email: extracted.email })
 
-  } catch (err: any) {
+  } catch {
     return res.json({ success: false, reason: 'Extraction failed' })
   }
 }
