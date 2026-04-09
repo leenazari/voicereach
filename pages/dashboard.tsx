@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
 import JobFormModal from '../components/JobFormModal'
+import BulkUploadModal from '../components/BulkUploadModal'
+import { useBulkUpload } from '../context/BulkUploadContext'
 
 const STATUSES = ['applied', 'shortlisted', 'voice_sent', 'interview_booked']
 
@@ -69,6 +71,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
+  const [sessionToken, setSessionToken] = useState('')
   const [jobs, setJobs] = useState<Job[]>([])
   const [showAddJob, setShowAddJob] = useState(false)
   const [showEditJob, setShowEditJob] = useState(false)
@@ -83,6 +86,9 @@ export default function Dashboard() {
   const [showPlayer, setShowPlayer] = useState(false)
   const [showJobModal, setShowJobModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [bulkJobId, setBulkJobId] = useState<string | undefined>()
+  const [bulkJobTitle, setBulkJobTitle] = useState<string | undefined>()
   const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null)
   const [jobModalCandidate, setJobModalCandidate] = useState<Candidate | null>(null)
   const [selectedJobId, setSelectedJobId] = useState('')
@@ -110,12 +116,14 @@ export default function Dashboard() {
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
   const initialized = useRef(false)
+  const { state: bulkState } = useBulkUpload()
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && !initialized.current) {
         initialized.current = true
         setUser(session.user)
+        setSessionToken(session.access_token)
         supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
           setProfile(data)
         })
@@ -126,18 +134,17 @@ export default function Dashboard() {
       }
     })
 
-    // Also check immediately in case session already exists
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !initialized.current) {
         initialized.current = true
         setUser(session.user)
+        setSessionToken(session.access_token)
         supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
           setProfile(data)
         })
         fetchCandidates()
         fetchJobs()
       } else if (!session) {
-        // Wait 3 seconds for OAuth redirect to complete before giving up
         setTimeout(async () => {
           if (!initialized.current) {
             const { data: { session: retrySession } } = await supabase.auth.getSession()
@@ -149,6 +156,11 @@ export default function Dashboard() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Refresh candidates when bulk upload completes
+  useEffect(() => {
+    if (bulkState.done) fetchCandidates()
+  }, [bulkState.done])
 
   async function authHeaders(): Promise<Record<string, string>> {
     const { data: { session } } = await supabase.auth.getSession()
@@ -670,7 +682,10 @@ export default function Dashboard() {
             {activeTab === 'jobs' ? (
               <button onClick={() => setShowAddJob(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Job</button>
             ) : (
-              <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Candidate</button>
+              <>
+                <button onClick={() => { setBulkJobId(undefined); setBulkJobTitle(undefined); setShowBulkUpload(true) }} style={{ background: 'white', color: '#534AB7', border: '1px solid #534AB7', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📦 Bulk upload</button>
+                <button onClick={() => setShowAdd(true)} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Candidate</button>
+              </>
             )}
           </div>
         </div>
@@ -839,6 +854,9 @@ export default function Dashboard() {
                               {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
                             </button>
                           )}
+                          <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>
+                            📦 Bulk CVs
+                          </button>
                           <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
                             {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
                           </button>
@@ -951,6 +969,16 @@ export default function Dashboard() {
       {/* JOB MODALS */}
       {showAddJob && <JobFormModal mode="add" onSave={fetchJobs} onClose={() => setShowAddJob(false)} notify={notify} />}
       {showEditJob && editingJob && <JobFormModal mode="edit" job={editingJob} onSave={fetchJobs} onClose={() => { setShowEditJob(false); setEditingJob(null) }} notify={notify} />}
+
+      {/* BULK UPLOAD MODAL */}
+      {showBulkUpload && (
+        <BulkUploadModal
+          token={sessionToken}
+          jobId={bulkJobId}
+          jobTitle={bulkJobTitle}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      )}
 
       {/* SEND VOICE NOTE MODAL */}
       {showJobModal && jobModalCandidate && (
