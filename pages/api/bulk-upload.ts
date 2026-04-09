@@ -4,6 +4,8 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
+export const config = { api: { bodyParser: { sizeLimit: '20mb' } } }
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -25,13 +27,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-    const allowedExts = ['.pdf', '.doc', '.docx']
-    if (!allowedExts.includes(ext)) return res.json({ success: false, reason: 'Wrong format' })
+    if (ext !== '.pdf') return res.json({ success: false, reason: 'PDF files only' })
 
-    // Use same approach as extract-cv.ts — send as PDF source
     const message = await (anthropic.messages.create as any)({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 2000,
       messages: [{
         role: 'user',
         content: [
@@ -45,22 +45,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           {
             type: 'text',
-            text: `Extract the following from this CV and return ONLY valid JSON with no markdown:
+            text: `Extract information from this CV and respond ONLY with valid JSON, no markdown, no backticks.
+
+Return exactly this format:
 {
   "name": "full name",
-  "email": "email address or null",
-  "phone": "phone or null",
-  "location": "city/area or null",
-  "role": "most recent job title or target role",
-  "last_employer": "most recent employer or null",
-  "years_experience": number,
-  "experience_summary": "2-3 sentence summary of experience",
-  "candidate_summary": "brief professional profile",
-  "skills": ["skill1", "skill2"],
-  "qualifications": ["qual1"],
-  "all_employers": ["employer1", "employer2"],
-  "strength_keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
-}`
+  "email": "email address",
+  "phone": "phone number",
+  "location": "city or region they are based in",
+  "role": "their most recent job title or the role they are applying for",
+  "years_experience": number of years total experience as integer,
+  "last_employer": "most recent company name",
+  "all_employers": ["company1", "company2", "company3"],
+  "skills": ["skill1", "skill2", "skill3", "skill4", "skill5"],
+  "qualifications": ["qualification1", "qualification2"],
+  "experience_summary": "2-3 sentence summary of their experience for use in a voice note. Write in third person. Keep it punchy and specific.",
+  "candidate_summary": "3-4 sentence professional summary of who they are and what they bring",
+  "strength_keywords": ["keyword1", "keyword2", ... up to 20 keywords]
+}
+
+For strength_keywords generate up to 20 keywords that represent this candidate's strongest and most marketable attributes. These will be used for job matching so make them specific, searchable and industry standard. Think about what a recruiter would search for.
+
+Include a mix of:
+- Core professional skills and competencies (e.g. "Team Leadership", "P&L Management")
+- Industry sectors and environments (e.g. "FMCG", "SaaS", "Warehousing")
+- Role types they are suited for (e.g. "Sales Manager", "Business Development")
+- Technical skills and systems (e.g. "WMS", "Salesforce", "SAP")
+- Key achievements or specialisms (e.g. "New Business Hunter", "Cost Reduction")
+- Location if relevant (e.g. "London Based", "Manchester Based")
+
+IMPORTANT: Use standard industry terminology that will match job descriptions. Use the actual system names, sector names and role titles that appear on both CVs and job specs.
+
+If any field cannot be found return null for that field. Return empty array for array fields if not found.`
           }
         ]
       }]
