@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 type Props = {
   onClose: () => void
   onStepComplete?: (step: 'job' | 'candidates' | 'voice_note') => void
@@ -154,7 +156,7 @@ export default function OnboardingModal({ onClose, onStepComplete, completedStep
                     </button>
                   ) : (
                     <button onClick={onClose} style={{ padding: '10px 20px', background: '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                      Got it — let\'s go →
+                      Got it — let's go →
                     </button>
                   )}
                 </div>
@@ -163,7 +165,7 @@ export default function OnboardingModal({ onClose, onStepComplete, completedStep
           )}
         </div>
 
-        {/* FOOTER */}
+        {/* FOOTER DOTS */}
         {!allDone && (
           <div style={{ padding: '0 32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {STEPS.map((_, i) => (
@@ -175,5 +177,3 @@ export default function OnboardingModal({ onClose, onStepComplete, completedStep
     </div>
   )
 }
-
-import { useState } from 'react'
