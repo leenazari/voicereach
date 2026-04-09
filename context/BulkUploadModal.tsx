@@ -9,11 +9,10 @@ type Props = {
   onClose: () => void
 }
 
-const ALLOWED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const ALLOWED_EXT = ['.pdf', '.doc', '.docx']
 
 export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Props) {
-  const { startUpload, state } = useBulkUpload()
+  const { startUpload } = useBulkUpload()
   const fileRef = useRef<HTMLInputElement>(null)
   const [zipFile, setZipFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<{ name: string; valid: boolean; reason?: string }[]>([])
@@ -126,7 +125,7 @@ export default function BulkUploadModal({ token, jobId, jobTitle, onClose }: Pro
             </div>
 
             <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: '#888' }}>
-              Processing happens in the background — you can navigate the site while CVs upload. A progress indicator will appear in the bottom left.
+              Processing happens in the background — you can navigate freely while CVs upload. Progress shows bottom left.
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
