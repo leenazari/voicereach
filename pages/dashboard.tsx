@@ -123,6 +123,7 @@ export default function Dashboard() {
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
   const initialized = useRef(false)
+  const router = useRouter()
   const { state: bulkState } = useBulkUpload()
 
   useEffect(() => {
@@ -921,7 +922,10 @@ export default function Dashboard() {
                             <button onClick={() => toggleJobExpanded(job.id)} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                               {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
                             </button>
-                          )}
+                           )}
+                          <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>
+                            ◈ Pipeline
+                          </button>
                           <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>
                             📦 Bulk CVs
                           </button>
