@@ -133,17 +133,19 @@ export default function Dashboard() {
         setUser(session.user)
         setSessionToken(session.access_token)
         supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
-          setProfile(data)
-          if (data) {
-            const onboarding = data.onboarding || { seen: false, steps: { job: false, candidates: false, voice_note: false } }
-            setOnboardingSteps(onboarding.steps || { job: false, candidates: false, voice_note: false })
-            if (!onboarding.seen) {
-              setOnboardingMode('auto')
-              setShowOnboarding(true)
-              supabase.from('profiles').update({ onboarding: { ...onboarding, seen: true } }).eq('id', session.user.id)
-            }
-          }
-        })
+  setProfile(data)
+  if (data) {
+    const onboarding = data.onboarding || { seen: false, steps: { job: false, candidates: false, voice_note: false } }
+    setOnboardingSteps(onboarding.steps || { job: false, candidates: false, voice_note: false })
+    const alreadyShown = sessionStorage.getItem('onboarding_shown')
+    if (!onboarding.seen && !alreadyShown) {
+      sessionStorage.setItem('onboarding_shown', 'true')
+      setOnboardingMode('auto')
+      setShowOnboarding(true)
+      supabase.from('profiles').update({ onboarding: { ...onboarding, seen: true } }).eq('id', session.user.id)
+    }
+  }
+})
         fetchCandidates()
         fetchJobs()
       } else if (event === 'SIGNED_OUT') {
