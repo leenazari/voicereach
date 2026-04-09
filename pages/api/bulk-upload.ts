@@ -40,8 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: 'user',
         content: [
           {
-            type: 'document',
-            source: { type: 'base64', media_type: mediaType as any, data: base64 }
+            type: 'document' as any,
+            source: { type: 'base64', media_type: mediaType, data: base64 }
           },
           {
             type: 'text',
