@@ -9,9 +9,7 @@ const MATCH_WEIGHTS = {
 
 const SYNONYMS: Record<string, string[]> = {
 
-  // ============================================================
   // SALES & BUSINESS DEVELOPMENT
-  // ============================================================
   'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial', 'selling', 'sales management', 'sales executive', 'sales manager'],
   'business development': ['sales', 'new business', 'revenue generation', 'commercial development', 'bd', 'bdr', 'business growth', 'new business development'],
   'account management': ['key account management', 'client management', 'account manager', 'kam', 'client services', 'client relationship management', 'account director'],
@@ -39,9 +37,7 @@ const SYNONYMS: Record<string, string[]> = {
   'solution selling': ['consultative selling', 'value selling', 'needs based selling', 'spin selling'],
   'consultative selling': ['solution selling', 'value selling', 'consultative sales', 'needs based selling'],
 
-  // ============================================================
   // MARKETING & DIGITAL MARKETING
-  // ============================================================
   'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy', 'campaign management', 'marketing manager'],
   'digital marketing': ['marketing', 'online marketing', 'performance marketing', 'growth marketing', 'digital marketing analytics', 'marketing analytics', 'digital'],
   'digital marketing analytics': ['google analytics', 'marketing analytics', 'digital marketing', 'data analytics', 'performance marketing', 'analytics', 'web analytics'],
@@ -71,7 +67,6 @@ const SYNONYMS: Record<string, string[]> = {
   'pr': ['public relations', 'media relations', 'press office', 'communications', 'press releases'],
   'public relations': ['pr', 'media relations', 'press office', 'communications', 'press releases', 'reputation management'],
   'marketing budget management': ['budget management', 'budgeting', 'marketing spend', 'campaign budget', 'p&l management'],
-  'lead generation': ['demand generation', 'pipeline generation', 'inbound marketing', 'outbound marketing', 'prospecting', 'new business'],
   'growth marketing': ['growth hacking', 'performance marketing', 'digital marketing', 'user acquisition', 'growth strategy'],
   'performance marketing': ['digital marketing', 'ppc', 'paid media', 'growth marketing', 'roi marketing'],
   'inbound marketing': ['content marketing', 'seo', 'hubspot', 'lead generation', 'inbound strategy'],
@@ -86,9 +81,7 @@ const SYNONYMS: Record<string, string[]> = {
   'market research': ['consumer research', 'competitor analysis', 'market analysis', 'customer insight', 'research'],
   'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics', 'crm management'],
 
-  // ============================================================
   // SOCIAL CARE & HEALTHCARE
-  // ============================================================
   'social care': ['care work', 'social work', 'care management', 'health and social care', 'social care management'],
   'care work': ['social care', 'care assistant', 'support worker', 'care worker', 'personal care', 'domiciliary care'],
   'care assistant': ['care worker', 'support worker', 'personal care', 'care work', 'healthcare assistant', 'hca'],
@@ -122,9 +115,7 @@ const SYNONYMS: Record<string, string[]> = {
   'children services': ['childrens services', 'child care', 'early years', 'child protection', 'family support'],
   'family support': ['children services', 'parenting support', 'early intervention', 'child welfare'],
 
-  // ============================================================
   // SOFTWARE DEVELOPMENT & CODING
-  // ============================================================
   'software development': ['software engineering', 'programming', 'coding', 'development', 'software developer'],
   'software engineering': ['software development', 'programming', 'engineering', 'development', 'software engineer'],
   'programming': ['coding', 'software development', 'development', 'software engineering', 'computer programming'],
@@ -192,9 +183,7 @@ const SYNONYMS: Record<string, string[]> = {
   'terraform': ['infrastructure as code', 'iac', 'devops', 'cloud infrastructure', 'aws'],
   'linux': ['unix', 'bash', 'server administration', 'system administration', 'command line'],
 
-  // ============================================================
   // LEADERSHIP & MANAGEMENT
-  // ============================================================
   'team leadership': ['people management', 'staff management', 'team management', 'managing teams', 'line management', 'leadership', 'team leader'],
   'people management': ['team leadership', 'staff management', 'team management', 'managing people', 'line management', 'hr management'],
   'staff management': ['team leadership', 'people management', 'team management', 'managing staff', 'workforce management'],
@@ -206,9 +195,7 @@ const SYNONYMS: Record<string, string[]> = {
   'stakeholder management': ['stakeholder engagement', 'relationship management', 'senior stakeholder management'],
   'performance management': ['appraisals', 'performance reviews', 'kpi management', 'staff performance', '1 to 1s'],
 
-  // ============================================================
   // OPERATIONS & LOGISTICS
-  // ============================================================
   'operations management': ['operations', 'operational management', 'ops management', 'operations manager', 'multi-site operations'],
   'multi-site operations': ['operations management', 'regional management', 'multi site', 'area management'],
   'logistics': ['supply chain', 'logistics coordination', 'logistics management', 'distribution', 'transport', 'haulage'],
@@ -216,15 +203,15 @@ const SYNONYMS: Record<string, string[]> = {
   'supply chain management': ['logistics', 'supply chain', 'scm', 'distribution management', 'procurement'],
   'warehouse management': ['warehousing', 'warehouse operations', 'wms', 'warehouse manager', 'distribution centre'],
   'inventory management': ['inventory control', 'stock management', 'stock control', 'inventory', 'stock'],
+  'inventory control': ['inventory management', 'stock management', 'stock control', 'inventory'],
+  'stock management': ['inventory control', 'inventory management', 'stock control', 'stock'],
   'fleet management': ['transport management', 'vehicle management', 'fleet operations', 'logistics'],
   'transport management': ['fleet management', 'logistics', 'distribution', 'haulage', 'transport operations'],
   'procurement': ['purchasing', 'supply chain', 'buying', 'strategic procurement', 'vendor management'],
   'project management': ['project delivery', 'programme management', 'project manager', 'pmo', 'project planning'],
   'programme management': ['project management', 'programme delivery', 'pmo', 'portfolio management'],
 
-  // ============================================================
   // FINANCE & COMMERCIAL
-  // ============================================================
   'financial management': ['finance', 'financial planning', 'fp&a', 'financial analysis', 'p&l', 'finance manager'],
   'p&l management': ['p&l responsibility', 'profit and loss', 'financial management', 'budget management', 'p&l'],
   'budget management': ['budgeting', 'financial management', 'cost management', 'p&l', 'marketing budget management'],
@@ -232,9 +219,7 @@ const SYNONYMS: Record<string, string[]> = {
   'accountancy': ['accounting', 'bookkeeping', 'management accounts', 'financial reporting', 'aca', 'acca', 'cima'],
   'management accounts': ['management accounting', 'financial reporting', 'accountancy', 'monthly accounts'],
 
-  // ============================================================
   // HR & RECRUITMENT
-  // ============================================================
   'recruitment': ['talent acquisition', 'hiring', 'resourcing', 'talent management', 'recruiter'],
   'talent acquisition': ['recruitment', 'hiring', 'resourcing', 'headhunting', 'talent sourcing'],
   'hr management': ['human resources', 'hr', 'people management', 'hr business partner', 'hrbp'],
@@ -246,9 +231,7 @@ const SYNONYMS: Record<string, string[]> = {
   'cipd': ['hr qualification', 'chartered institute of personnel development', 'hr certified', 'people professional'],
   'employment law': ['hr', 'employee relations', 'tupe', 'redundancy', 'employment tribunal'],
 
-  // ============================================================
   // RETAIL & FMCG
-  // ============================================================
   'retail management': ['store management', 'retail operations', 'shop management', 'retail manager'],
   'store management': ['retail management', 'shop management', 'store manager', 'retail operations'],
   'retail': ['retail management', 'retail operations', 'store management', 'fmcg', 'consumer goods'],
@@ -257,10 +240,13 @@ const SYNONYMS: Record<string, string[]> = {
   'merchandising': ['visual merchandising', 'product placement', 'retail merchandising', 'category management'],
   'buying': ['procurement', 'purchasing', 'category management', 'buyer', 'product buying'],
   'customer experience': ['cx', 'customer service', 'customer satisfaction', 'customer journey', 'customer success'],
+  'saas': ['software as a service', 'cloud software', 'subscription software', 'tech sales'],
+  'e-commerce': ['ecommerce', 'online retail', 'digital retail', 'online sales'],
+  'ecommerce': ['e-commerce', 'online retail', 'digital retail', 'online sales'],
+  'hospitality': ['hotels', 'food and beverage', 'f&b', 'restaurant management'],
+  'healthcare': ['medical', 'nhs', 'health sector', 'clinical'],
 
-  // ============================================================
   // TECHNOLOGY & SYSTEMS
-  // ============================================================
   'wms': ['warehouse management system', 'warehouse management', 'warehouse software', 'manhattan', 'sap wm'],
   'erp': ['enterprise resource planning', 'sap', 'oracle', 'netsuite', 'dynamics', 'sage'],
   'sap': ['erp', 'sap erp', 'sap system', 'sap implementation', 'sap consultant'],
@@ -270,9 +256,7 @@ const SYNONYMS: Record<string, string[]> = {
   'tableau': ['data visualisation', 'business intelligence', 'bi', 'power bi', 'reporting'],
   'jira': ['project management tool', 'agile tool', 'issue tracking', 'atlassian', 'scrum tool'],
 
-  // ============================================================
   // COMPLIANCE & SAFETY
-  // ============================================================
   'health and safety': ['safety compliance', 'hse', 'safety management', 'risk assessment', 'nebosh', 'iosh'],
   'safety compliance': ['health and safety', 'hse', 'safety management', 'compliance', 'iso'],
   'nebosh': ['health and safety', 'safety qualification', 'hse', 'safety management', 'iosh'],
@@ -281,32 +265,24 @@ const SYNONYMS: Record<string, string[]> = {
   'data protection': ['gdpr', 'data privacy', 'information security', 'data compliance', 'dpa'],
   'compliance': ['regulatory compliance', 'risk management', 'governance', 'audit', 'quality management'],
 
-  // ============================================================
-  // CUSTOMER SERVICE & SUCCESS
-  // ============================================================
+  // CUSTOMER SERVICE
   'customer service': ['customer support', 'client services', 'customer success', 'customer relations', 'customer care'],
   'customer success': ['customer service', 'client success', 'customer support', 'account management', 'cx'],
   'customer support': ['customer service', 'technical support', 'helpdesk', 'customer care', 'client support'],
   'helpdesk': ['it support', 'technical support', 'service desk', 'customer support', 'first line support'],
 
-  // ============================================================
   // EDUCATION & TRAINING
-  // ============================================================
   'teaching': ['education', 'teacher', 'lecturer', 'training', 'instruction', 'pedagogy'],
   'education': ['teaching', 'learning', 'training', 'educational', 'academic'],
   'early years': ['eyfs', 'early years education', 'nursery', 'childcare', 'reception'],
   'send': ['special educational needs', 'sen', 'special needs', 'inclusion', 'learning support'],
 
-  // ============================================================
   // PROPERTY & CONSTRUCTION
-  // ============================================================
   'construction management': ['site management', 'project management', 'construction', 'building management'],
   'facilities management': ['fm', 'building management', 'property management', 'estates management'],
   'property management': ['facilities management', 'real estate', 'estate management', 'lettings management'],
 
-  // ============================================================
   // GENERAL PROFESSIONAL
-  // ============================================================
   'analysis': ['data analysis', 'analytical skills', 'reporting', 'insight', 'research'],
   'reporting': ['data reporting', 'analysis', 'kpi reporting', 'management information', 'mi'],
   'communication': ['written communication', 'verbal communication', 'presentation skills', 'stakeholder communication'],
