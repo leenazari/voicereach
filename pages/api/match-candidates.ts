@@ -8,36 +8,77 @@ const MATCH_WEIGHTS = {
 }
 
 const SYNONYMS: Record<string, string[]> = {
+  // Sales & Business Development
   'sales': ['business development', 'revenue generation', 'account management', 'new business', 'commercial'],
   'business development': ['sales', 'new business', 'revenue generation', 'commercial development', 'bd'],
-  'team leadership': ['people management', 'staff management', 'team management', 'managing teams', 'line management'],
+  'account management': ['key account management', 'client management', 'account manager', 'kam', 'client services'],
+  'new business': ['business development', 'sales', 'new business hunter', 'outbound sales', 'lead generation'],
+
+  // Leadership & Management
+  'team leadership': ['people management', 'staff management', 'team management', 'managing teams', 'line management', 'leadership'],
   'people management': ['team leadership', 'staff management', 'team management', 'managing people', 'line management'],
   'staff management': ['team leadership', 'people management', 'team management', 'managing staff'],
+  'line management': ['team leadership', 'people management', 'staff management', 'direct reports'],
+
+  // Operations & Logistics
   'inventory control': ['inventory management', 'stock management', 'stock control', 'inventory'],
   'inventory management': ['inventory control', 'stock management', 'stock control', 'inventory'],
   'stock management': ['inventory control', 'inventory management', 'stock control'],
-  'warehouse management': ['warehousing', 'warehouse operations', 'wms', 'warehouse manager'],
-  'logistics': ['supply chain', 'logistics coordination', 'logistics management', 'distribution'],
+  'warehouse management': ['warehousing', 'warehouse operations', 'wms', 'warehouse manager', 'distribution centre'],
+  'logistics': ['supply chain', 'logistics coordination', 'logistics management', 'distribution', 'transport'],
   'supply chain': ['logistics', 'supply chain management', 'scm', 'distribution'],
   'supply chain management': ['logistics', 'supply chain', 'scm', 'distribution management'],
-  'operations management': ['operations', 'operational management', 'ops management', 'operations manager'],
-  'project management': ['project delivery', 'programme management', 'project manager', 'pmo'],
-  'customer service': ['customer support', 'client services', 'customer success', 'customer relations'],
-  'customer success': ['customer service', 'client success', 'customer support', 'account management'],
-  'account management': ['key account management', 'client management', 'account manager', 'kam'],
-  'business analysis': ['business analyst', 'data analysis', 'requirements gathering', 'ba'],
-  'data analysis': ['data analytics', 'business intelligence', 'bi', 'reporting', 'data analyst'],
+  'operations management': ['operations', 'operational management', 'ops management', 'operations manager', 'multi-site operations'],
+
+  // Marketing & Digital
+  'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy', 'campaign management'],
+  'digital marketing': ['marketing', 'online marketing', 'performance marketing', 'growth marketing', 'digital marketing analytics', 'marketing analytics'],
+  'digital marketing analytics': ['google analytics', 'marketing analytics', 'digital marketing', 'data analytics', 'performance marketing', 'analytics'],
+  'google analytics': ['digital marketing analytics', 'marketing analytics', 'analytics', 'web analytics', 'data analytics'],
+  'seo': ['seo optimisation', 'search engine optimisation', 'organic search', 'seo management'],
+  'seo optimisation': ['seo', 'search engine optimisation', 'organic search', 'seo management'],
+  'ppc': ['ppc management', 'paid search', 'google ads', 'paid advertising', 'performance marketing'],
+  'ppc management': ['ppc', 'paid search', 'google ads', 'paid advertising', 'performance marketing'],
+  'social media': ['social media management', 'social media marketing', 'community management', 'social media strategy'],
+  'social media management': ['social media', 'social media marketing', 'community management', 'community engagement', 'content creation'],
+  'community engagement': ['social media management', 'social media', 'community management', 'stakeholder engagement'],
+  'content creation': ['copywriting', 'content marketing', 'content strategy', 'social media content', 'creative writing'],
+  'copywriting': ['content creation', 'content marketing', 'copy', 'creative writing', 'brand copywriting'],
+  'campaign management': ['marketing campaigns', 'campaign delivery', 'campaign planning', 'marketing management'],
+  'brand management': ['brand strategy', 'branding', 'brand marketing', 'brand development'],
+  'lead generation': ['demand generation', 'pipeline generation', 'inbound marketing', 'outbound marketing'],
+  'marketing budget management': ['budget management', 'budgeting', 'marketing spend', 'campaign budget'],
+  'hubspot': ['crm', 'marketing automation', 'hubspot crm', 'inbound marketing'],
+  'salesforce': ['crm', 'customer relationship management', 'salesforce crm', 'sfdc'],
+  'fundraising': ['fundraising campaign support', 'charity fundraising', 'campaign management', 'donor engagement'],
+  'fundraising campaign support': ['fundraising', 'campaign management', 'charity marketing', 'donor engagement'],
+  'b2b marketing': ['b2b', 'business to business', 'b2b sales', 'corporate marketing'],
+  'b2c marketing': ['b2c', 'business to consumer', 'consumer marketing', 'retail marketing'],
+
+  // Finance & Commercial
   'financial management': ['finance', 'financial planning', 'fp&a', 'financial analysis', 'p&l'],
-  'p&l management': ['p&l responsibility', 'profit and loss', 'financial management', 'budget management'],
-  'budget management': ['budgeting', 'financial management', 'cost management', 'p&l'],
+  'p&l management': ['p&l responsibility', 'profit and loss', 'financial management', 'budget management', 'p&l'],
+  'budget management': ['budgeting', 'financial management', 'cost management', 'p&l', 'marketing budget management'],
+
+  // HR & People
   'recruitment': ['talent acquisition', 'hiring', 'resourcing', 'talent management'],
   'talent acquisition': ['recruitment', 'hiring', 'resourcing', 'headhunting'],
-  'marketing': ['digital marketing', 'marketing management', 'brand management', 'marketing strategy'],
-  'digital marketing': ['marketing', 'online marketing', 'performance marketing', 'growth marketing'],
+
+  // Project & Analysis
+  'project management': ['project delivery', 'programme management', 'project manager', 'pmo'],
+  'business analysis': ['business analyst', 'data analysis', 'requirements gathering', 'ba'],
+  'data analysis': ['data analytics', 'business intelligence', 'bi', 'reporting', 'data analyst', 'google analytics'],
+
+  // Tech & Systems
   'software development': ['software engineering', 'programming', 'coding', 'development'],
   'software engineering': ['software development', 'programming', 'engineering', 'development'],
-  'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales'],
-  'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales'],
+  'wms': ['warehouse management system', 'warehouse management', 'warehouse software'],
+  'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
+  'erp': ['enterprise resource planning', 'sap', 'oracle', 'netsuite'],
+
+  // Sectors
+  'b2b': ['business to business', 'b2b sales', 'corporate sales', 'enterprise sales', 'b2b marketing'],
+  'b2c': ['business to consumer', 'retail sales', 'consumer sales', 'direct sales', 'b2c marketing'],
   'saas': ['software as a service', 'cloud software', 'subscription software', 'tech sales'],
   'e-commerce': ['ecommerce', 'online retail', 'digital retail', 'online sales'],
   'ecommerce': ['e-commerce', 'online retail', 'digital retail', 'online sales'],
@@ -45,11 +86,14 @@ const SYNONYMS: Record<string, string[]> = {
   'fmcg': ['retail', 'consumer goods', 'fast moving consumer goods', 'cpg'],
   'hospitality': ['hotels', 'food and beverage', 'f&b', 'restaurant management'],
   'healthcare': ['medical', 'nhs', 'health sector', 'clinical'],
-  'wms': ['warehouse management system', 'warehouse management', 'warehouse software'],
-  'crm': ['customer relationship management', 'salesforce', 'hubspot', 'dynamics'],
-  'erp': ['enterprise resource planning', 'sap', 'oracle', 'netsuite'],
+
+  // Compliance & Safety
   'safety compliance': ['health and safety', 'hse', 'safety management', 'compliance', 'iso'],
   'health and safety': ['safety compliance', 'hse', 'safety management', 'risk assessment'],
+
+  // Customer
+  'customer service': ['customer support', 'client services', 'customer success', 'customer relations'],
+  'customer success': ['customer service', 'client success', 'customer support', 'account management'],
 }
 
 function normalise(str: string): string {
@@ -162,7 +206,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    // Auth check
     const token = req.headers.authorization?.replace('Bearer ', '')
     if (!token) return res.status(401).json({ error: 'Unauthorised' })
 
@@ -182,7 +225,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { jobId } = req.body
     if (!jobId) return res.status(400).json({ error: 'jobId required' })
 
-    // Verify job belongs to this user
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('*')
@@ -192,7 +234,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (jobError || !job) return res.status(404).json({ error: 'Job not found' })
 
-    // Only fetch THIS user's candidates
     const { data: candidates, error: candError } = await supabase
       .from('candidates')
       .select('*')
