@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
 import JobFormModal from '../components/JobFormModal'
