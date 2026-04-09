@@ -73,7 +73,6 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     location: job?.location || '',
     salary: job?.salary || '',
     description: job?.description || '',
-    required_skills: (job?.required_skills || []).join(', '),
     sector: job?.sector || '',
     status: job?.status || 'active',
     logo_url: job?.logo_url || '',
@@ -82,12 +81,15 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
     match_priority: job?.match_priority || 'skills',
     match_threshold: job?.match_threshold || 70
   })
+  const [skills, setSkills] = useState<string[]>(job?.required_skills || [])
+  const [newSkill, setNewSkill] = useState('')
   const [logoPreview, setLogoPreview] = useState<string>(job?.logo_url || '')
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [generatingJob, setGeneratingJob] = useState(false)
   const [saving, setSaving] = useState(false)
   const logoRef = useRef<HTMLInputElement>(null)
   const mouseDownOnOverlay = useRef(false)
+  const newSkillRef = useRef<HTMLInputElement>(null)
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5',
@@ -112,6 +114,29 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
   function overlayMouseUp(e: React.MouseEvent) {
     if (e.target === e.currentTarget && mouseDownOnOverlay.current) onClose()
     mouseDownOnOverlay.current = false
+  }
+
+  function removeSkill(index: number) {
+    setSkills(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function addSkill() {
+    const trimmed = newSkill.trim()
+    if (!trimmed) return
+    if (skills.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      setNewSkill('')
+      return
+    }
+    setSkills(prev => [...prev, trimmed])
+    setNewSkill('')
+    newSkillRef.current?.focus()
+  }
+
+  function handleSkillKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); addSkill() }
+    if (e.key === 'Backspace' && !newSkill && skills.length > 0) {
+      setSkills(prev => prev.slice(0, -1))
+    }
   }
 
   async function handleLogoUpload(file: File) {
@@ -154,9 +179,11 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
         setForm(p => ({
           ...p,
           description: data.generated.description || p.description,
-          required_skills: (data.generated.required_skills || []).join(', '),
           sector: data.generated.sector || p.sector
         }))
+        if (data.generated.required_skills?.length) {
+          setSkills(data.generated.required_skills)
+        }
         notify('Job details generated successfully')
       } else notify('Could not generate job details', 'error')
     } catch { notify('Generation failed', 'error') }
@@ -170,9 +197,7 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
       const { brief, ...formWithoutBrief } = form
       const payload = {
         ...formWithoutBrief,
-        required_skills: form.required_skills
-          ? form.required_skills.split(',').map(s => s.trim()).filter(Boolean)
-          : [],
+        required_skills: skills,
         closes_at: form.closes_at ? new Date(form.closes_at).toISOString() : null,
         ...(mode === 'edit' && job ? { jobId: job.id } : {})
       }
@@ -294,12 +319,61 @@ export default function JobFormModal({ mode, job, onSave, onClose, notify }: Pro
           </div>
         </div>
 
-        {/* REQUIRED SKILLS */}
+        {/* REQUIRED SKILLS — TAG DESIGN */}
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>
-            Required skills <span style={{ color: '#bbb', fontWeight: 400 }}>(comma separated)</span>
-          </label>
-          <input type="text" value={form.required_skills} onChange={e => setForm(p => ({ ...p, required_skills: e.target.value }))} placeholder="e.g. B2B Sales, CRM, Negotiation" style={inputStyle} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <label style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>Required skills</label>
+            <span style={{ fontSize: 11, color: '#aaa' }}>{skills.length} skill{skills.length !== 1 ? 's' : ''} — used for candidate matching</span>
+          </div>
+
+          {/* TAGS CONTAINER */}
+          <div
+            onClick={() => newSkillRef.current?.focus()}
+            style={{ minHeight: 52, padding: '8px 10px', border: '1px solid #e5e5e5', borderRadius: 10, background: '#fafafa', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', cursor: 'text' }}
+          >
+            {skills.map((skill, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#EEEDFE', borderRadius: 20, padding: '4px 10px 4px 12px', fontSize: 12, fontWeight: 500, color: '#534AB7', flexShrink: 0 }}>
+                <span>{skill}</span>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); removeSkill(i) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#534AB7', padding: 0, lineHeight: 1, fontSize: 14, opacity: 0.6, display: 'flex', alignItems: 'center', marginLeft: 2 }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <input
+              ref={newSkillRef}
+              type="text"
+              value={newSkill}
+              onChange={e => setNewSkill(e.target.value)}
+              onKeyDown={handleSkillKeyDown}
+              placeholder={skills.length === 0 ? 'Type a skill and press Enter...' : 'Add another...'}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 12, color: '#555', minWidth: 140, flex: 1, padding: '2px 4px' }}
+            />
+          </div>
+
+          {/* ADD BUTTON */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input
+              type="text"
+              value={newSkill}
+              onChange={e => setNewSkill(e.target.value)}
+              onKeyDown={handleSkillKeyDown}
+              placeholder="Type a skill and press Enter or +"
+              style={{ ...inputStyle, fontSize: 12, flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={addSkill}
+              disabled={!newSkill.trim()}
+              style={{ padding: '9px 14px', background: newSkill.trim() ? '#534AB7' : '#f0f0f0', color: newSkill.trim() ? 'white' : '#bbb', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: newSkill.trim() ? 'pointer' : 'not-allowed', lineHeight: 1 }}
+            >
+              +
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: '#bbb', marginTop: 5 }}>Press Enter or + to add · Backspace to remove last · × on tag to remove</div>
         </div>
 
         {/* MATCH PRIORITY */}
