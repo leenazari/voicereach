@@ -561,7 +561,7 @@ export default function JobPipeline() {
       {/* HEADER */}
       <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, flexShrink: 0 }}>
+       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, flexShrink: 0 }}>
   ← Back
 </button>
           <div style={{ width: 1, height: 16, background: '#e5e5e5', flexShrink: 0 }} />
