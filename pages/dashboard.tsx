@@ -348,6 +348,16 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
     if (data.success) { fetchJobs(); notify(`${job.title} deleted`) }
     else notify('Could not delete job', 'error')
   }
+function prevMonth() {
+    if (activityMonth === 0) { setActivityMonth(11); setActivityYear(y => y - 1) }
+    else setActivityMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (isCurrentMonth) return
+    if (activityMonth === 11) { setActivityMonth(0); setActivityYear(y => y + 1) }
+    else setActivityMonth(m => m + 1)
+  }
 
   async function fetchVoices() {
     const res = await fetch('/api/voices')
