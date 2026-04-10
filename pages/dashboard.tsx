@@ -64,11 +64,92 @@ type MatchResult = {
 }
 
 type OnboardingSteps = { job: boolean; candidates: boolean; voice_note: boolean }
-type ActivityDay = { date: string; candidates: number; voice_notes: number }
+type ActivityDay = { date: string; label: string; candidates: number; voice_notes: number }
 
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
 const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+function getDaysInMonth(year: number, month: number): ActivityDay[] {
+  const days: ActivityDay[] = []
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d)
+    const key = date.toISOString().split('T')[0]
+    days.push({ date: key, label: String(d), candidates: 0, voice_notes: 0 })
+  }
+  return days
+}
+
+function ActivityChart({ data }: { data: ActivityDay[] }) {
+  const [tooltip, setTooltip] = useState<{ day: ActivityDay; left: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const maxActivity = Math.max(...data.map(d => Math.max(d.candidates, d.voice_notes)), 1)
+
+  return (
+    <div ref={containerRef} style={{ overflowX: 'auto', position: 'relative' }} onMouseLeave={() => setTooltip(null)}>
+      <div style={{ minWidth: Math.max(data.length * 22, 400) }}>
+        {/* BARS */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 140, position: 'relative' }}>
+          {data.map((day, i) => (
+            <div
+              key={day.date}
+              style={{ flex: 1, display: 'flex', gap: 2, alignItems: 'flex-end', height: '100%', cursor: 'default' }}
+              onMouseEnter={e => {
+                const barRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                const containerRect = containerRef.current?.getBoundingClientRect()
+                const left = barRect.left - (containerRect?.left || 0) + barRect.width / 2
+                setTooltip({ day, left })
+              }}
+            >
+              <div style={{ flex: 1, background: day.candidates > 0 ? '#534AB7' : '#f0f0f0', borderRadius: '3px 3px 0 0', height: `${Math.max((day.candidates / maxActivity) * 100, day.candidates > 0 ? 3 : 0)}%`, minHeight: day.candidates > 0 ? 3 : 0, transition: 'height 0.3s' }} />
+              <div style={{ flex: 1, background: day.voice_notes > 0 ? '#1D9E75' : '#f0f0f0', borderRadius: '3px 3px 0 0', height: `${Math.max((day.voice_notes / maxActivity) * 100, day.voice_notes > 0 ? 3 : 0)}%`, minHeight: day.voice_notes > 0 ? 3 : 0, transition: 'height 0.3s' }} />
+            </div>
+          ))}
+
+          {/* TOOLTIP */}
+          {tooltip && (
+            <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: tooltip.left,
+              transform: 'translateX(-50%)',
+              marginBottom: 8,
+              background: '#1a1a1a',
+              color: 'white',
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              zIndex: 50,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              pointerEvents: 'none'
+            }}>
+              <div style={{ color: '#a78bfa', marginBottom: 5 }}>◼ {tooltip.day.candidates} candidate{tooltip.day.candidates !== 1 ? 's' : ''}</div>
+              <div style={{ color: '#6ee7b7' }}>◼ {tooltip.day.voice_notes} voice note{tooltip.day.voice_notes !== 1 ? 's' : ''}</div>
+              <div style={{ fontSize: 11, color: '#777', marginTop: 5, fontWeight: 400, borderTop: '1px solid #333', paddingTop: 5 }}>{tooltip.day.date}</div>
+              <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1a1a1a' }} />
+            </div>
+          )}
+        </div>
+
+        {/* DATE LABELS */}
+        <div style={{ display: 'flex', gap: 3, borderTop: '1px solid #f0f0f0', paddingTop: 5 }}>
+          {data.map((day, i) => {
+            const showLabel = i === 0 || (Number(day.label)) % 5 === 0
+            return (
+              <div key={day.date} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: showLabel ? '#bbb' : 'transparent', userSelect: 'none', overflow: 'hidden' }}>
+                {day.label}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,6 +162,7 @@ export default function Dashboard() {
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [matchingJob, setMatchingJob] = useState<string | null>(null)
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -114,12 +196,10 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [activityData, setActivityData] = useState<ActivityDay[]>([])
+  const [activityMonth, setActivityMonth] = useState(new Date().getMonth())
+  const [activityYear, setActivityYear] = useState(new Date().getFullYear())
+  const [monthStats, setMonthStats] = useState({ candidates: 0, voiceNotes: 0 })
   const [shortlistedThisWeek, setShortlistedThisWeek] = useState(0)
-  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
-const [activityMonth, setActivityMonth] = useState(new Date().getMonth())
-const [activityYear, setActivityYear] = useState(new Date().getFullYear())
-const [monthStats, setMonthStats] = useState({ candidates: 0, voiceNotes: 0 })
-const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear === new Date().getFullYear()
   const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -128,6 +208,8 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
   const initialized = useRef(false)
   const router = useRouter()
   const { state: bulkState } = useBulkUpload()
+
+  const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear === new Date().getFullYear()
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -151,7 +233,6 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
         })
         fetchCandidates()
         fetchJobs()
-        fetchActivityData()
         fetchShortlistedThisWeek()
       } else if (event === 'SIGNED_OUT') {
         window.location.href = '/login'
@@ -179,7 +260,6 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
         })
         fetchCandidates()
         fetchJobs()
-        fetchActivityData()
         fetchShortlistedThisWeek()
       } else if (!session) {
         setTimeout(async () => {
@@ -203,67 +283,85 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
   }, [])
 
   useEffect(() => {
+    fetchActivityData(activityYear, activityMonth)
+  }, [activityMonth, activityYear])
+
+  useEffect(() => {
     if (bulkState.done) {
       fetchCandidates()
-      fetchActivityData()
+      fetchActivityData(activityYear, activityMonth)
       markOnboardingStep('candidates')
     }
   }, [bulkState.done])
 
-  async function fetchActivityData() {
+  async function fetchActivityData(year: number, month: number) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const startOfMonth = new Date(year, month, 1).toISOString()
+    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
 
     const { data: candidateData } = await supabase
       .from('candidates')
-      .select('created_at, last_script_at')
+      .select('created_at')
       .eq('user_id', session.user.id)
-      .gte('created_at', thirtyDaysAgo.toISOString())
+      .gte('created_at', startOfMonth)
+      .lte('created_at', endOfMonth)
 
-    const days: Record<string, ActivityDay> = {}
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const key = d.toISOString().split('T')[0]
-      days[key] = { date: key, candidates: 0, voice_notes: 0 }
-    }
+    const { data: voiceData } = await supabase
+      .from('candidates')
+      .select('last_script_at')
+      .eq('user_id', session.user.id)
+      .gte('last_script_at', startOfMonth)
+      .lte('last_script_at', endOfMonth)
+      .not('last_script_at', 'is', null)
+
+    const days = getDaysInMonth(year, month)
+    const dayMap: Record<string, ActivityDay> = {}
+    for (const d of days) dayMap[d.date] = { ...d }
 
     for (const c of candidateData || []) {
-      const createdKey = c.created_at?.split('T')[0]
-      if (createdKey && days[createdKey]) days[createdKey].candidates++
-      if (c.last_script_at) {
-        const scriptKey = c.last_script_at.split('T')[0]
-        if (scriptKey && days[scriptKey]) days[scriptKey].voice_notes++
-      }
+      const key = c.created_at?.split('T')[0]
+      if (key && dayMap[key]) dayMap[key].candidates++
     }
 
-    setActivityData(Object.values(days))
+    for (const v of voiceData || []) {
+      const key = v.last_script_at?.split('T')[0]
+      if (key && dayMap[key]) dayMap[key].voice_notes++
+    }
+
+    const result = Object.values(dayMap)
+    setActivityData(result)
+    setMonthStats({
+      candidates: result.reduce((sum, d) => sum + d.candidates, 0),
+      voiceNotes: result.reduce((sum, d) => sum + d.voice_notes, 0)
+    })
+  }
+
+  function prevMonth() {
+    if (activityMonth === 0) { setActivityMonth(11); setActivityYear(y => y - 1) }
+    else setActivityMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (isCurrentMonth) return
+    if (activityMonth === 11) { setActivityMonth(0); setActivityYear(y => y + 1) }
+    else setActivityMonth(m => m + 1)
   }
 
   async function fetchShortlistedThisWeek() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const { data: jobIds } = await supabase
-      .from('jobs')
-      .select('id')
-      .eq('user_id', session.user.id)
-
+    const { data: jobIds } = await supabase.from('jobs').select('id').eq('user_id', session.user.id)
     if (!jobIds || jobIds.length === 0) return
-
     const { count } = await supabase
       .from('job_candidates')
       .select('*', { count: 'exact', head: true })
       .in('job_id', jobIds.map((j: any) => j.id))
       .eq('status', 'shortlist')
       .gte('updated_at', sevenDaysAgo.toISOString())
-
     setShortlistedThisWeek(count || 0)
   }
 
@@ -279,16 +377,10 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
 
   async function authHeaders(): Promise<Record<string, string>> {
     const { data: { session } } = await supabase.auth.getSession()
-    return {
-      'Content-Type': 'application/json',
-      ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
-    }
+    return { 'Content-Type': 'application/json', ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
+  async function signOut() { await supabase.auth.signOut(); window.location.href = '/login' }
 
   function notify(message: string, type: 'success' | 'error' = 'success') {
     const id = ++notifId.current
@@ -334,6 +426,7 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
       const data = await res.json()
       if (data.success) {
         setMatchResults(prev => ({ ...prev, [job.id]: data.results }))
+        setExpandedJobs(prev => new Set(prev).add(job.id))
         notify(`Found ${data.shortlist} strong matches out of ${data.total} candidates`)
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
@@ -347,16 +440,6 @@ const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear =
     const data = await res.json()
     if (data.success) { fetchJobs(); notify(`${job.title} deleted`) }
     else notify('Could not delete job', 'error')
-  }
-function prevMonth() {
-    if (activityMonth === 0) { setActivityMonth(11); setActivityYear(y => y - 1) }
-    else setActivityMonth(m => m - 1)
-  }
-
-  function nextMonth() {
-    if (isCurrentMonth) return
-    if (activityMonth === 11) { setActivityMonth(0); setActivityYear(y => y + 1) }
-    else setActivityMonth(m => m + 1)
   }
 
   async function fetchVoices() {
@@ -465,7 +548,7 @@ function prevMonth() {
       if (data.success) {
         notify(`Voice note sent to ${jobModalCandidate.name} ✓`)
         fetchCandidates()
-        fetchActivityData()
+        fetchActivityData(activityYear, activityMonth)
         if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
         markOnboardingStep('voice_note')
       } else notify('Error: ' + data.error, 'error')
@@ -543,16 +626,11 @@ function prevMonth() {
     if (data.candidate) {
       setShowAdd(false); setCvFile(null)
       setForm({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
-      fetchCandidates(); fetchActivityData()
+      fetchCandidates()
+      fetchActivityData(activityYear, activityMonth)
       notify('Candidate added successfully')
       markOnboardingStep('candidates')
     } else notify('Error: ' + (data.error || 'Something went wrong'), 'error')
-  }
-
-  async function moveCandidate(candidateId: string, newStatus: string) {
-    const headers = await authHeaders()
-    await fetch('/api/candidates', { method: 'PATCH', headers, body: JSON.stringify({ candidateId, status: newStatus }) })
-    fetchCandidates()
   }
 
   const filterCandidates = (list: Candidate[]) => {
@@ -575,8 +653,6 @@ function prevMonth() {
   }
 
   const recentJobs = jobs.filter(j => j.status === 'active').slice(0, 5)
-  const maxActivity = Math.max(...activityData.map(d => Math.max(d.candidates, d.voice_notes)), 1)
-
   const creditsPercent = profile && profile.credits_limit !== 999999 ? Math.min((profile.credits_used / profile.credits_limit) * 100, 100) : 0
   const creditsColor = creditsPercent >= 90 ? '#E24B4A' : creditsPercent >= 70 ? '#BA7517' : '#534AB7'
   const onboardingDoneCount = Object.values(onboardingSteps).filter(Boolean).length
@@ -621,9 +697,153 @@ function prevMonth() {
     return '#fff0ee'
   }
 
-  function formatDate(dateStr: string): string {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  function renderJobCard(job: Job) {
+    return (
+      <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          {job.logo_url ? (
+            <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
+              {(job.company || job.title)[0].toUpperCase()}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
+              <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
+              {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500 }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
+              {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
+              {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
+              {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {matchResults[job.id] && (
+              <button onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
+              </button>
+            )}
+            <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
+            <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
+            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
+              {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
+            </button>
+            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
+            <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
+          </div>
+        </div>
+        {(job.required_skills || []).length > 0 && (
+          <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(job.required_skills || []).map(skill => (
+              <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
+            ))}
+            <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+              {job.match_priority === 'skills' ? '⚡ Skills priority' : job.match_priority === 'experience' ? '🏆 Experience priority' : '📍 Location priority'}
+            </span>
+            <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{job.match_threshold || 70}% threshold</span>
+          </div>
+        )}
+        {expandedJobs.has(job.id) && matchResults[job.id] && (
+          <div style={{ borderTop: '1px solid #f0f0f0' }}>
+            <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
+                {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
+                <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
+                {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
+                  <span style={{ fontSize: 11, background: '#FFF3E0', color: '#BA7517', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.already_sent).length} already sent</span>
+                )}
+              </div>
+            </div>
+            {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
+              <div style={{ padding: '12px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
+                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: match.already_sent ? '#fffbf0' : '#f9fffe', border: `1px solid ${match.already_sent ? '#f0d080' : '#d4f0e8'}`, borderRadius: 10 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                          <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{match.name}</div>
+                          {match.already_sent && <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
+                        {match.keyword_matches.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {match.keyword_matches.slice(0, 4).map(kw => (
+                              <span key={kw} style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={async () => {
+                        setShortlisting(match.candidate_id)
+                        try {
+                          const headers = await authHeaders()
+                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
+                          const data = await res.json()
+                          if (data.success) {
+                            notify(`Voice note sent to ${match.name} ✓`)
+                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true, status: 'voice_sent' } : m) }))
+                            fetchCandidates()
+                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+                            markOnboardingStep('voice_note')
+                          } else notify('Error: ' + data.error, 'error')
+                        } finally { setShortlisting(null) }
+                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white', border: match.already_sent ? '1px solid #f0d080' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                        {shortlisting === match.candidate_id ? '⟳' : match.already_sent ? '↺ Resend' : '🎙 Send'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
+              <div style={{ padding: '0 20px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
+                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
+                        <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
+                      </div>
+                      <button onClick={async () => {
+                        setShortlisting(match.candidate_id)
+                        try {
+                          const headers = await authHeaders()
+                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
+                          const data = await res.json()
+                          if (data.success) {
+                            notify(`Voice note sent to ${match.name} ✓`)
+                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true } : m) }))
+                            fetchCandidates()
+                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+                          } else notify('Error: ' + data.error, 'error')
+                        } finally { setShortlisting(null) }
+                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                        {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -666,12 +886,10 @@ function prevMonth() {
               <span>⊛</span>Admin panel
             </div>
           )}
-
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
           <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
             <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
           </div>
-
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
           <div onClick={() => { setOnboardingMode('manual'); setShowOnboarding(true) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent', margin: '1px 0' }}>
             <span style={{ opacity: 0.5 }}>◎</span>
@@ -688,7 +906,6 @@ function prevMonth() {
             <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
           </div>
         </div>
-
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
             <div style={{ marginBottom: 12 }}>
@@ -764,14 +981,9 @@ function prevMonth() {
                   { label: 'Voice notes sent', value: stats.voiceSent, color: '#1D9E75', bg: '#E1F5EE' },
                   { label: 'Interviews booked', value: stats.interviews, color: '#185FA5', bg: '#E6F1FB' },
                 ].map(s => (
-                  <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: '20px 22px', border: '1px solid #ebebeb', display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', lineHeight: 1 }}>{s.value}</div>
-                      <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{s.label}</div>
-                    </div>
+                  <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: '20px 22px', border: '1px solid #ebebeb' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: s.color, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: 6 }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -793,8 +1005,19 @@ function prevMonth() {
 
               {/* ACTIVITY GRAPH */}
               <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: '20px 24px', marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>Activity — last 30 days</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>Activity</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={prevMonth} style={{ background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12, color: '#555', lineHeight: 1 }}>←</button>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', minWidth: 130, textAlign: 'center' }}>{MONTH_NAMES[activityMonth]} {activityYear}</span>
+                      <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '3px 10px', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: 12, color: isCurrentMonth ? '#ccc' : '#555', lineHeight: 1 }}>→</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>{monthStats.candidates} candidates</span>
+                      <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>{monthStats.voiceNotes} voice notes</span>
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', gap: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: '#534AB7' }} />
@@ -806,19 +1029,7 @@ function prevMonth() {
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
-                  {activityData.map((day, i) => (
-                    <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
-                      <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: '100%', justifyContent: 'center' }}>
-                        <div style={{ flex: 1, background: day.candidates > 0 ? '#534AB7' : '#f0f0f0', borderRadius: '2px 2px 0 0', height: `${Math.max((day.candidates / maxActivity) * 100, day.candidates > 0 ? 4 : 0)}%`, minHeight: day.candidates > 0 ? 4 : 0, transition: 'height 0.3s' }} title={`${day.candidates} candidates`} />
-                        <div style={{ flex: 1, background: day.voice_notes > 0 ? '#1D9E75' : '#f0f0f0', borderRadius: '2px 2px 0 0', height: `${Math.max((day.voice_notes / maxActivity) * 100, day.voice_notes > 0 ? 4 : 0)}%`, minHeight: day.voice_notes > 0 ? 4 : 0, transition: 'height 0.3s' }} title={`${day.voice_notes} voice notes`} />
-                      </div>
-                      {(i === 0 || i === 14 || i === 29) && (
-                        <div style={{ fontSize: 9, color: '#ccc', marginTop: 4, whiteSpace: 'nowrap' }}>{formatDate(day.date)}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <ActivityChart data={activityData} />
               </div>
 
               {/* RECENT JOBS */}
@@ -836,154 +1047,7 @@ function prevMonth() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {recentJobs.map(job => (
-                    <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                        {job.logo_url ? (
-                          <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
-                        ) : (
-                          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
-                            {(job.company || job.title)[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
-                            <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
-                            {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500 }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
-                          </div>
-                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
-                            {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
-                            {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
-                            {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
-                          <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
-                          {matchResults[job.id] && (
-  <button onClick={() => {
-    setExpandedJobs(prev => {
-      const next = new Set(prev)
-      if (next.has(job.id)) next.delete(job.id)
-      else next.add(job.id)
-      return next
-    })
-  }} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-    {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
-  </button>
-)}
-<button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
-  {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
-</button>
-                          <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
-                        </div>
-                      </div>
-                      {(job.required_skills || []).length > 0 && (
-  <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-    {(job.required_skills || []).map(skill => (
-      <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
-    ))}
-    <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{job.match_threshold || 70}% threshold</span>
-  </div>
-)}
-
-{expandedJobs.has(job.id) && matchResults[job.id] && (
-  <div style={{ borderTop: '1px solid #f0f0f0' }}>
-    <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
-        {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
-        <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
-      </div>
-    </div>
-    {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
-      <div style={{ padding: '12px 20px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
-            <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: match.already_sent ? '#fffbf0' : '#f9fffe', border: `1px solid ${match.already_sent ? '#f0d080' : '#d4f0e8'}`, borderRadius: 10 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{match.name}</div>
-                  {match.already_sent && <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>}
-                </div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
-                {match.keyword_matches.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {match.keyword_matches.slice(0, 4).map(kw => (
-                      <span key={kw} style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button onClick={async () => {
-                setShortlisting(match.candidate_id)
-                try {
-                  const headers = await authHeaders()
-                  const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                  const data = await res.json()
-                  if (data.success) {
-                    notify(`Voice note sent to ${match.name} ✓`)
-                    setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true, status: 'voice_sent' } : m) }))
-                    fetchCandidates()
-                    if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                    markOnboardingStep('voice_note')
-                  } else notify('Error: ' + data.error, 'error')
-                } finally { setShortlisting(null) }
-              }} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white', border: match.already_sent ? '1px solid #f0d080' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                {shortlisting === match.candidate_id ? '⟳' : match.already_sent ? '↺ Resend' : '🎙 Send'}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-    {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
-            <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
-                <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
-              </div>
-              <button onClick={async () => {
-                setShortlisting(match.candidate_id)
-                try {
-                  const headers = await authHeaders()
-                  const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                  const data = await res.json()
-                  if (data.success) {
-                    notify(`Voice note sent to ${match.name} ✓`)
-                    setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true } : m) }))
-                    fetchCandidates()
-                    if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                  } else notify('Error: ' + data.error, 'error')
-                } finally { setShortlisting(null) }
-              }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-                    </div>
-                  ))}
+                  {recentJobs.map(job => renderJobCard(job))}
                 </div>
               )}
             </>
@@ -1054,52 +1118,7 @@ function prevMonth() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {jobs.map(job => (
-                    <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                        {job.logo_url ? (
-                          <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
-                        ) : (
-                          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
-                            {(job.company || job.title)[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
-                            <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
-                            {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500 }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
-                          </div>
-                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
-                            {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
-                            {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
-                            {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
-                          <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
-                          <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
-                            {matchingJob === job.id ? '⟳ Matching...' : '◎ Find matches'}
-                          </button>
-                          <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
-                        </div>
-                      </div>
-                      {(job.required_skills || []).length > 0 && (
-                        <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {(job.required_skills || []).map(skill => (
-                            <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
-                          ))}
-                          <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
-                            {job.match_priority === 'skills' ? '⚡ Skills priority' : job.match_priority === 'experience' ? '🏆 Experience priority' : '📍 Location priority'}
-                          </span>
-                          <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{job.match_threshold || 70}% threshold</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {jobs.map(job => renderJobCard(job))}
                 </div>
               )}
             </div>
