@@ -847,9 +847,21 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
                           <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
-                          <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
-                            {matchingJob === job.id ? '⟳ Matching...' : '◎ Find matches'}
-                          </button>
+                          {matchResults[job.id] && (
+  <button onClick={() => {
+    setExpandedJobs(prev => {
+      const next = new Set(prev)
+      if (next.has(job.id)) next.delete(job.id)
+      else next.add(job.id)
+      return next
+    })
+  }} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+    {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
+  </button>
+)}
+<button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
+  {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
+</button>
                           <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
                           <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
                         </div>
