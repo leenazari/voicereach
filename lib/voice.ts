@@ -50,6 +50,16 @@ function numberToWords(n: number): string {
   return n.toString()
 }
 
+function cleanCompanyName(name: string): string {
+  if (!name) return name
+  return name
+    .replace(/\b(ltd|limited|plc|llp|llc|inc|incorporated|group limited|holdings limited|holdings ltd|& co ltd|& co limited|& co|co ltd)\b\.?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/,\s*$/, '')
+    .trim()
+}
+
 function trimToSixtySeconds(script: string): string {
   const words = script.split(' ')
   if (words.length <= 180) return script
@@ -90,15 +100,20 @@ function sanitiseHookLine(hook: string): string {
 export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: any): string {
   const firstName = candidate.name.split(' ')[0]
   const jobTitle = job?.title || candidate.job_title || candidate.role_applied
-  const company = job?.company ? `at ${job.company}` : ''
+  const rawCompany = job?.company || null
+  const cleanedCompany = rawCompany ? cleanCompanyName(rawCompany) : null
+  const company = cleanedCompany ? `at ${cleanedCompany}` : ''
   const sector = job?.sector ? `in the ${job.sector} space` : ''
 
   const salaryLine = (job?.salary || candidate.job_salary)
     ? `, paying ${formatSalary(job?.salary || candidate.job_salary)},`
     : ','
 
-  const employerLine = (candidate as any).last_employer
-    ? `your experience at ${(candidate as any).last_employer}`
+  const rawLastEmployer = (candidate as any).last_employer || null
+  const cleanedLastEmployer = rawLastEmployer ? cleanCompanyName(rawLastEmployer) : null
+
+  const employerLine = cleanedLastEmployer
+    ? `your experience at ${cleanedLastEmployer}`
     : candidate.years_experience > 0
       ? `your ${candidate.years_experience} years of experience`
       : `your background`
@@ -120,7 +135,6 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
     .replace(/with your \d+ years (of experience|experience)/gi, 'with your background')
     .replace(/your \d+ years (of experience|experience) in [^,\.]+,?\s*/gi, '')
 
-  // Sanitise any markdown, special chars or smart quotes that ElevenLabs would read aloud
   hookLine = sanitiseHookLine(hookLine)
 
   const script = `Hi ${firstName}... I hope you are having a brilliant day! I have literally just seen your CV and I had to reach out straight away because I have got something really exciting for you. We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${employerLine} makes you such a strong fit for what they need ${sector} and I think you would absolutely love it. Now listen, interviews have already started on this one and I really want to get you on that list as quickly as possible. The link I have just sent you in this email is your actual interview for this job. Not a call with me, not a pre-screen, the real thing. You click it and you are straight in. As you can imagine there has been a huge amount of interest in this role and the interview spaces are filling up fast. They are going to make a decision very quickly so please do not sit on this one ${firstName}. Get in there today, do your interview, and I am really confident that with your skills and background you are exactly what they are looking for. Go and get it!`
