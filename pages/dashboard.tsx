@@ -1328,10 +1328,16 @@ async function openProfile(candidate: Candidate) {
                 </div>
               </div>
             )}
-            {profileCandidate.voice_note_url && (
+            {(profileCandidate as any).voice_note_path && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Last voice note</div>
-                <audio controls src={profileCandidate.voice_note_url} style={{ width: '100%', borderRadius: 8 }} />
+                {profileCandidate.voice_note_url ? (
+                  <audio controls src={profileCandidate.voice_note_url} style={{ width: '100%', borderRadius: 8 }} />
+                ) : (
+                  <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic', background: '#f9f9f9', borderRadius: 8, padding: '12px 14px' }}>
+                    Voice note expired after 30 days
+                  </div>
+                )}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
