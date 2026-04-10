@@ -68,21 +68,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       job_salary: job?.salary || jobSalary || candidate.job_salary
     }
 
-    const expiresAt = new Date()
-expiresAt.setDate(expiresAt.getDate() + 30)
-
-await supabase
-  .from('candidates')
-  .update({
-    status: 'voice_sent',
-    interview_token: interviewToken,
-    voice_note_url: voiceNoteUrl,
-    voice_note_path: fileName,
-    last_script: generatedScript,
-    last_script_at: new Date().toISOString(),
-    voice_note_expires_at: expiresAt.toISOString()
-  })
-  .eq('id', candidateId)
+    await supabase
+      .from('candidates')
+      .update({
+        status: 'shortlisted',
+        job_title: updatedCandidate.job_title,
+        job_salary: updatedCandidate.job_salary,
+        job_id: jobId || candidate.job_id
+      })
+      .eq('id', candidateId)
 
     const { buffer: voiceBuffer, script: generatedScript } = await generateVoiceNoteFromMatch(
       updatedCandidate,
