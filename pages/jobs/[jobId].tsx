@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
+import JobFormModal from '../../components/JobFormModal'
 
 const PIPELINE_STATUSES = ['matched', 'shortlisted', 'voice_sent', 'interview_booked']
 
@@ -36,6 +37,8 @@ type Job = {
   sector: string
   status: string
   logo_url: string | null
+  created_at: string
+  closes_at?: string | null
   match_priority?: string
   match_threshold?: number
   work_type?: string
@@ -96,6 +99,7 @@ export default function JobPipeline() {
   const [regeneratingKeywords, setRegeneratingKeywords] = useState(false)
   const [profileScrollPos, setProfileScrollPos] = useState(0)
   const [shortlistingAll, setShortlistingAll] = useState(false)
+  const [showEditJob, setShowEditJob] = useState(false)
   const notifId = useRef(0)
   const initialized = useRef(false)
   const mouseDownOnOverlay = useRef(false)
@@ -557,10 +561,10 @@ export default function JobPipeline() {
       {/* HEADER */}
       <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => router.push('/dashboard?tab=jobs')} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
+          <button onClick={() => router.push('/dashboard?tab=jobs')} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, flexShrink: 0 }}>
             ← Back to Jobs
           </button>
-          <div style={{ width: 1, height: 16, background: '#e5e5e5' }} />
+          <div style={{ width: 1, height: 16, background: '#e5e5e5', flexShrink: 0 }} />
           {job ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
               {job.logo_url ? (
@@ -580,9 +584,15 @@ export default function JobPipeline() {
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: 14, color: '#aaa' }}>Loading...</div>
+            <div style={{ flex: 1, fontSize: 14, color: '#aaa' }}>Loading...</div>
           )}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <button
+              onClick={() => setShowEditJob(true)}
+              style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}
+            >
+              ✎ Edit job
+            </button>
             {shortlistedCount > 0 && (
               <button onClick={openBulkConfirm} style={{ padding: '8px 16px', background: '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 🎙 Send to {selectedShortlisted.size > 0 ? `${selectedShortlisted.size} selected` : `all shortlisted (${shortlistedCount})`}
@@ -648,31 +658,21 @@ export default function JobPipeline() {
                     <span style={{ fontSize: 11, background: STATUS_BG[status], color: STATUS_COLORS[status], padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{byStatus(status).length}</span>
                   </div>
 
-                  {/* MATCHED COLUMN ACTIONS */}
                   {status === 'matched' && byStatus('matched').length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {aboveThresholdCount > 0 && (
-                        <button
-                          onClick={shortlistAllAboveThreshold}
-                          disabled={shortlistingAll}
-                          style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-                        >
+                        <button onClick={shortlistAllAboveThreshold} disabled={shortlistingAll} style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                           {shortlistingAll ? '⟳ Moving...' : `⚡ Shortlist all above ${threshold}% (${aboveThresholdCount})`}
                         </button>
                       )}
                       {selectedMatched.size > 0 && (
-                        <button
-                          onClick={shortlistSelected}
-                          disabled={shortlistingAll}
-                          style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer' }}
-                        >
+                        <button onClick={shortlistSelected} disabled={shortlistingAll} style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer' }}>
                           ✓ Shortlist {selectedMatched.size} selected
                         </button>
                       )}
                     </div>
                   )}
 
-                  {/* SHORTLISTED COLUMN ACTIONS */}
                   {status === 'shortlisted' && byStatus('shortlisted').length > 0 && (
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       <button onClick={selectAllShortlisted} style={{ fontSize: 11, padding: '3px 10px', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Select all</button>
@@ -688,63 +688,28 @@ export default function JobPipeline() {
                       draggable
                       onDragStart={e => handleDragStart(e, c.id)}
                       onDragEnd={handleDragEnd}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #f0f0f0',
-                        borderLeft: `4px solid ${getScoreBorder(c.match_score)}`,
-                        borderRadius: 8,
-                        padding: '10px 12px',
-                        cursor: 'grab',
-                        opacity: dragId === c.id ? 0.4 : 1,
-                        transition: 'all 0.15s',
-                        userSelect: 'none',
-                        boxShadow: (status === 'matched' && selectedMatched.has(c.id)) || (status === 'shortlisted' && selectedShortlisted.has(c.id))
-                          ? '0 0 0 2px rgba(83,74,183,0.3)'
-                          : '0 1px 3px rgba(0,0,0,0.04)'
-                      }}
+                      style={{ background: 'white', border: '1px solid #f0f0f0', borderLeft: `4px solid ${getScoreBorder(c.match_score)}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab', opacity: dragId === c.id ? 0.4 : 1, transition: 'all 0.15s', userSelect: 'none', boxShadow: (status === 'matched' && selectedMatched.has(c.id)) || (status === 'shortlisted' && selectedShortlisted.has(c.id)) ? '0 0 0 2px rgba(83,74,183,0.3)' : '0 1px 3px rgba(0,0,0,0.04)' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-
-                        {/* CHECKBOX — Matched */}
                         {status === 'matched' && (
-                          <input
-                            type="checkbox"
-                            checked={selectedMatched.has(c.id)}
-                            onChange={() => toggleSelectMatched(c.id)}
-                            onClick={e => e.stopPropagation()}
-                            style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }}
-                          />
+                          <input type="checkbox" checked={selectedMatched.has(c.id)} onChange={() => toggleSelectMatched(c.id)} onClick={e => e.stopPropagation()} style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }} />
                         )}
-
-                        {/* CHECKBOX — Shortlisted */}
                         {status === 'shortlisted' && (
-                          <input
-                            type="checkbox"
-                            checked={selectedShortlisted.has(c.id)}
-                            onChange={() => toggleSelectShortlisted(c.id)}
-                            onClick={e => e.stopPropagation()}
-                            style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }}
-                          />
+                          <input type="checkbox" checked={selectedShortlisted.has(c.id)} onChange={() => toggleSelectShortlisted(c.id)} onClick={e => e.stopPropagation()} style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }} />
                         )}
-
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                             <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', lineHeight: 1.3 }}>{c.name}</div>
-
-                            {/* SCORE BADGE */}
-                            <div style={{ flexShrink: 0, marginLeft: 8, background: getScoreBg(c.match_score), borderRadius: 6, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <div style={{ flexShrink: 0, marginLeft: 8, background: getScoreBg(c.match_score), borderRadius: 6, padding: '2px 8px' }}>
                               <span style={{ fontSize: 12, fontWeight: 800, color: getScoreColor(c.match_score) }}>{c.match_score}%</span>
                             </div>
                           </div>
-
                           <div style={{ fontSize: 11, color: '#999', marginBottom: 3 }}>{c.role_applied}</div>
                           {c.last_employer && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 3 }}>@ {c.last_employer}</div>}
                           {c.location && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 4 }}>📍 {c.location}</div>}
-
                           {c.years_experience > 0 && (
                             <span style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 7px', borderRadius: 10, fontWeight: 600, display: 'inline-block', marginBottom: 6 }}>{c.years_experience}yr exp</span>
                           )}
-
                           {c.keyword_matches.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
                               {c.keyword_matches.slice(0, 3).map(kw => (
@@ -753,7 +718,6 @@ export default function JobPipeline() {
                               {c.keyword_matches.length > 3 && <span style={{ fontSize: 10, color: '#aaa' }}>+{c.keyword_matches.length - 3}</span>}
                             </div>
                           )}
-
                           {status === 'matched' && (
                             <button onClick={() => updatePipelineStatus(c.id, 'shortlisted')} style={{ width: '100%', padding: '5px 0', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginTop: 2 }}>
                               + Shortlist
@@ -774,7 +738,6 @@ export default function JobPipeline() {
                       </div>
                     </div>
                   ))}
-
                   {byStatus(status).length === 0 && (
                     <div style={{ fontSize: 12, color: '#ddd', padding: '24px 8px', textAlign: 'center' }}>
                       {dragOver === status ? 'Drop here' : status === 'matched' ? 'Run match to populate' : 'Empty'}
@@ -1005,6 +968,17 @@ export default function JobPipeline() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* EDIT JOB MODAL */}
+      {showEditJob && job && (
+        <JobFormModal
+          mode="edit"
+          job={job}
+          onSave={() => { loadJob(); notify('Job updated successfully') }}
+          onClose={() => setShowEditJob(false)}
+          notify={notify}
+        />
       )}
     </div>
   )
