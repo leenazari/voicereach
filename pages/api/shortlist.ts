@@ -7,7 +7,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    // Auth check
     const token = req.headers.authorization?.replace('Bearer ', '')
     if (!token) return res.status(401).json({ error: 'Unauthorised' })
 
@@ -27,7 +26,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { candidateId, jobId, jobTitle, jobSalary, customScript } = req.body
     if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
 
-    // Verify candidate belongs to this user
     const { data: candidate, error: fetchError } = await supabase
       .from('candidates')
       .select('*')
@@ -37,7 +35,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (fetchError || !candidate) return res.status(404).json({ error: 'Candidate not found' })
 
-    // Check credits
     const { data: profile } = await supabase
       .from('profiles')
       .select('credits_used, credits_limit')
@@ -89,14 +86,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
 
     const sizeMb = getAudioSizeMb(voiceBuffer)
-    const fileName = `${candidateId}-${Date.now()}.mp3`
+    const fileName = `${userId}/${candidateId}-${Date.now()}.mp3`
 
-    await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('voice-notes')
       .upload(fileName, voiceBuffer, { contentType: 'audio/mpeg', upsert: true })
 
-    const { data: urlData } = supabase.storage.from('voice-notes').getPublicUrl(fileName)
-    const voiceNoteUrl = urlData?.publicUrl || ''
+    if (uploadError) throw uploadError
+
+    // Generate a signed URL that expires in 7 days
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('voice-notes')
+      .createSignedUrl(fileName, 60 * 60 * 24 * 7)
+
+    if (signedError || !signedData?.signedUrl) throw new Error('Could not generate signed URL')
+
+    const voiceNoteUrl = signedData.signedUrl
 
     const { token: interviewToken } = await sendVoiceOutreachEmail(updatedCandidate, voiceNoteUrl, voiceBuffer, sizeMb)
 
@@ -106,12 +111,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'voice_sent',
         interview_token: interviewToken,
         voice_note_url: voiceNoteUrl,
+        voice_note_path: fileName,
         last_script: generatedScript,
         last_script_at: new Date().toISOString()
       })
       .eq('id', candidateId)
 
-    // Increment credits
     if (profile) {
       await supabase
         .from('profiles')
