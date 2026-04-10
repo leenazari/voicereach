@@ -356,7 +356,27 @@ export default function Dashboard() {
   }
 
   function openPlayer(candidate: Candidate) { setPlayerCandidate(candidate); setShowPlayer(true) }
-  function openProfile(candidate: Candidate) { setProfileCandidate(candidate); setShowProfile(true) }
+async function openProfile(candidate: Candidate) {
+  setProfileCandidate(candidate)
+  setShowProfile(true)
+  if ((candidate as any).voice_note_path) {
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/refresh-voice-url', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ candidateId: candidate.id })
+      })
+      const data = await res.json()
+      if (data.url) {
+        setProfileCandidate(prev => prev ? { ...prev, voice_note_url: data.url } : prev)
+        setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, voice_note_url: data.url } : c))
+      } else if (data.expired) {
+        setProfileCandidate(prev => prev ? { ...prev, voice_note_url: null } : prev)
+      }
+    } catch { }
+  }
+}
 
   function overlayMouseDown(e: React.MouseEvent) { mouseDownOnOverlay.current = e.target === e.currentTarget }
   function overlayMouseUp(e: React.MouseEvent, closeFn: () => void) {
