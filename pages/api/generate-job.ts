@@ -1,7 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (!token) return res.status(401).json({ error: 'Unauthorised' })
+
+  const authClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  const { data: { user } } = await authClient.auth.getUser(token)
+  if (!user) return res.status(401).json({ error: 'Unauthorised' })
 
   try {
     const { title, brief } = req.body
@@ -54,11 +62,9 @@ CRITICAL RULES for required_skills:
 
     const apiData = await response.json()
     if (!response.ok) throw new Error(apiData.error?.message || 'Claude API error')
-
     const text = apiData.content?.[0]?.text || ''
     const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
     const generated = JSON.parse(clean)
-
     return res.status(200).json({ generated })
 
   } catch (err: any) {
