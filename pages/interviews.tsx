@@ -248,7 +248,7 @@ export default function Interviews() {
   const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f5f5f7' }}>
+    <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f9fafb' }}>
 
       <style>{`
         @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -266,7 +266,87 @@ export default function Interviews() {
       </div>
 
       {/* SIDEBAR */}
-      <div style={{ width: 240, background: 'white', borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div style={{ width: 224, background: 'white', borderRight: '0.5px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        {/* Logo */}
+        <div style={{ padding: '18px 16px 14px', borderBottom: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><path d="M5 7c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2"/><path d="M7 9v1.5"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', letterSpacing: '-0.3px' }}>VoiceReach</div>
+            <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>AI recruitment</div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <div style={{ padding: '8px 10px', flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', padding: '10px 8px 4px' }}>Main</div>
+
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
+            { id: 'candidates', label: 'All Candidates', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg> },
+            { id: 'jobs', label: 'Jobs', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/><path d="M5 7.5h6M5 10h4"/></svg> },
+          ].map(tab => (
+            <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', background: 'transparent', borderRadius: 8, marginBottom: 1 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
+                {tab.icon}
+              </div>
+              {tab.label}
+            </div>
+          ))}
+
+          {/* Interviews — active */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, color: '#4F46E5', background: '#EEF2FF', borderRadius: 8, marginBottom: 1, fontWeight: 500 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#DDD6FE', color: '#4F46E5' }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2a4 4 0 014 4v1.5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 13.5c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+            </div>
+            Interviews
+          </div>
+
+          {profile?.role === 'admin' && (
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#ef4444', borderRadius: 8, marginBottom: 1 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#fef2f2', color: '#ef4444' }}>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+              </div>
+              Admin panel
+            </div>
+          )}
+
+          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', padding: '12px 8px 4px' }}>Settings</div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3"/></svg>
+            </div>
+            Voice selector
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px' }}>
+          {profile && (
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+                  {(profile.full_name || user?.email || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#111827', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name || user?.email?.split('@')[0]}</div>
+                  <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'capitalize' as const }}>{profile.plan} plan</div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} style={{ fontSize: 12, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px' }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 7H3M5.5 4.5L3 7l2.5 2.5M8 2h3a1 1 0 011 1v8a1 1 0 01-1 1H8"/></svg>
+            Sign out
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN */}
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
           <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
@@ -338,10 +418,10 @@ export default function Interviews() {
 
       {/* MAIN */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ background: 'white', borderBottom: '1px solid #ebebeb', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ background: 'white', borderBottom: '0.5px solid #e5e7eb', padding: '13px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.2px' }}>Interviews</div>
-            <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>Generate AI interview packs for your active jobs</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#111827', letterSpacing: '-0.2px' }}>Interviews</div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>Generate AI interview packs for your active jobs</div>
           </div>
         </div>
 
@@ -350,9 +430,9 @@ export default function Interviews() {
             <div style={{ textAlign: 'center', padding: 80, color: '#aaa' }}>Loading...</div>
           ) : jobs.length === 0 ? (
             <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 60, textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }}>◉</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>No jobs yet</div>
-              <div style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>Create a job first, then come back here to generate an interview pack for it.</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 6 }}>No jobs yet</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>Create a job first</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>Create a job first, then generate an interview pack for it.</div>
               <button onClick={() => router.push('/dashboard?tab=jobs')} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 Go to Jobs →
               </button>
@@ -364,7 +444,7 @@ export default function Interviews() {
                 const isGenerating = generatingJobId === job.id
 
                 return (
-                  <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+                  <div key={job.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
                     <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
 
                       {/* JOB LOGO / INITIAL */}
@@ -380,7 +460,7 @@ export default function Interviews() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                           <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
-                          <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
+                          <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f3f4f6', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
                           {pack && (
                             <span style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 8, fontWeight: 600 }}>
                               ✓ Interview ready
@@ -411,26 +491,26 @@ export default function Interviews() {
           navigator.clipboard.writeText(url)
           notify('Interview link copied to clipboard ✓')
         }}
-        style={{ padding: '8px 14px', background: '#E1F5EE', color: '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}
       >
-        🔗 Copy link
+        Copy link
       </button>
       <button
         onClick={() => { setEditingPack(pack); setShowModal(true) }}
-        style={{ padding: '8px 14px', background: '#EEEDFE', color: '#534AB7', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        style={{ padding: '8px 13px', background: 'rgba(255,255,255,0.9)', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
       >
-        ✎ Edit pack
+        Edit pack
       </button>
       <button
         onClick={() => generateInterview(job)}
         disabled={isGenerating}
-        style={{ padding: '8px 14px', background: isGenerating ? '#aaa' : 'white', color: isGenerating ? 'white' : '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
+        style={{ padding: '8px 13px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}
       >
         {isGenerating ? '⟳ Regenerating...' : '↺ Regenerate'}
       </button>
       <button
         onClick={() => deletePack(pack)}
-        style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}
+        style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}
       >
         Delete
       </button>
@@ -439,7 +519,7 @@ export default function Interviews() {
     <button
       onClick={() => generateInterview(job)}
       disabled={isGenerating}
-      style={{ padding: '8px 18px', background: isGenerating ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
     >
       {isGenerating ? (
         <>
@@ -454,7 +534,7 @@ export default function Interviews() {
 
                     {/* GENERATING STATE */}
                     {isGenerating && (
-                      <div style={{ padding: '12px 20px', background: '#f0eeff', borderTop: '1px solid #EEEDFE', fontSize: 12, color: '#534AB7', fontWeight: 500 }}>
+                      <div style={{ padding: '10px 18px', background: '#EEF2FF', borderTop: '0.5px solid #e5e7eb', fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
                         ⟳ Running AI generator then validator — generating 6 questions with sub-questions, fallbacks and scoring context. This takes about 20 seconds...
                       </div>
                     )}
@@ -463,7 +543,7 @@ export default function Interviews() {
                     {pack && (
                       <div
                         onClick={() => togglePipeline(job.id)}
-                        style={{ padding: '10px 20px', borderTop: '1px solid #f0f0f0', background: expandedPipeline === job.id ? '#fafafa' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#534AB7', fontWeight: 600 }}
+                        style={{ padding: '8px 16px', borderTop: '0.5px solid #e5e7eb', background: expandedPipeline === job.id ? '#f9fafb' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4F46E5', fontWeight: 500 }}
                       >
                         <span>{expandedPipeline === job.id ? '▲' : '▼'}</span>
                         {expandedPipeline === job.id ? 'Hide candidate pipeline' : `View candidate pipeline${jobCandidates[job.id] ? ` (${jobCandidates[job.id].length} interviewed)` : ''}`}
