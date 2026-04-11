@@ -886,6 +886,9 @@ export default function Dashboard() {
               <span>⊛</span>Admin panel
             </div>
           )}
+          <div onClick={() => router.push('/interviews')} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+  <span style={{ opacity: 0.5 }}>🎙</span>Interviews
+</div>
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
           <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
             <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
