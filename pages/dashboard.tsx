@@ -1067,7 +1067,7 @@ export default function Dashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#fafafa', borderBottom: '1px solid #ebebeb' }}>
-                    {['Name', 'Role', 'Last Employer', 'Location', 'Exp', 'Status', 'Actions'].map(h => (
+                    {['Name', 'Role', 'Last Employer', 'Location', 'Exp', 'Status', 'Interview', 'Actions'].map(h => (
                       <th key={h} style={{ padding: '11px 16px', fontSize: 11, fontWeight: 700, color: '#888', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                     ))}
                   </tr>
