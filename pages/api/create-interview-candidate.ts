@@ -18,7 +18,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   )
 
   try {
-    // Get job and its owner
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('id, title, salary, user_id, status')
@@ -29,61 +28,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (job.status === 'closed') return res.status(400).json({ error: 'Job is closed' })
 
     const { data: existing } = await supabase
-  .from('candidates')
-  .select('id, interview_token, interview_completed_at')
-  .eq('user_id', job.user_id)
-  .eq('email', email)
-  .eq('job_id', jobId)
-  .single()
-    if (existing) {
-  if (existing.interview_completed_at) {
-    // Reset for testing — in production remove this and return error
-    await supabase
       .from('candidates')
-      .update({
-        interview_completed_at: null,
-        interview_transcript: null,
-        interview_score: null,
-        interview_answers: null,
-        interview_recommendation: null
-      })
-      .eq('id', existing.id)
-  }
-  // Always return existing token so they can reuse
-  return res.status(200).json({ token: existing.interview_token, existing: true })
-}
+      .select('id, interview_token, interview_completed_at')
+      .eq('user_id', job.user_id)
+      .eq('email', email)
+      .eq('job_id', jobId)
+      .single()
+
+    if (existing) {
+      if (existing.interview_completed_at) {
+        await supabase
+          .from('candidates')
+          .update({
+            interview_completed_at: null,
+            interview_transcript: null,
+            interview_score: null,
+            interview_answers: null,
+            interview_recommendation: null
+          })
+          .eq('id', existing.id)
+      }
+      return res.status(200).json({ token: existing.interview_token, existing: true })
+    }
+
     const token = generateToken()
 
-    // Create candidate record
     const { data: candidate, error: insertError } = await supabase
       .from('candidates')
       .insert({
         user_id: job.user_id,
-        name,
-        email,
+        name: name,
+        email: email,
         phone: phone || null,
-        role_applied: job.title,
-        job_title: job.title,
+        role_applied: job.title || 'Interview Applicant',
+        job_title: job.title || '',
         job_salary: job.salary || null,
         job_id: jobId,
         status: 'voice_sent',
         interview_token: token,
-        experience_summary: '',
+        experience_summary: 'Applied via interview link',
+        candidate_summary: '',
         years_experience: 0,
         skills: [],
         strength_keywords: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        all_employers: [],
+        qualifications: [],
       })
       .select()
       .single()
 
     if (insertError || !candidate) {
-  console.error('Insert error:', insertError)
-  return res.status(500).json({ error: 'Could not create candidate record' })
-}
+      console.error('Insert error:', JSON.stringify(insertError))
+      return res.status(500).json({ error: insertError?.message || 'Could not create candidate record' })
+    }
 
-    // Add to job pipeline as voice_sent so they appear in interview column
     await supabase
       .from('job_candidates')
       .upsert({
