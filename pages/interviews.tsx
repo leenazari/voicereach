@@ -274,10 +274,9 @@ export default function Interviews() {
         <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
 {[
-  { id: 'pipeline', label: 'Pipeline', icon: '◈' },
+  { id: 'dashboard', label: 'Dashboard', icon: '◈' },
   { id: 'candidates', label: 'All Candidates', icon: '◎' },
   { id: 'jobs', label: 'Jobs', icon: '◉' },
-  { id: 'analytics', label: 'Analytics', icon: '◷' }
 ].map(tab => (
   <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
     <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
