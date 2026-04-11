@@ -1723,9 +1723,19 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-            {((interviewCandidate as any).interview_keywords || []).length > 0 && (
+{((interviewCandidate as any).interview_answers?.next_round_questions || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Keywords from interview</div>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, fontWeight: 600 }}>Suggested next round questions</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {((interviewCandidate as any).interview_answers.next_round_questions || []).map((q: any, i: number) => (
+                    <div key={i} style={{ padding: '12px 14px', background: '#f9f9f9', borderRadius: 8, borderLeft: '3px solid #534AB7' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>{i + 1}. {q.question}</div>
+                      <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{q.rationale}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {((interviewCandidate as any).interview_keywords || []).map((kw: string) => (
                     <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
