@@ -11,21 +11,24 @@ const STATUS_LABELS: Record<string, string> = {
   applied: 'Applied',
   shortlisted: 'Shortlisted',
   voice_sent: 'Voice Sent',
-  interview_booked: 'Interview Booked'
+  interview_booked: 'Interview Booked',
+  interviewed: 'Interviewed'
 }
 
 const STATUS_COLORS: Record<string, string> = {
   applied: '#185FA5',
   shortlisted: '#534AB7',
   voice_sent: '#1D9E75',
-  interview_booked: '#639922'
+  interview_booked: '#639922',
+  interviewed: '#302b63'
 }
 
 const STATUS_BG: Record<string, string> = {
   applied: '#E6F1FB',
   shortlisted: '#EEEDFE',
   voice_sent: '#E1F5EE',
-  interview_booked: '#EAF3DE'
+  interview_booked: '#EAF3DE',
+  interviewed: '#EEEDFE'
 }
 
 type Voice = { voice_id: string; name: string; preview_url: string }
