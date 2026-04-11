@@ -29,22 +29,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (job.status === 'closed') return res.status(400).json({ error: 'Job is closed' })
 
     // Check for existing candidate with same email for this job
-    const { data: existing } = await supabase
-      .from('candidates')
-      .select('id, interview_token, interview_completed_at')
-      .eq('user_id', job.user_id)
-      .eq('email', email)
+    so this   .eq('email', email)
       .eq('job_id', jobId)
       .single()
-
     if (existing) {
-      if (existing.interview_completed_at) {
-        return res.status(400).json({ error: 'You have already completed an interview for this role' })
-      }
-      // Return existing token so they can continue
-      return res.status(200).json({ token: existing.interview_token, existing: true })
-    }
-
+  if (existing.interview_completed_at) {
+    // Reset for testing — in production remove this and return error
+    await supabase
+      .from('candidates')
+      .update({
+        interview_completed_at: null,
+        interview_transcript: null,
+        interview_score: null,
+        interview_answers: null,
+        interview_recommendation: null
+      })
+      .eq('id', existing.id)
+  }
+  // Always return existing token so they can reuse
+  return res.status(200).json({ token: existing.interview_token, existing: true })
+}
     const token = generateToken()
 
     // Create candidate record
