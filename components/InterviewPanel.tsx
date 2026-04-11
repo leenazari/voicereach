@@ -110,10 +110,14 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
     }
   }
 
-  function detectQuestionProgress(text: string) {
+ function detectQuestionProgress(text: string) {
     const lower = text.toLowerCase()
-    if (lower.includes('question') || lower.includes('next') || lower.includes('move on') || lower.includes('let me bring us')) {
-      setCurrentQuestion(prev => Math.min(prev + 1, questionCount))
+    // Match explicit question number patterns from the agent
+    const match = lower.match(/question\s+([one|two|three|four|five|six|1|2|3|4|5|6]+)/i)
+    if (match) {
+      const wordToNum: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6 }
+      const num = wordToNum[match[1].toLowerCase()]
+      if (num) setCurrentQuestion(num - 1)
     }
     if (lower.includes("that's all my questions") || lower.includes('hiring team will review') || lower.includes('do you have any questions for me')) {
       setCurrentQuestion(questionCount)
