@@ -171,6 +171,8 @@ export default function Dashboard() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [showInterviewModal, setShowInterviewModal] = useState(false)
+  const [interviewCandidate, setInterviewCandidate] = useState<Candidate | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingMode, setOnboardingMode] = useState<'auto' | 'manual'>('auto')
   const [onboardingSteps, setOnboardingSteps] = useState<OnboardingSteps>({ job: false, candidates: false, voice_note: false })
