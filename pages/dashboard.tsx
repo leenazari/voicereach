@@ -419,9 +419,10 @@ export default function Dashboard() {
       .select('job_id')
       .eq('user_id', session.user.id)
       .eq('status', 'active')
-    if (data) {
+   if (data) {
       const map: Record<string, string> = {}
       data.forEach((p: any) => { if (p.job_id) map[p.job_id] = p.job_id })
+      console.log('Interview packs loaded:', map)
       setInterviewPacks(map)
     }
   }
