@@ -346,78 +346,6 @@ export default function Interviews() {
 
       {/* MAIN */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-
-        <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
-        </div>
-        <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
-          <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
-{[
-  { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-  { id: 'candidates', label: 'All Candidates', icon: '◎' },
-  { id: 'jobs', label: 'Jobs', icon: '◉' },
-].map(tab => (
-  <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
-    <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
-  </div>
-))}
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#534AB7', background: '#f0eeff', borderLeft: '3px solid #534AB7', fontWeight: 700, margin: '1px 0' }}>
-  <span>🎙</span>Interviews
-</div>
-{profile?.role === 'admin' && (
-  <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-    <span>⊛</span>Admin panel
-  </div>
-)}
-<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
-  <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
-</div>
-<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-  <span style={{ opacity: 0.3 }}>◷</span>
-  <span>FAQ</span>
-  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-  <span style={{ opacity: 0.3 }}>◈</span>
-  <span>Support chat</span>
-  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-</div>
-
-          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-            <span style={{ opacity: 0.3 }}>◷</span>
-            <span>FAQ</span>
-            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-          </div>
-        </div>
-
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
-          {profile && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
-                  {(profile.full_name || user?.email || 'U')[0].toUpperCase()}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {profile.full_name || user?.email?.split('@')[0]}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#aaa', textTransform: 'capitalize' }}>{profile.plan} plan</div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} style={{ fontSize: 12, color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>→</span> Sign out
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN */}
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '0.5px solid #e5e7eb', padding: '13px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#111827', letterSpacing: '-0.2px' }}>Interviews</div>
@@ -443,94 +371,97 @@ export default function Interviews() {
                 const pack = getPackForJob(job.id)
                 const isGenerating = generatingJobId === job.id
 
-                return (
-                  <div key={job.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                return (() => {
+                  const gradients: Record<string, string> = {
+                    sales:      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+                    tech:       'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+                    marketing:  'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
+                    finance:    'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+                    default:    'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
+                  }
+                  const fallbacks = [
+                    'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+                    'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+                    'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
+                    'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+                    'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
+                  ]
+                  const sector = (job.sector || '').toLowerCase()
+                  const sectorKey = Object.keys(gradients).find(k => k !== 'default' && sector.includes(k))
+                  const gradient = sectorKey ? gradients[sectorKey] : fallbacks[(job.company || job.title).charCodeAt(0) % fallbacks.length]
 
-                      {/* JOB LOGO / INITIAL */}
+                  return (
+                  <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)' }}>
+
+                    {/* GRADIENT BANNER */}
+                    <div style={{ background: gradient, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+                      <div style={{ position: 'absolute', right: 40, bottom: -70, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+                      {/* LOGO */}
                       {job.logo_url ? (
-                        <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
+                        <img src={job.logo_url} alt={job.company} style={{ width: 42, height: 42, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, zIndex: 1 }} />
                       ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0, zIndex: 1 }}>
                           {(job.company || job.title)[0].toUpperCase()}
                         </div>
                       )}
 
                       {/* JOB INFO */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
-                          <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f3f4f6', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
-                          {pack && (
-                            <span style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 8, fontWeight: 600 }}>
-                              ✓ Interview ready
-                            </span>
-                          )}
+                      <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
+                          <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const }}>{job.status}</span>
+                          {pack && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓ Interview ready</span>}
                         </div>
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                          {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
-                          {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
-                          {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
+                          {job.company && <span>{job.company}</span>}
+                          {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
+                          {job.location && <span>{job.location}</span>}
                         </div>
-                        {pack && (
-                          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                            {(pack.questions?.questions || []).map((q: any, i: number) => (
-                              <span key={i} style={{ fontSize: 10, background: '#f5f5f5', color: '#888', padding: '2px 8px', borderRadius: 6 }}>Q{q.number}: {q.competency}</span>
-                            ))}
-                          </div>
-                        )}
                       </div>
 
-            {/* ACTIONS */}
-<div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-  {pack ? (
-    <>
-      <button
-        onClick={() => {
-          const url = `${window.location.origin}/interview/apply/${job.id}`
-          navigator.clipboard.writeText(url)
-          notify('Interview link copied to clipboard ✓')
-        }}
-        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}
-      >
-        Copy link
-      </button>
-      <button
-        onClick={() => { setEditingPack(pack); setShowModal(true) }}
-        style={{ padding: '8px 13px', background: 'rgba(255,255,255,0.9)', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-      >
-        Edit pack
-      </button>
-      <button
-        onClick={() => generateInterview(job)}
-        disabled={isGenerating}
-        style={{ padding: '8px 13px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}
-      >
-        {isGenerating ? '⟳ Regenerating...' : '↺ Regenerate'}
-      </button>
-      <button
-        onClick={() => deletePack(pack)}
-        style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}
-      >
-        Delete
-      </button>
-    </>
-  ) : (
-    <button
-      onClick={() => generateInterview(job)}
-      disabled={isGenerating}
-      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
-    >
-      {isGenerating ? (
-        <>
-          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.8s linear infinite' }} />
-          Generating...
-        </>
-      ) : '✦ Generate interview'}
-    </button>
-  )}
-</div>
+                      {/* ACTIONS */}
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, zIndex: 1 }}>
+                        {pack ? (
+                          <>
+                            <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
+                              Copy link
+                            </button>
+                            <button onClick={() => { setEditingPack(pack); setShowModal(true) }}
+                              style={{ padding: '8px 13px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                              Edit pack
+                            </button>
+                            <button onClick={() => generateInterview(job)} disabled={isGenerating}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#f59e0b', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}>
+                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 7c0-2.8 2.2-5 5-5a5 5 0 014.9 4M12 7c0 2.8-2.2 5-5 5a5 5 0 01-4.9-4"/><path d="M10 2l2 2-2 2M4 12l-2-2 2-2"/></svg>
+                              {isGenerating ? 'Regenerating...' : 'Regenerate'}
+                            </button>
+                            <button onClick={() => deletePack(pack)}
+                              style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => generateInterview(job)} disabled={isGenerating}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}>
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
+                            {isGenerating ? 'Generating...' : 'Generate interview'}
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* QUESTION TAGS FOOTER */}
+                    {pack && (pack.questions?.questions || []).length > 0 && (
+                      <div style={{ background: 'white', padding: '8px 16px', borderTop: '0.5px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                        {(pack.questions?.questions || []).map((q: any, i: number) => (
+                          <span key={i} style={{ fontSize: 10, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 5 }}>Q{q.number}: {q.competency}</span>
+                        ))}
+                      </div>
+                    )}
 
                     {/* GENERATING STATE */}
                     {isGenerating && (
@@ -612,8 +543,8 @@ export default function Interviews() {
                       </div>
                     )}
                   </div>
-                )
-              })}
+                  )
+                })()
             </div>
           )}
         </div>
