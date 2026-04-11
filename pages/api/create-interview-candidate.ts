@@ -79,9 +79,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single()
 
     if (insertError || !candidate) {
-      console.error('Insert error:', insertError)
-      return res.status(500).json({ error: 'Could not create candidate record' })
-    }
+  console.error('Insert error:', insertError)
+  return res.status(500).json({ error: 'Could not create candidate record' })
+}
 
     // Add to job pipeline as voice_sent so they appear in interview column
     await supabase
