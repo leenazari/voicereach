@@ -286,45 +286,55 @@ export default function Interviews() {
                         )}
                       </div>
 
-                      {/* ACTIONS */}
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        {pack ? (
-                          <>
-                            <button
-                              onClick={() => { setEditingPack(pack); setShowModal(true) }}
-                              style={{ padding: '8px 14px', background: '#EEEDFE', color: '#534AB7', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              ✎ Edit pack
-                            </button>
-                            <button
-                              onClick={() => generateInterview(job)}
-                              disabled={isGenerating}
-                              style={{ padding: '8px 14px', background: isGenerating ? '#aaa' : 'white', color: isGenerating ? 'white' : '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
-                            >
-                              {isGenerating ? '⟳ Regenerating...' : '↺ Regenerate'}
-                            </button>
-                            <button
-                              onClick={() => deletePack(pack)}
-                              style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => generateInterview(job)}
-                            disabled={isGenerating}
-                            style={{ padding: '8px 18px', background: isGenerating ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                          >
-                            {isGenerating ? (
-                              <>
-                                <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.8s linear infinite' }} />
-                                Generating...
-                              </>
-                            ) : '✦ Generate interview'}
-                          </button>
-                        )}
-                      </div>
+            {/* ACTIONS */}
+<div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+  {pack ? (
+    <>
+      <button
+        onClick={() => {
+          const url = `${window.location.origin}/interview/apply/${job.id}`
+          navigator.clipboard.writeText(url)
+          notify('Interview link copied to clipboard ✓')
+        }}
+        style={{ padding: '8px 14px', background: '#E1F5EE', color: '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+      >
+        🔗 Copy link
+      </button>
+      <button
+        onClick={() => { setEditingPack(pack); setShowModal(true) }}
+        style={{ padding: '8px 14px', background: '#EEEDFE', color: '#534AB7', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+      >
+        ✎ Edit pack
+      </button>
+      <button
+        onClick={() => generateInterview(job)}
+        disabled={isGenerating}
+        style={{ padding: '8px 14px', background: isGenerating ? '#aaa' : 'white', color: isGenerating ? 'white' : '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
+      >
+        {isGenerating ? '⟳ Regenerating...' : '↺ Regenerate'}
+      </button>
+      <button
+        onClick={() => deletePack(pack)}
+        style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}
+      >
+        Delete
+      </button>
+    </>
+  ) : (
+    <button
+      onClick={() => generateInterview(job)}
+      disabled={isGenerating}
+      style={{ padding: '8px 18px', background: isGenerating ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isGenerating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+    >
+      {isGenerating ? (
+        <>
+          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.8s linear infinite' }} />
+          Generating...
+        </>
+      ) : '✦ Generate interview'}
+    </button>
+  )}
+</div>
                     </div>
 
                     {/* GENERATING STATE */}
