@@ -1736,6 +1736,9 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+                {((interviewCandidate as any).interview_keywords || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Keywords from interview</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {((interviewCandidate as any).interview_keywords || []).map((kw: string) => (
                     <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
