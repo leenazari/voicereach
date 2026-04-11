@@ -1224,6 +1224,8 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {jobs.map(job => renderJobCard(job))}
                 </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1802,5 +1804,7 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+    </div>
+  </div>
   )
 }
