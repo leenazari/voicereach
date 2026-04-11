@@ -29,6 +29,32 @@ type Job = {
 
 type Notification = { id: number; message: string; type: 'success' | 'error' }
 
+type InterviewCandidate = {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  role_applied: string
+  years_experience: number
+  last_employer?: string
+  location?: string
+  interview_score: number
+  interview_completed_at: string
+  interview_recommendation?: string
+  interview_answers?: any
+  interview_keywords?: string[]
+  cv_contradictions?: any[]
+  pipeline_stage?: string
+  job_id?: string
+}
+
+const PIPELINE_STAGES = [
+  { id: 'interviewed', label: 'Interviewed', color: '#534AB7', bg: '#EEEDFE' },
+  { id: 'second_round', label: '2nd Round', color: '#185FA5', bg: '#E6F1FB' },
+  { id: 'job_offer', label: 'Job Offer', color: '#1D9E75', bg: '#E1F5EE' },
+  { id: 'rejected', label: 'Rejected', color: '#E24B4A', bg: '#fff0ee' },
+]
+
 export default function Interviews() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
@@ -40,6 +66,11 @@ export default function Interviews() {
   const [editingPack, setEditingPack] = useState<InterviewPack | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [generatingJobId, setGeneratingJobId] = useState<string | null>(null)
+  const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
+  const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
+  const [loadingCandidates, setLoadingCandidates] = useState<string | null>(null)
+  const [selectedCandidate, setSelectedCandidate] = useState<InterviewCandidate | null>(null)
+  const [movingCandidate, setMovingCandidate] = useState<string | null>(null)
   const notifId = useRef(0)
   const initialized = useRef(false)
 
@@ -91,6 +122,62 @@ export default function Interviews() {
     return {
       'Content-Type': 'application/json',
       ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+    }
+  }
+
+  async function fetchJobCandidates(jobId: string) {
+    setLoadingCandidates(jobId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data } = await supabase
+        .from('candidates')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+        .eq('user_id', session.user.id)
+        .eq('job_id', jobId)
+        .not('interview_completed_at', 'is', null)
+        .order('interview_score', { ascending: false })
+      setJobCandidates(prev => ({ ...prev, [jobId]: data || [] }))
+    } finally {
+      setLoadingCandidates(null)
+    }
+  }
+
+  async function togglePipeline(jobId: string) {
+    if (expandedPipeline === jobId) {
+      setExpandedPipeline(null)
+    } else {
+      setExpandedPipeline(jobId)
+      if (!jobCandidates[jobId]) await fetchJobCandidates(jobId)
+    }
+  }
+
+  async function moveCandidateStage(candidate: InterviewCandidate, stage: string) {
+    setMovingCandidate(candidate.id)
+    try {
+      const headers = await authHeaders()
+      await fetch('/api/candidates', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ candidateId: candidate.id, pipeline_stage: stage })
+      })
+      setJobCandidates(prev => {
+        const jobId = candidate.job_id!
+        return {
+          ...prev,
+          [jobId]: (prev[jobId] || []).map(c =>
+            c.id === candidate.id ? { ...c, pipeline_stage: stage } : c
+          )
+        }
+      })
+      if (selectedCandidate?.id === candidate.id) {
+        setSelectedCandidate(prev => prev ? { ...prev, pipeline_stage: stage } : prev)
+      }
+      notify(`Moved to ${PIPELINE_STAGES.find(s => s.id === stage)?.label}`)
+    } catch {
+      notify('Could not update stage', 'error')
+    } finally {
+      setMovingCandidate(null)
     }
   }
 
@@ -184,39 +271,48 @@ export default function Interviews() {
         </div>
         <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-            { id: 'candidates', label: 'All Candidates', icon: '◎' },
-            { id: 'jobs', label: 'Jobs', icon: '◉' },
-          ].map(tab => (
-            <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
-              <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
-            </div>
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#534AB7', background: '#f0eeff', borderLeft: '3px solid #534AB7', fontWeight: 700, margin: '1px 0' }}>
-            <span>🎙</span>Interviews
-          </div>
-          {profile?.role === 'admin' && (
-            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-              <span>⊛</span>Admin panel
-            </div>
-          )}
-          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
-            <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
-          </div>
+{[
+  { id: 'pipeline', label: 'Pipeline', icon: '◈' },
+  { id: 'candidates', label: 'All Candidates', icon: '◎' },
+  { id: 'jobs', label: 'Jobs', icon: '◉' },
+  { id: 'analytics', label: 'Analytics', icon: '◷' }
+].map(tab => (
+  <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
+    <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
+  </div>
+))}
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#534AB7', background: '#f0eeff', borderLeft: '3px solid #534AB7', fontWeight: 700, margin: '1px 0' }}>
+  <span>🎙</span>Interviews
+</div>
+{profile?.role === 'admin' && (
+  <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+    <span>⊛</span>Admin panel
+  </div>
+)}
+<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
+  <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
+</div>
+<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+  <span style={{ opacity: 0.3 }}>◷</span>
+  <span>FAQ</span>
+  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+</div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+  <span style={{ opacity: 0.3 }}>◈</span>
+  <span>Support chat</span>
+  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+</div>
+
           <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
             <span style={{ opacity: 0.3 }}>◷</span>
             <span>FAQ</span>
             <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-            <span style={{ opacity: 0.3 }}>◈</span>
-            <span>Support chat</span>
-            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-          </div>
         </div>
+
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
             <div style={{ marginBottom: 12 }}>
@@ -361,6 +457,79 @@ export default function Interviews() {
                         ⟳ Running AI generator then validator — generating 6 questions with sub-questions, fallbacks and scoring context. This takes about 20 seconds...
                       </div>
                     )}
+
+                    {/* PIPELINE TOGGLE */}
+                    {pack && (
+                      <div
+                        onClick={() => togglePipeline(job.id)}
+                        style={{ padding: '10px 20px', borderTop: '1px solid #f0f0f0', background: expandedPipeline === job.id ? '#fafafa' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#534AB7', fontWeight: 600 }}
+                      >
+                        <span>{expandedPipeline === job.id ? '▲' : '▼'}</span>
+                        {expandedPipeline === job.id ? 'Hide candidate pipeline' : `View candidate pipeline${jobCandidates[job.id] ? ` (${jobCandidates[job.id].length} interviewed)` : ''}`}
+                        {loadingCandidates === job.id && <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>Loading...</span>}
+                      </div>
+                    )}
+
+                    {/* KANBAN PIPELINE */}
+                    {expandedPipeline === job.id && (
+                      <div style={{ borderTop: '1px solid #ebebeb', padding: '20px', background: '#fafafa' }}>
+                        {!jobCandidates[job.id] || jobCandidates[job.id].length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '32px 0', color: '#aaa', fontSize: 13 }}>
+                            No candidates have completed an interview for this job yet.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                            {PIPELINE_STAGES.map(stage => {
+                              const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interviewed') === stage.id)
+                              return (
+                                <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+                                  {/* COLUMN HEADER */}
+                                  <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{stage.label}</span>
+                                    <span style={{ fontSize: 11, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 8, fontWeight: 700 }}>{stageCandidates.length}</span>
+                                  </div>
+                                  {/* CANDIDATE CARDS */}
+                                  <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
+                                    {stageCandidates.map(c => (
+                                      <div
+                                        key={c.id}
+                                        onClick={() => setSelectedCandidate(c)}
+                                        style={{ background: '#fafafa', border: '1px solid #ebebeb', borderRadius: 8, padding: '10px 12px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#534AB7')}
+                                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#ebebeb')}
+                                      >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                          <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.name}</div>
+                                          <div style={{
+                                            fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 6,
+                                            background: c.interview_score >= 75 ? '#E1F5EE' : c.interview_score >= 55 ? '#FFF3E0' : '#fff0ee',
+                                            color: c.interview_score >= 75 ? '#1D9E75' : c.interview_score >= 55 ? '#BA7517' : '#E24B4A'
+                                          }}>{c.interview_score}%</div>
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>{c.role_applied}{c.last_employer ? ` · ${c.last_employer}` : ''}</div>
+                                        {/* MOVE BUTTONS */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                          {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
+                                            <button
+                                              key={s.id}
+                                              onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, s.id) }}
+                                              disabled={movingCandidate === c.id}
+                                              style={{ fontSize: 10, padding: '2px 7px', border: `1px solid ${s.color}22`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600 }}
+                                            >
+                                              → {s.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -377,6 +546,142 @@ export default function Interviews() {
           onSave={() => { fetchAll(); setShowModal(false); setEditingPack(null) }}
           notify={notify}
         />
+      )}
+
+      {/* CANDIDATE SUMMARY MODAL */}
+      {selectedCandidate && (
+        <div
+          onClick={() => setSelectedCandidate(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 16, width: 640, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+
+            {/* HEADER */}
+            <div style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63)', borderRadius: '16px 16px 0 0', padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: selectedCandidate.interview_score >= 75 ? '#1D9E75' : selectedCandidate.interview_score >= 55 ? '#BA7517' : '#E24B4A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{selectedCandidate.interview_score}%</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>{selectedCandidate.name}</div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{selectedCandidate.role_applied}{selectedCandidate.last_employer ? ` · ${selectedCandidate.last_employer}` : ''}</div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedCandidate(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 24, cursor: 'pointer' }}>×</button>
+            </div>
+
+            <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* PIPELINE STAGE */}
+              <div>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 10 }}>Move to stage</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {PIPELINE_STAGES.map(stage => (
+                    <button
+                      key={stage.id}
+                      onClick={() => moveCandidateStage(selectedCandidate, stage.id)}
+                      disabled={movingCandidate === selectedCandidate.id}
+                      style={{
+                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+                        background: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? stage.color : stage.bg,
+                        color: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? 'white' : stage.color,
+                        outline: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? `2px solid ${stage.color}` : 'none',
+                        outlineOffset: 2
+                      }}
+                    >
+                      {(selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? '✓ ' : ''}{stage.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* RECOMMENDATION */}
+              {selectedCandidate.interview_recommendation && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 8 }}>AI Recommendation</div>
+                  <div style={{ fontSize: 13, color: '#444', lineHeight: 1.7, background: '#f9f9f9', borderRadius: 8, padding: '14px 16px' }}>{selectedCandidate.interview_recommendation}</div>
+                </div>
+              )}
+
+              {/* STRENGTHS & CONCERNS */}
+              {(selectedCandidate.interview_answers?.strengths?.length > 0 || selectedCandidate.interview_answers?.concerns?.length > 0) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {selectedCandidate.interview_answers?.strengths?.length > 0 && (
+                    <div style={{ background: '#f0fff8', border: '1px solid #d4f0e8', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Strengths</div>
+                      {selectedCandidate.interview_answers.strengths.map((s: string, i: number) => (
+                        <div key={i} style={{ fontSize: 12, color: '#1D9E75', padding: '2px 0', display: 'flex', gap: 6 }}><span>✓</span><span>{s}</span></div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedCandidate.interview_answers?.concerns?.length > 0 && (
+                    <div style={{ background: '#fff8f8', border: '1px solid #fdd', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 11, color: '#E24B4A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Concerns</div>
+                      {selectedCandidate.interview_answers.concerns.map((c: string, i: number) => (
+                        <div key={i} style={{ fontSize: 12, color: '#E24B4A', padding: '2px 0', display: 'flex', gap: 6 }}><span>⚠</span><span>{c}</span></div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* QUESTION SCORES */}
+              {selectedCandidate.interview_answers?.question_scores?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 10 }}>Question breakdown</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedCandidate.interview_answers.question_scores.map((q: any) => (
+                      <div key={q.number} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: q.score >= 7 ? '#E1F5EE' : q.score >= 5 ? '#FFF3E0' : '#fff0ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: q.score >= 7 ? '#1D9E75' : q.score >= 5 ? '#BA7517' : '#E24B4A' }}>{q.score}</span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 3 }}>Q{q.number}: {q.competency}</div>
+                          <div style={{ fontSize: 12, color: '#888', lineHeight: 1.5 }}>{q.reasoning}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* NEXT ROUND QUESTIONS */}
+              {selectedCandidate.interview_answers?.next_round_questions?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 10 }}>Suggested 2nd round questions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedCandidate.interview_answers.next_round_questions.map((q: any, i: number) => (
+                      <div key={i} style={{ padding: '12px 14px', background: '#f9f9f9', borderRadius: 8, borderLeft: '3px solid #534AB7' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>{i + 1}. {q.question}</div>
+                        <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{q.rationale}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* KEYWORDS */}
+              {selectedCandidate.interview_keywords?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 8 }}>Keywords from interview</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {selectedCandidate.interview_keywords.map((kw: string) => (
+                      <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CONTACT */}
+              <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, marginBottom: 8 }}>Contact</div>
+                <div style={{ fontSize: 13, color: '#555', marginBottom: 3 }}>📧 {selectedCandidate.email}</div>
+                {selectedCandidate.phone && <div style={{ fontSize: 13, color: '#555' }}>📞 {selectedCandidate.phone}</div>}
+              </div>
+
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
