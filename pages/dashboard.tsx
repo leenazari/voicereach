@@ -1102,20 +1102,26 @@ export default function Dashboard() {
                       <td style={{ padding: '12px 16px' }}>
                         {c.years_experience > 0 && <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{c.years_experience}yr</span>}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+              <td style={{ padding: '12px 16px' }}>
                         <span style={{ fontSize: 11, background: STATUS_BG[c.status] || '#f0f0f0', color: STATUS_COLORS[c.status] || '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600 }}>
                           {STATUS_LABELS[c.status] || c.status}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => openProfile(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #EEEDFE', borderRadius: 6, cursor: 'pointer', background: '#EEEDFE', color: '#534AB7', fontWeight: 500 }}>Profile</button>
-                          <button onClick={() => openEdit(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          {c.voice_note_url && <button onClick={() => openPlayer(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #E1F5EE', borderRadius: 6, cursor: 'pointer', background: '#E1F5EE', color: '#1D9E75', fontWeight: 500 }}>▶ Play</button>}
-                          <button onClick={() => openJobModal(c)} style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', background: '#534AB7', color: 'white', fontWeight: 500 }}>
-                            {shortlisting === c.id ? '⟳' : '→ Send'}
+                        {(c as any).interview_completed_at ? (
+                          <button
+                            onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
+                            style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700, background: (c as any).interview_score >= 75 ? '#E1F5EE' : (c as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee', color: (c as any).interview_score >= 75 ? '#1D9E75' : (c as any).interview_score >= 55 ? '#BA7517' : '#E24B4A' }}
+                          >
+                            🎙 {(c as any).interview_score}%
                           </button>
-                          <button onClick={() => deleteCandidate(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #fdd', borderRadius: 6, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#ddd' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => openProfile(c)}
                         </div>
                       </td>
                     </tr>
