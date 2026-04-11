@@ -205,6 +205,7 @@ export default function Dashboard() {
   const [activityYear, setActivityYear] = useState(new Date().getFullYear())
   const [monthStats, setMonthStats] = useState({ candidates: 0, voiceNotes: 0 })
   const [shortlistedThisWeek, setShortlistedThisWeek] = useState(0)
+  const [interviewPacks, setInterviewPacks] = useState<Record<string, string>>({})
   const notifId = useRef(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
