@@ -962,10 +962,107 @@ export default function Dashboard() {
 
       {/* SIDEBAR */}
       <div style={{ width: 224, background: 'white', borderRight: '0.5px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
+        {/* Logo */}
+        <div style={{ padding: '18px 16px 14px', borderBottom: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><path d="M5 7c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2"/><path d="M7 9v1.5"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', letterSpacing: '-0.3px' }}>VoiceReach</div>
+            <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>AI recruitment</div>
+          </div>
         </div>
+
+        {/* Nav */}
+        <div style={{ padding: '8px 10px', flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', padding: '10px 8px 4px' }}>Main</div>
+
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
+            { id: 'candidates', label: 'All Candidates', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg> },
+            { id: 'jobs', label: 'Jobs', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/><path d="M5 7.5h6M5 10h4"/></svg> },
+          ].map(tab => (
+            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', background: activeTab === tab.id ? '#EEF2FF' : 'transparent', borderRadius: 8, marginBottom: 1, fontWeight: activeTab === tab.id ? 500 : 400 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280' }}>
+                {tab.icon}
+              </div>
+              {tab.label}
+              {tab.id === 'jobs' && jobs.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{jobs.filter(j => j.status === 'active').length}</span>}
+              {tab.id === 'candidates' && candidates.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{candidates.length}</span>}
+            </div>
+          ))}
+
+          <div onClick={() => router.push('/interviews')} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2a4 4 0 014 4v1.5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 13.5c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+            </div>
+            Interviews
+          </div>
+
+          {profile?.role === 'admin' && (
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#ef4444', borderRadius: 8, marginBottom: 1 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#fef2f2', color: '#ef4444' }}>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+              </div>
+              Admin panel
+            </div>
+          )}
+
+          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', padding: '12px 8px 4px' }}>Settings</div>
+
+          <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3"/></svg>
+            </div>
+            Voice selector
+          </div>
+
+          <div onClick={() => { setOnboardingMode('manual'); setShowOnboarding(true) }} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+            </div>
+            <span style={{ flex: 1 }}>Getting started</span>
+            {onboardingDoneCount < 3 && <span style={{ fontSize: 10, background: '#DDD6FE', color: '#4F46E5', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{onboardingDoneCount}/3</span>}
+            {onboardingDoneCount === 3 && <span style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓</span>}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px' }}>
+          {profile && (
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+                  {(profile.full_name || user?.email || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#111827', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name || user?.email?.split('@')[0]}</div>
+                  <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'capitalize' as const }}>{profile.plan} plan</div>
+                </div>
+              </div>
+              {profile.credits_limit !== 999999 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: 10, color: '#9ca3af' }}>Credits</span>
+                    <span style={{ fontSize: 10, color: creditsColor, fontWeight: 500 }}>{profile.credits_used}/{profile.credits_limit}</span>
+                  </div>
+                  <div style={{ height: 3, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 3, transition: 'width 0.3s' }} />
+                  </div>
+                  {creditsPercent >= 90 && <div style={{ marginTop: 6, fontSize: 11, color: '#ef4444' }}>Credits almost used up</div>}
+                </div>
+              )}
+              {profile.credits_limit === 999999 && <div style={{ fontSize: 10, color: '#15803d', marginTop: 4 }}>Unlimited credits</div>}
+            </div>
+          )}
+          <div onClick={signOut} style={{ fontSize: 12, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px' }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 7H3M5.5 4.5L3 7l2.5 2.5M8 2h3a1 1 0 011 1v8a1 1 0 01-1 1H8"/></svg>
+            Sign out
+          </div>
+        </div>
+      </div>
+
+
         <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
           {[
