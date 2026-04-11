@@ -163,7 +163,10 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
       for (let i = 0; i < inputData.length; i++) {
         pcm16[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768))
       }
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)))
+      const uint8 = new Uint8Array(pcm16.buffer)
+let binary = ''
+for (let j = 0; j < uint8.byteLength; j++) binary += String.fromCharCode(uint8[j])
+const base64 = btoa(binary)
       wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64 }))
     }
 
