@@ -193,6 +193,7 @@ export default function Dashboard() {
   const [regeneratingKeywords, setRegeneratingKeywords] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [extracting, setExtracting] = useState(false)
