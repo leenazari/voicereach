@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
+import { getCombinedScore, getScoreColor, getScoreBg, getScoreLabel, getScoreBreakdown } from '../lib/scoring'
 
 type InterviewPack = {
   id: string
@@ -39,6 +40,7 @@ type InterviewCandidate = {
   last_employer?: string
   location?: string
   interview_score: number
+  cv_match_score?: number | null
   interview_completed_at: string
   interview_recommendation?: string
   interview_answers?: any
@@ -132,7 +134,7 @@ export default function Interviews() {
       if (!session) return
       const { data } = await supabase
         .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
         .eq('user_id', session.user.id)
         .eq('job_id', jobId)
         .not('interview_completed_at', 'is', null)
@@ -502,9 +504,9 @@ export default function Interviews() {
                                           <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.name}</div>
                                           <div style={{
                                             fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 6,
-                                            background: c.interview_score >= 75 ? '#E1F5EE' : c.interview_score >= 55 ? '#FFF3E0' : '#fff0ee',
-                                            color: c.interview_score >= 75 ? '#1D9E75' : c.interview_score >= 55 ? '#BA7517' : '#E24B4A'
-                                          }}>{c.interview_score}%</div>
+                                            background: getScoreBg(getCombinedScore(c.cv_match_score, c.interview_score)),
+                                            color: getScoreColor(getCombinedScore(c.cv_match_score, c.interview_score))
+                                          }}>{getCombinedScore(c.cv_match_score, c.interview_score)}%</div>
                                         </div>
                                         <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>{c.role_applied}{c.last_employer ? ` · ${c.last_employer}` : ''}</div>
                                         {/* MOVE BUTTONS */}
@@ -559,8 +561,8 @@ export default function Interviews() {
             {/* HEADER */}
             <div style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63)', borderRadius: '16px 16px 0 0', padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: selectedCandidate.interview_score >= 75 ? '#1D9E75' : selectedCandidate.interview_score >= 55 ? '#BA7517' : '#E24B4A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{selectedCandidate.interview_score}%</span>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: getScoreColor(getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score)), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score)}%</span>
                 </div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>{selectedCandidate.name}</div>
