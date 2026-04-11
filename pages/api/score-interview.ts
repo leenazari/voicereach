@@ -108,6 +108,12 @@ Respond ONLY with valid JSON, no markdown, no backticks:
       "note": "what was observed in the interview — neutral professional language",
       "severity": "LOW | MEDIUM | HIGH"
     }
+  ],
+  "next_round_questions": [
+    {
+      "question": "string",
+      "rationale": "why this question — what gap or area it explores"
+    }
   ]
 }`
 
