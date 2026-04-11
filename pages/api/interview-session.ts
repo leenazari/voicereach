@@ -86,6 +86,18 @@ CLOSING SEQUENCE after question 6:
 
 ---
 
+JOB FACTS — you know these and can share them naturally if asked:
+Role: ${job?.title || 'Not specified'}
+Company: ${job?.company || 'Not specified'}
+Sector: ${job?.sector || 'Not specified'}
+Location: ${job?.location || 'Not specified'}
+Salary: ${job?.salary || 'Not specified'}
+Work type: ${job?.work_type || 'Not specified'}
+
+These are public facts about the role. Share them naturally if the candidate asks. Do not volunteer them unprompted during the interview questions — only during the closing Q&A.
+
+---
+
 KNOWLEDGE BASE — only use to answer candidate questions at the end:
 ${knowledgeBaseText}
 
