@@ -95,7 +95,15 @@ export default function ApplyPage({ job, pack, notFound, jobClosed }: Props) {
   const ogDescription = job
     ? `${job.salary ? job.salary + ' · ' : ''}${job.location ? job.location + ' · ' : ''}Apply via a quick 10-minute voice interview. No CV needed.`
     : 'You have been invited to a voice interview.'
-  const ogImage = job?.logo_url || 'https://voicereach.co.uk/og-default.png'
+
+  const ogImageParams = new URLSearchParams({
+    title: job?.title || '',
+    company: job?.company || '',
+    salary: job?.salary || '',
+    location: job?.location || '',
+    logo: job?.logo_url || '',
+  })
+  const ogImage = `https://voicereach.co.uk/api/og-image?${ogImageParams.toString()}`
 
   return (
     <>
