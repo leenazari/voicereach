@@ -720,14 +720,29 @@ export default function Dashboard() {
   function getMatchBg(score: number): string { return getScoreBg(score) }
 
   function renderJobCard(job: Job) {
-    const gradients = [
-      'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
+    const gradients: Record<string, string> = {
+      sales:      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+      tech:       'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+      marketing:  'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
+      finance:    'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+      hr:         'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+      operations:'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+      legal:      'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+      healthcare: 'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+      default:    'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
+    }
+    const fallbacks = [
       'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
       'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
       'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
       'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+      'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
     ]
-    const gradient = gradients[job.title.charCodeAt(0) % gradients.length]
+    const sector = (job.sector || '').toLowerCase()
+    const sectorKey = Object.keys(gradients).find(k => k !== 'default' && sector.includes(k))
+    const gradient = sectorKey
+      ? gradients[sectorKey]
+      : fallbacks[(job.company || job.title).charCodeAt(0) % fallbacks.length]
     const workTypeLabel = job.work_type === 'office' ? 'Office' : job.work_type === 'hybrid' ? 'Hybrid' : job.work_type === 'remote' ? 'Remote' : null
 
     const btnStyle = (bg: string, extraPad?: string): React.CSSProperties => ({
