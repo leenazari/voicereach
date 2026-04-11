@@ -1263,11 +1263,21 @@ export default function Dashboard() {
                 {STATUS_LABELS[profileCandidate.status] || profileCandidate.status}
               </span>
             </div>
+
+            {(profileCandidate as any).no_cv && (
+              <div style={{ background: '#FFF3E0', border: '1px solid #f0d080', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#BA7517' }}>No CV uploaded</div>
+                  <div style={{ fontSize: 11, color: '#BA7517', opacity: 0.8 }}>This candidate applied directly via interview link. Score is based on interview performance only.</div>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
               {[
-                { label: 'Experience', value: profileCandidate.years_experience > 0 ? `${profileCandidate.years_experience} years` : 'Not specified' },
-                { label: 'Location', value: (profileCandidate as any).location || 'Not specified' },
-                { label: 'Last employer', value: (profileCandidate as any).last_employer || 'Not specified' },
+                { label: 'Experience', value: profileCandidate.years_experience > 0 ? `${profileCandidate.years_experience} years` : (profileCandidate as any).no_cv ? '—' : 'Not specified' },
+                { label: 'Location', value: (profileCandidate as any).location || ((profileCandidate as any).no_cv ? '—' : 'Not specified') },
+                { label: 'Last employer', value: (profileCandidate as any).last_employer || ((profileCandidate as any).no_cv ? '—' : 'Not specified') },
               ].map(item => (
                 <div key={item.label} style={{ background: '#f9f9f9', borderRadius: 8, padding: '10px 12px' }}>
                   <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4, fontWeight: 600 }}>{item.label}</div>
@@ -1290,12 +1300,17 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            {(profileCandidate as any).candidate_summary && (
+            {(profileCandidate as any).candidate_summary ? (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Profile summary</div>
                 <div style={{ fontSize: 13, color: '#444', lineHeight: 1.7, background: '#f9f9f9', borderRadius: 8, padding: '12px 14px' }}>{(profileCandidate as any).candidate_summary}</div>
               </div>
-            )}
+            ) : (profileCandidate as any).no_cv ? (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Profile summary</div>
+                <div style={{ fontSize: 12, color: '#bbb', fontStyle: 'italic', background: '#f9f9f9', borderRadius: 8, padding: '12px 14px' }}>No CV uploaded — summary not available</div>
+              </div>
+            ) : null}
             {((profileCandidate as any).skills || []).length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Skills</div>
