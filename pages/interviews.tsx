@@ -184,41 +184,39 @@ export default function Interviews() {
         </div>
         <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
-{[
-  { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-{ id: 'candidates', label: 'All Candidates', icon: '◎' },
-{ id: 'jobs', label: 'Jobs', icon: '◉' },
-].map(tab => (
-  <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
-    <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
-  </div>
-))}
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#534AB7', background: '#f0eeff', borderLeft: '3px solid #534AB7', fontWeight: 700, margin: '1px 0' }}>
-  <span>🎙</span>Interviews
-</div>
-{profile?.role === 'admin' && (
-  <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-    <span>⊛</span>Admin panel
-  </div>
-)}
-<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
-  <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
-</div>
-<div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-  <span style={{ opacity: 0.3 }}>◷</span>
-  <span>FAQ</span>
-  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-  <span style={{ opacity: 0.3 }}>◈</span>
-  <span>Support chat</span>
-  <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-</div>
-
-        
-
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: '◈' },
+            { id: 'candidates', label: 'All Candidates', icon: '◎' },
+            { id: 'jobs', label: 'Jobs', icon: '◉' },
+          ].map(tab => (
+            <div key={tab.id} onClick={() => router.push(`/dashboard?tab=${tab.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', fontWeight: 400, margin: '1px 0' }}>
+              <span style={{ opacity: 0.5 }}>{tab.icon}</span>{tab.label}
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#534AB7', background: '#f0eeff', borderLeft: '3px solid #534AB7', fontWeight: 700, margin: '1px 0' }}>
+            <span>🎙</span>Interviews
+          </div>
+          {profile?.role === 'admin' && (
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+              <span>⊛</span>Admin panel
+            </div>
+          )}
+          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
+            <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
+          </div>
+          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◷</span>
+            <span>FAQ</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◈</span>
+            <span>Support chat</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+          </div>
+        </div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
             <div style={{ marginBottom: 12 }}>
