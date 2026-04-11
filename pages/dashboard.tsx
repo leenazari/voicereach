@@ -786,7 +786,7 @@ export default function Dashboard() {
                 Copy link
               </button>
             ) : (
-              <button onClick={() => router.push('/interviews')} style={btnStyle('#0ea5e9')}>
+              <button onClick={() => router.push('/interviews')} style={btnStyle('#16a34a')}>
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
                 Create interview
               </button>
@@ -926,203 +926,6 @@ export default function Dashboard() {
     )
   }
 
-      'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
-      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
-      'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
-      'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
-      'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
-    ]
-    const gradient = gradients[job.title.charCodeAt(0) % gradients.length]
-    const workTypeLabel = job.work_type === 'office' ? 'Office' : job.work_type === 'hybrid' ? 'Hybrid' : job.work_type === 'remote' ? 'Remote' : null
-
-    return (
-      <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)', marginBottom: 2 }}>
-
-        {/* GRADIENT BANNER */}
-        <div style={{ background: gradient, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', right: 40, bottom: -70, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-
-          {/* LOGO */}
-          {job.logo_url ? (
-            <img src={job.logo_url} alt={job.company} style={{ width: 42, height: 42, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, zIndex: 1 }} />
-          ) : (
-            <div style={{ width: 42, height: 42, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0, zIndex: 1 }}>
-              {(job.company || job.title)[0].toUpperCase()}
-            </div>
-          )}
-
-          {/* JOB INFO */}
-          <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
-              {job.status !== 'active' && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const }}>{job.status}</span>}
-              {workTypeLabel && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', padding: '2px 7px', borderRadius: 20 }}>{workTypeLabel}</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
-              {job.company && <span>{job.company}</span>}
-              {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
-              {job.location && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
-                {job.location}
-              </span>}
-              {job.closes_at && <span style={{ color: 'rgba(255,220,100,0.9)' }}>Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-            </div>
-          </div>
-
-          {/* ACTION BUTTONS IN HEADER */}
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0, zIndex: 1 }}>
-            {interviewPacks[job.id] ? (
-              <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
-                Copy link
-              </button>
-            ) : (
-              <button onClick={() => router.push('/interviews')}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
-                Create interview
-              </button>
-            )}
-            <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v8M4 6l3 3 3-3"/><path d="M1 10v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
-              Bulk CVs
-            </button>
-            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: matchingJob === job.id ? 'not-allowed' : 'pointer', opacity: matchingJob === job.id ? 0.6 : 1 }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
-              {matchingJob === job.id ? 'Matching...' : matchResults[job.id] ? 'Refresh' : 'Find matches'}
-            </button>
-            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>
-              Edit
-            </button>
-            <button onClick={() => deleteJob(job)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'rgba(220,50,50,0.25)', border: '1px solid rgba(255,100,100,0.3)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
-            </button>
-          </div>
-        </div>
-
-        {/* FOOTER — skills + match toggle */}
-        <div style={{ background: 'white', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTop: '0.5px solid rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' as const, flex: 1 }}>
-            {(job.required_skills || []).slice(0, 6).map(skill => (
-              <span key={skill} style={{ fontSize: 11, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 5 }}>{skill}</span>
-            ))}
-            {interviewPacks[job.id] && <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 5, fontWeight: 500 }}>Interview ready</span>}
-            <span style={{ fontSize: 11, background: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: 5 }}>{job.match_threshold || 70}% threshold</span>
-          </div>
-          {matchResults[job.id] && (
-            <button onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
-              style={{ padding: '4px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
-              {expandedJobs.has(job.id) ? 'Hide matches' : `${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches`}
-            </button>
-          )}
-        </div>
-
-        {/* MATCH RESULTS */}
-        {expandedJobs.has(job.id) && matchResults[job.id] && (
-          <div style={{ borderTop: '0.5px solid #e5e7eb' }}>
-            <div style={{ padding: '10px 16px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-                {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
-                <span style={{ fontSize: 11, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low</span>
-                {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
-                  <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.already_sent).length} sent</span>
-                )}
-              </div>
-            </div>
-            {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
-              <div style={{ padding: '10px 16px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#15803d', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Strong matches</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: match.already_sent ? '#fffbeb' : '#f0fdf4', border: `0.5px solid ${match.already_sent ? '#fde68a' : '#bbf7d0'}`, borderRadius: 8 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-                          <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 500, color: '#4F46E5', cursor: 'pointer' }}>{match.name}</div>
-                          {match.already_sent && <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 5, fontWeight: 500 }}>Sent</span>}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 3 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr` : ''}</div>
-                        {match.keyword_matches.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                            {match.keyword_matches.slice(0, 4).map(kw => (
-                              <span key={kw} style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>{kw}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <button onClick={async () => {
-                        setShortlisting(match.candidate_id)
-                        try {
-                          const headers = await authHeaders()
-                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                          const data = await res.json()
-                          if (data.success) {
-                            notify(`Voice note sent to ${match.name} ✓`)
-                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true, status: 'voice_sent' } : m) }))
-                            fetchCandidates()
-                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                            markOnboardingStep('voice_note')
-                          } else notify('Error: ' + data.error, 'error')
-                        } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 14px', background: shortlisting === match.candidate_id ? '#9ca3af' : match.already_sent ? '#fef3c7' : '#4F46E5', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#92400e' : 'white', border: match.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : match.already_sent ? 'Resend' : 'Send'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
-              <div style={{ padding: '0 16px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Low match — below threshold</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f9fafb', border: '0.5px solid #e5e7eb', borderRadius: 8 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 7, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 12, fontWeight: 500, color: '#4F46E5', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
-                      </div>
-                      <button onClick={async () => {
-                        setShortlisting(match.candidate_id)
-                        try {
-                          const headers = await authHeaders()
-                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                          const data = await res.json()
-                          if (data.success) {
-                            notify(`Voice note sent to ${match.name} ✓`)
-                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true } : m) }))
-                            fetchCandidates()
-                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                          } else notify('Error: ' + data.error, 'error')
-                        } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '5px 10px', background: 'white', color: '#4F46E5', border: '0.5px solid #c7d2fe', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : 'Send anyway'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
 
 
   return (
@@ -1575,7 +1378,7 @@ export default function Dashboard() {
                 <>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                     {((profileCandidate as any).strength_keywords || []).map((kw: string) => (
-                      <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+                      <span key={kw} style={{ fontSize: 11, background: '#16a34a', color: 'white', padding: '4px 10px', borderRadius: 8, fontWeight: 600, letterSpacing: '0.01em' }}>⚡ {kw}</span>
                     ))}
                   </div>
                   {(() => {
@@ -1838,7 +1641,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 600, marginBottom: 6 }}>⚡ Strength keywords extracted</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {form.strength_keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => (
-                    <span key={k} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{k}</span>
+                    <span key={k} style={{ fontSize: 11, background: '#16a34a', color: 'white', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>{k}</span>
                   ))}
                 </div>
               </div>
@@ -1989,7 +1792,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Keywords from interview</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {((interviewCandidate as any).interview_keywords || []).map((kw: string) => (
-                    <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+                    <span key={kw} style={{ fontSize: 11, background: '#16a34a', color: 'white', padding: '4px 10px', borderRadius: 8, fontWeight: 600, letterSpacing: '0.01em' }}>⚡ {kw}</span>
                   ))}
                 </div>
               </div>
