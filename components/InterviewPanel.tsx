@@ -28,6 +28,13 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const conversationRef = useRef<any>(null)
   const transcriptRef = useRef<string>('')
+  const completedRef = useRef<boolean>(false)
+
+  function completeOnce(transcript: string) {
+    if (completedRef.current) return
+    completedRef.current = true
+    onComplete(transcript)
+  }
   const durationRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const firstName = candidateName.split(' ')[0]
@@ -69,7 +76,7 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   onConnect: () => setStatus('connected'),
   onDisconnect: () => {
     setStatus('disconnected')
-    onComplete(transcriptRef.current)
+    completeOnce(transcriptRef.current)
   },
   onError: (error: any) => {
     console.error('Conversation error:', error)
@@ -134,7 +141,7 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
     }
     cleanup()
     setStatus('disconnected')
-    onComplete(transcriptRef.current)
+    completeOnce(transcriptRef.current)
   }
 
   function cleanup() {
