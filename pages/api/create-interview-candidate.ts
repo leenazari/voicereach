@@ -28,10 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (jobError || !job) return res.status(404).json({ error: 'Job not found' })
     if (job.status === 'closed') return res.status(400).json({ error: 'Job is closed' })
 
-    // Check for existing candidate with same email for this job
-      .eq('email', email)
-      .eq('job_id', jobId)
-      .single()
+    const { data: existing } = await supabase
+  .from('candidates')
+  .select('id, interview_token, interview_completed_at')
+  .eq('user_id', job.user_id)
+  .eq('email', email)
+  .eq('job_id', jobId)
+  .single()
     if (existing) {
   if (existing.interview_completed_at) {
     // Reset for testing — in production remove this and return error
