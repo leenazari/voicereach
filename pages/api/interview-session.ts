@@ -33,6 +33,7 @@ QUESTION ${q.number} — ${q.competency}
 Main question: ${q.main_question}
 Sub-questions (use selectively, max 1-2): ${(q.sub_questions || []).join(' | ')}
 Fallback if answer is weak: ${(q.fallback_questions || []).join(' | ')}
+CV probe — use naturally where relevant: ${q.cv_probe || ''}
 Red flags to note: ${(q.red_flags || []).join(', ')}
 `).join('\n')}
 
@@ -57,25 +58,23 @@ GUARD RAILS:
 
 ---
 
-CV VERIFICATION — do this naturally and warmly throughout:
-The candidate has the following on their CV. Where relevant, probe these naturally in your questions:
-- Employers: ${(candidate.all_employers || []).join(', ')}
-- Skills claimed: ${(candidate.skills || []).join(', ')}
-- Years experience: ${candidate.years_experience}
+CV VERIFICATION — weave these naturally into your questions:
+The candidate's CV claims the following. Where relevant to a question, probe these warmly:
+Employers: ${(candidate.all_employers || []).join(', ') || 'Not specified'}
+Skills claimed: ${(candidate.skills || []).join(', ') || 'Not specified'}
+Years experience claimed: ${candidate.years_experience || 'Not specified'}
 
-If a candidate mentions something from their CV, follow up naturally:
-- "You mentioned working at [employer] — what was a typical day like there?"
-- "Your background shows experience with [skill] — can you give me a specific example of using that?"
+For each question, if there is a relevant CV claim, use the cv_probe approach:
+- "You mentioned working at [employer] — what did a typical week look like there?"
+- "Your background shows [skill] — can you walk me through a specific time you used that?"
+- "With [X] years in [sector], what was the most complex challenge you navigated?"
 
-If an answer seems vague or doesn't match the depth you'd expect from someone with that experience, use a fallback question to probe further.
+Give candidates every opportunity to demonstrate genuine experience.
+Stay warm, curious and encouraging throughout.
+NEVER sound accusatory or confrontational.
+If an answer seems shallow for someone with that claimed experience, use a fallback question once to give them another chance.
 
-NEVER accuse or confront. Always stay warm and curious. The goal is to give the candidate every opportunity to demonstrate their experience.`
-
-Commit both files. The system now:
-- Extracts interview keywords and saves them for matching
-- Detects CV contradictions with severity ratings
-- Includes them in the recruiter notification email
-- Probes CV claims naturally during the interview
+---
 
 CLOSING SEQUENCE after question 6:
 1. "That's all my questions — thank you so much for your time today, ${firstName}."
@@ -153,7 +152,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const agentId = process.env.ELEVENLABS_AGENT_ID!
     const apiKey = process.env.ELEVENLABS_API_KEY!
 
-    // Step 1 — Update agent with full dynamic system prompt
     const updateResponse = await fetch(
       `https://api.elevenlabs.io/v1/convai/agents/${agentId}`,
       {
@@ -185,7 +183,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Could not configure interview agent' })
     }
 
-    // Step 2 — Get signed URL
     const signedUrlResponse = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
       {
