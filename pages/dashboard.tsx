@@ -239,6 +239,7 @@ export default function Dashboard() {
         })
         fetchCandidates()
         fetchJobs()
+        fetchInterviewPacks()
         fetchShortlistedThisWeek()
       } else if (event === 'SIGNED_OUT') {
         window.location.href = '/login'
