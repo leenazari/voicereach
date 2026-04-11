@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
 import JobFormModal from '../components/JobFormModal'
+import { getCombinedScore, getScoreColor, getScoreBg, getScoreLabel, getScoreBreakdown } from '../lib/scoring'
 import BulkUploadModal from '../components/BulkUploadModal'
 import OnboardingModal from '../components/OnboardingModal'
 import { useBulkUpload } from '../context/BulkUploadContext'
@@ -192,7 +193,6 @@ export default function Dashboard() {
   const [regeneratingKeywords, setRegeneratingKeywords] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
-  const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [extracting, setExtracting] = useState(false)
@@ -213,6 +213,7 @@ export default function Dashboard() {
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
   const initialized = useRef(false)
+  const router = useRouter()
   const { state: bulkState } = useBulkUpload()
 
   const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear === new Date().getFullYear()
@@ -707,19 +708,8 @@ export default function Dashboard() {
     { key: 'job_salary', label: 'Salary (e.g. £45,000)', type: 'text' },
   ]
 
-  function getMatchColor(score: number): string {
-    if (score >= 80) return '#1D9E75'
-    if (score >= 70) return '#534AB7'
-    if (score >= 55) return '#BA7517'
-    return '#E24B4A'
-  }
-
-  function getMatchBg(score: number): string {
-    if (score >= 80) return '#E1F5EE'
-    if (score >= 70) return '#EEEDFE'
-    if (score >= 55) return '#FFF3E0'
-    return '#fff0ee'
-  }
+  function getMatchColor(score: number): string { return getScoreColor(score) }
+  function getMatchBg(score: number): string { return getScoreBg(score) }
 
   function renderJobCard(job: Job) {
     return (
@@ -1125,10 +1115,10 @@ export default function Dashboard() {
     {(c as any).interview_completed_at && (
       <span
         onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
-        style={{ fontSize: 10, background: (c as any).interview_score >= 75 ? '#E1F5EE' : (c as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee', color: (c as any).interview_score >= 75 ? '#1D9E75' : (c as any).interview_score >= 55 ? '#BA7517' : '#E24B4A', padding: '2px 7px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-        title="View interview results"
+        style={{ fontSize: 10, background: getScoreBg(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), color: getScoreColor(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), padding: '2px 7px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+        title={getScoreBreakdown((c as any).cv_match_score, (c as any).interview_score)}
       >
-        🎙 {(c as any).interview_score}%
+        🎙 {getCombinedScore((c as any).cv_match_score, (c as any).interview_score)}%
       </span>
     )}
   </div>
@@ -1149,9 +1139,9 @@ export default function Dashboard() {
                         {(c as any).interview_completed_at ? (
                           <button
                             onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
-                            style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700, background: (c as any).interview_score >= 75 ? '#E1F5EE' : (c as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee', color: (c as any).interview_score >= 75 ? '#1D9E75' : (c as any).interview_score >= 55 ? '#BA7517' : '#E24B4A' }}
+                            style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700, background: getScoreBg(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), color: getScoreColor(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)) }}
                           >
-                            🎙 {(c as any).interview_score}%
+                            🎙 {getCombinedScore((c as any).cv_match_score, (c as any).interview_score)}%
                           </button>
                         ) : (
                           <span style={{ fontSize: 11, color: '#ddd' }}>—</span>
@@ -1411,22 +1401,22 @@ export default function Dashboard() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#f9f9f9', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
       <div style={{
         width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
-        background: (profileCandidate as any).interview_score >= 75 ? '#E1F5EE' : (profileCandidate as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee',
+        background: getScoreBg(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score)),
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
         <span style={{
           fontSize: 16, fontWeight: 800,
-          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
+          color: getScoreColor(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))
         }}>
-          {(profileCandidate as any).interview_score}%
+          {getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score)}%
         </span>
       </div>
       <div>
         <div style={{
           fontSize: 13, fontWeight: 700, marginBottom: 2,
-          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
+          color: getScoreColor(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))
         }}>
-          {(profileCandidate as any).interview_score >= 75 ? 'Strong candidate' : (profileCandidate as any).interview_score >= 55 ? 'Average candidate' : 'Weak candidate'}
+          {getScoreLabel(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))}
         </div>
         <div style={{ fontSize: 12, color: '#888' }}>Overall interview score</div>
       </div>
@@ -1643,12 +1633,12 @@ export default function Dashboard() {
               <button onClick={() => { setShowInterviewModal(false); setInterviewCandidate(null) }} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
             </div>
             <div style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63)', borderRadius: 12, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: (interviewCandidate as any).interview_score >= 75 ? '#1D9E75' : (interviewCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 20, fontWeight: 900, color: 'white' }}>{(interviewCandidate as any).interview_score}%</span>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: getScoreColor(getCombinedScore((interviewCandidate as any).cv_match_score, (interviewCandidate as any).interview_score)), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 20, fontWeight: 900, color: 'white' }}>{getCombinedScore((interviewCandidate as any).cv_match_score, (interviewCandidate as any).interview_score)}%</span>
               </div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 4 }}>
-                  {(interviewCandidate as any).interview_score >= 75 ? 'Strong candidate' : (interviewCandidate as any).interview_score >= 55 ? 'Average candidate' : 'Weak candidate'}
+                  {getScoreLabel(getCombinedScore((interviewCandidate as any).cv_match_score, (interviewCandidate as any).interview_score))}
                 </div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
                   Interviewed {new Date((interviewCandidate as any).interview_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
