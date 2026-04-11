@@ -36,110 +36,80 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   const firstName = candidateName.split(' ')[0]
 
   useEffect(() => {
-    initSession()
-    return () => cleanup()
-  }, [])
+  return () => cleanup()
+}, [])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  useEffect(() => {
-    if (status === 'connected') {
-      durationRef.current = setInterval(() => setDuration(d => d + 1), 1000)
-    } else {
-      if (durationRef.current) clearInterval(durationRef.current)
-    }
-    return () => { if (durationRef.current) clearInterval(durationRef.current) }
-  }, [status])
-
-  async function initSession() {
-    setStatus('connecting')
-    try {
-      const res = await fetch('/api/interview-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      })
-      const data = await res.json()
-      if (!res.ok || !data.signed_url) {
-        onError(data.error || 'Could not start interview session')
-        setStatus('error')
-        return
-      }
-      setSignedUrl(data.signed_url)
-      setSystemPrompt(data.system_prompt)
-      setSessionReady(true)
-      setStatus('idle')
-    } catch (err: any) {
-      onError(err.message || 'Failed to initialise session')
+async function startInterview() {
+  setStatus('connecting')
+  try {
+    const res = await fetch('/api/interview-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
+    const data = await res.json()
+    if (!res.ok || !data.signed_url) {
+      onError(data.error || 'Could not start interview session')
       setStatus('error')
+      return
     }
-  }
 
-  async function startInterview() {
-    if (!signedUrl || !systemPrompt) return
-    setStatus('connecting')
-
-    try {
-      const conversation = await Conversation.startSession({
-        signedUrl,
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: systemPrompt
-            },
-            firstMessage: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${jobTitle} position. We have ${questionCount} questions and the whole thing should take around 9 minutes. Are you ready to get started?`
+    const conversation = await Conversation.startSession({
+      signedUrl: data.signed_url,
+      overrides: {
+        agent: {
+          prompt: {
+            prompt: data.system_prompt
           },
-          tts: {
-            voiceId: 'bDTlr4ICxntY9qVWyL0o'
-          }
+          firstMessage: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${jobTitle} position. We have ${questionCount} questions and the whole thing should take around 9 minutes. Are you ready to get started?`
         },
-        onConnect: () => {
-          setStatus('connected')
-        },
-        onDisconnect: () => {
-          setStatus('disconnected')
-          onComplete(transcriptRef.current)
-        },
-        onError: (error: any) => {
-          console.error('Conversation error:', error)
-          setStatus('error')
-          onError('Connection error — please try again')
-        },
-        onModeChange: (mode: any) => {
-          setIsSpeaking(mode.mode === 'speaking')
-          setIsCandidateSpeaking(mode.mode === 'listening')
-        },
-        onMessage: (message: any) => {
-          if (message.source === 'ai') {
-            setMessages(prev => {
-              const updated = [...prev, { role: 'agent' as const, text: message.message }]
-              transcriptRef.current = buildTranscript(updated)
-              detectQuestionProgress(message.message)
-              return updated
-            })
-          } else if (message.source === 'user') {
-            setMessages(prev => {
-              const updated = [...prev, { role: 'candidate' as const, text: message.message }]
-              transcriptRef.current = buildTranscript(updated)
-              return updated
-            })
-          }
+        tts: {
+          voiceId: 'bDTlr4ICxntY9qVWyL0o'
         }
-      })
-
-      conversationRef.current = conversation
-
-    } catch (err: any) {
-      if (err.message?.includes('Permission') || err.message?.includes('permission') || err.message?.includes('microphone')) {
-        onError('Microphone access denied — please allow microphone access and try again')
-      } else {
-        onError(err.message || 'Could not start interview')
+      },
+      onConnect: () => setStatus('connected'),
+      onDisconnect: () => {
+        setStatus('disconnected')
+        onComplete(transcriptRef.current)
+      },
+      onError: (error: any) => {
+        console.error('Conversation error:', error)
+        setStatus('error')
+        onError('Connection error — please try again')
+      },
+      onModeChange: (mode: any) => {
+        setIsSpeaking(mode.mode === 'speaking')
+        setIsCandidateSpeaking(mode.mode === 'listening')
+      },
+      onMessage: (message: any) => {
+        if (message.source === 'ai') {
+          setMessages(prev => {
+            const updated = [...prev, { role: 'agent' as const, text: message.message }]
+            transcriptRef.current = buildTranscript(updated)
+            detectQuestionProgress(message.message)
+            return updated
+          })
+        } else if (message.source === 'user') {
+          setMessages(prev => {
+            const updated = [...prev, { role: 'candidate' as const, text: message.message }]
+            transcriptRef.current = buildTranscript(updated)
+            return updated
+          })
+        }
       }
-      setStatus('error')
+    })
+
+    conversationRef.current = conversation
+
+  } catch (err: any) {
+    if (err.message?.includes('Permission') || err.message?.includes('microphone')) {
+      onError('Microphone access denied — please allow microphone access and try again')
+    } else {
+      onError(err.message || 'Could not start interview')
     }
+    setStatus('error')
   }
+}
 
   function detectQuestionProgress(text: string) {
     const lower = text.toLowerCase()
