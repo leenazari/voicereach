@@ -213,7 +213,6 @@ export default function Dashboard() {
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
   const initialized = useRef(false)
-  const router = useRouter()
   const { state: bulkState } = useBulkUpload()
 
   const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear === new Date().getFullYear()
@@ -281,6 +280,14 @@ export default function Dashboard() {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab) setActiveTab(tab)
+    }
   }, [])
 
   useEffect(() => {
@@ -712,122 +719,107 @@ export default function Dashboard() {
   function getMatchBg(score: number): string { return getScoreBg(score) }
 
   function renderJobCard(job: Job) {
-    const gradients = [
-      'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
-      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
-      'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
-      'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
-      'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
-    ]
-    const gradient = gradients[job.title.charCodeAt(0) % gradients.length]
-    const workTypeLabel = job.work_type === 'office' ? 'Office' : job.work_type === 'hybrid' ? 'Hybrid' : job.work_type === 'remote' ? 'Remote' : null
-
     return (
-      <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)' }}>
-        {/* GRADIENT BANNER */}
-        <div style={{ background: gradient, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 13, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -50, top: -50, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-          <div style={{ position: 'absolute', right: 40, bottom: -60, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+      <div key={job.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           {job.logo_url ? (
-            <img src={job.logo_url} alt={job.company} style={{ width: 38, height: 38, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, zIndex: 1 }} />
+            <img src={job.logo_url} alt={job.company} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 38, height: 38, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: 'white', flexShrink: 0, zIndex: 1 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
               {(job.company || job.title)[0].toUpperCase()}
             </div>
           )}
-          <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
-              {job.status === 'closed' && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>Closed</span>}
-              {job.status === 'draft' && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>Draft</span>}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{job.title}</div>
+              <span style={{ fontSize: 10, background: JOB_STATUS_BG[job.status] || '#f0f0f0', color: JOB_STATUS_COLORS[job.status] || '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 600, textTransform: 'capitalize' }}>{job.status}</span>
+              {job.work_type && <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 8, fontWeight: 500 }}>{job.work_type === 'office' ? '🏢 Office' : job.work_type === 'hybrid' ? '🔄 Hybrid' : '🌍 Remote'}</span>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
-              {job.company && <span>{job.company}</span>}
-              {job.location && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
-                {job.location}
-              </span>}
-              {workTypeLabel && <span style={{ background: 'rgba(255,255,255,0.15)', padding: '1px 7px', borderRadius: 20, fontSize: 10 }}>{workTypeLabel}</span>}
-              {job.closes_at && <span style={{ color: 'rgba(255,200,100,0.9)' }}>Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {job.company && <span style={{ fontSize: 12, color: '#888' }}>{job.company}</span>}
+              {job.salary && <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>💰 {job.salary}</span>}
+              {job.location && <span style={{ fontSize: 12, color: '#888' }}>📍 {job.location}</span>}
+              {job.closes_at && <span style={{ fontSize: 12, color: '#E24B4A', fontWeight: 500 }}>⏱ Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
             </div>
           </div>
-          {job.salary && (
-            <div style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.22)', color: 'white', fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, zIndex: 1, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="6" r="5"/><path d="M6 3v6M4 4.5h3a1 1 0 010 2H5a1 1 0 000 2h3"/></svg>
-              {job.salary}
-            </div>
-          )}
-        </div>
-
-        {/* FOOTER */}
-        <div style={{ background: 'white', padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTop: '0.5px solid rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' as const, flex: 1 }}>
-            {(job.required_skills || []).slice(0, 5).map(skill => (
-              <span key={skill} style={{ fontSize: 11, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 5 }}>{skill}</span>
-            ))}
-            {interviewPacks[job.id] && <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 5, fontWeight: 500 }}>Interview ready</span>}
-            <span style={{ fontSize: 11, background: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: 5 }}>{job.match_threshold || 70}% threshold</span>
-          </div>
-          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {matchResults[job.id] && (
-              <button onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                {expandedJobs.has(job.id) ? 'Hide' : `${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches`}
+              <button onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })} style={{ padding: '8px 14px', background: expandedJobs.has(job.id) ? '#f0f0f0' : '#E1F5EE', color: expandedJobs.has(job.id) ? '#888' : '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
               </button>
             )}
-            {interviewPacks[job.id] ? (
-              <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }} style={{ padding: '5px 10px', background: '#f0fdf4', color: '#15803d', border: '0.5px solid #bbf7d0', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                Copy link
+   {interviewPacks[job.id] ? (
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/interview/apply/${job.id}`
+                  navigator.clipboard.writeText(url)
+                  notify('Interview link copied ✓')
+                }}
+                style={{ padding: '8px 14px', background: '#E1F5EE', color: '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                🔗 Copy link
               </button>
             ) : (
-              <button onClick={() => router.push('/interviews')} style={{ padding: '5px 10px', background: '#EEF2FF', color: '#4F46E5', border: '0.5px solid #c7d2fe', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                Create interview
+              <button
+                onClick={() => router.push('/interviews')}
+                style={{ padding: '8px 14px', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ✦ Create interview
               </button>
             )}
-            <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-              Bulk CVs
+            <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
+            <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
+            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
+              {matchingJob === job.id ? '⟳ Matching...' : matchResults[job.id] ? '↺ Refresh' : '◎ Find matches'}
             </button>
-            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer', opacity: matchingJob === job.id ? 0.6 : 1 }}>
-              {matchingJob === job.id ? 'Matching...' : matchResults[job.id] ? 'Refresh' : 'Find matches'}
-            </button>
-            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Edit</button>
-            <button onClick={() => deleteJob(job)} style={{ padding: '5px 10px', background: '#fff1f2', color: '#e11d48', border: '0.5px solid #fecdd3', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Delete</button>
+            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ padding: '8px 14px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
+            <button onClick={() => deleteJob(job)} style={{ padding: '8px 14px', border: '1px solid #fdd', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
           </div>
         </div>
-
-        {/* MATCH RESULTS */}
+        {(job.required_skills || []).length > 0 && (
+          <div style={{ padding: '0 20px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(job.required_skills || []).map(skill => (
+              <span key={skill} style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{skill}</span>
+            ))}
+            <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+              {job.match_priority === 'skills' ? '⚡ Skills priority' : job.match_priority === 'experience' ? '🏆 Experience priority' : '📍 Location priority'}
+            </span>
+            <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{job.match_threshold || 70}% threshold</span>
+          </div>
+        )}
         {expandedJobs.has(job.id) && matchResults[job.id] && (
-          <div style={{ borderTop: '0.5px solid #e5e7eb' }}>
-            <div style={{ padding: '10px 16px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+          <div style={{ borderTop: '1px solid #f0f0f0' }}>
+            <div style={{ padding: '12px 20px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                 {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
-                <span style={{ fontSize: 11, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>✓ {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
+                <span style={{ fontSize: 11, background: '#f0f0f0', color: '#888', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low match</span>
                 {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
-                  <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.already_sent).length} sent</span>
+                  <span style={{ fontSize: 11, background: '#FFF3E0', color: '#BA7517', padding: '2px 10px', borderRadius: 8, fontWeight: 600 }}>{matchResults[job.id].filter(r => r.already_sent).length} already sent</span>
                 )}
               </div>
             </div>
             {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
-              <div style={{ padding: '10px 16px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#15803d', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Strong matches</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ padding: '12px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Strong matches</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: match.already_sent ? '#fffbeb' : '#f0fdf4', border: `0.5px solid ${match.already_sent ? '#fde68a' : '#bbf7d0'}`, borderRadius: 8 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: match.already_sent ? '#fffbf0' : '#f9fffe', border: `1px solid ${match.already_sent ? '#f0d080' : '#d4f0e8'}`, borderRadius: 10 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-                          <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 500, color: '#4F46E5', cursor: 'pointer' }}>{match.name}</div>
-                          {match.already_sent && <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 5, fontWeight: 500 }}>Sent</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                          <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{match.name}</div>
+                          {match.already_sent && <span style={{ fontSize: 10, background: '#FFF3E0', color: '#BA7517', padding: '1px 7px', borderRadius: 6, fontWeight: 600 }}>✓ Already sent</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 3 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr` : ''}</div>
+                        <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr exp` : ''}</div>
                         {match.keyword_matches.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {match.keyword_matches.slice(0, 4).map(kw => (
-                              <span key={kw} style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>{kw}</span>
+                              <span key={kw} style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
                             ))}
                           </div>
                         )}
@@ -846,8 +838,8 @@ export default function Dashboard() {
                             markOnboardingStep('voice_note')
                           } else notify('Error: ' + data.error, 'error')
                         } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 14px', background: shortlisting === match.candidate_id ? '#9ca3af' : match.already_sent ? '#fef3c7' : '#4F46E5', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#92400e' : 'white', border: match.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : match.already_sent ? 'Resend' : 'Send'}
+                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '8px 16px', background: shortlisting === match.candidate_id ? '#aaa' : match.already_sent ? '#fff3e0' : '#534AB7', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#BA7517' : 'white', border: match.already_sent ? '1px solid #f0d080' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                        {shortlisting === match.candidate_id ? '⟳' : match.already_sent ? '↺ Resend' : '🎙 Send'}
                       </button>
                     </div>
                   ))}
@@ -855,17 +847,17 @@ export default function Dashboard() {
               </div>
             )}
             {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
-              <div style={{ padding: '0 16px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Low match — below threshold</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ padding: '0 20px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>Low match — below threshold</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f9fafb', border: '0.5px solid #e5e7eb', borderRadius: 8 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 7, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
+                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 10 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 12, fontWeight: 500, color: '#4F46E5', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
+                        <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
+                        <div style={{ fontSize: 11, color: '#aaa' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
                       </div>
                       <button onClick={async () => {
                         setShortlisting(match.candidate_id)
@@ -880,8 +872,8 @@ export default function Dashboard() {
                             if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
                           } else notify('Error: ' + data.error, 'error')
                         } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '5px 10px', background: 'white', color: '#4F46E5', border: '0.5px solid #c7d2fe', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : 'Send anyway'}
+                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 12px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                        {shortlisting === match.candidate_id ? '⟳' : 'Send anyway'}
                       </button>
                     </div>
                   ))}
@@ -893,7 +885,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f9fafb' }}>
@@ -914,102 +905,80 @@ export default function Dashboard() {
 
       {/* SIDEBAR */}
       <div style={{ width: 224, background: 'white', borderRight: '0.5px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        {/* Logo */}
-        <div style={{ padding: '18px 16px 14px', borderBottom: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><path d="M5 7c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2"/><path d="M7 9v1.5"/></svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', letterSpacing: '-0.3px' }}>VoiceReach</div>
-            <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>AI recruitment</div>
-          </div>
+        <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #ebebeb' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.3px' }}>VoiceReach</div>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>AI outreach platform</div>
         </div>
-
-        {/* Nav */}
-        <div style={{ padding: '8px 10px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '10px 8px 4px' }}>Main</div>
-
+        <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '6px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Main</div>
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
-            { id: 'candidates', label: 'All Candidates', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg> },
-            { id: 'jobs', label: 'Jobs', icon: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/><path d="M5 7.5h6M5 10h4"/></svg> },
+            { id: 'dashboard', label: 'Dashboard', icon: '◈' },
+            { id: 'candidates', label: 'All Candidates', icon: '◎' },
+            { id: 'jobs', label: 'Jobs', icon: '◉' },
           ].map(tab => (
-            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', background: activeTab === tab.id ? '#EEF2FF' : 'transparent', borderRadius: 8, marginBottom: 1, fontWeight: activeTab === tab.id ? 500 : 400 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280' }}>
-                {tab.icon}
-              </div>
-              {tab.label}
-              {tab.id === 'jobs' && jobs.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{jobs.filter(j => j.status === 'active').length}</span>}
-              {tab.id === 'candidates' && candidates.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: activeTab === tab.id ? '#DDD6FE' : '#f3f4f6', color: activeTab === tab.id ? '#4F46E5' : '#6b7280', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{candidates.length}</span>}
+            <div key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: activeTab === tab.id ? '#534AB7' : '#888', background: activeTab === tab.id ? '#f0eeff' : 'transparent', borderLeft: activeTab === tab.id ? '3px solid #534AB7' : '3px solid transparent', fontWeight: activeTab === tab.id ? 700 : 400, margin: '1px 0' }}>
+              <span style={{ opacity: activeTab === tab.id ? 1 : 0.5 }}>{tab.icon}</span>{tab.label}
+              {tab.id === 'jobs' && jobs.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>{jobs.filter(j => j.status === 'active').length}</span>}
             </div>
           ))}
-
-          <div onClick={() => router.push('/interviews')} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2a4 4 0 014 4v1.5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 13.5c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
-            </div>
-            Interviews
-          </div>
-
           {profile?.role === 'admin' && (
-            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#ef4444', borderRadius: 8, marginBottom: 1 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#fef2f2', color: '#ef4444' }}>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
-              </div>
-              Admin panel
+            <div onClick={() => window.location.href = '/admin'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#E24B4A', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+              <span>⊛</span>Admin panel
             </div>
           )}
-
-          <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '12px 8px 4px' }}>Settings</div>
-
-          <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3"/></svg>
-            </div>
-            Voice selector
+          <div onClick={() => router.push('/interviews')} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer', color: '#888', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+  <span style={{ opacity: 0.5 }}>🎙</span>Interviews
+</div>
+          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Settings</div>
+          <div onClick={openVoices} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent' }}>
+            <span style={{ opacity: 0.5 }}>⊙</span>Voice selector
           </div>
-
-          <div onClick={() => { setOnboardingMode('manual'); setShowOnboarding(true) }} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', fontSize: 13, cursor: 'pointer', color: '#6b7280', borderRadius: 8, marginBottom: 1 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' }}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
-            </div>
+          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
+          <div onClick={() => { setOnboardingMode('manual'); setShowOnboarding(true) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#888', cursor: 'pointer', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.5 }}>◎</span>
             <span style={{ flex: 1 }}>Getting started</span>
-            {onboardingDoneCount < 3 && <span style={{ fontSize: 10, background: '#DDD6FE', color: '#4F46E5', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{onboardingDoneCount}/3</span>}
-            {onboardingDoneCount === 3 && <span style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓</span>}
+            {onboardingDoneCount < 3 && <span style={{ fontSize: 10, background: '#534AB7', color: 'white', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>{onboardingDoneCount}/3</span>}
+            {onboardingDoneCount === 3 && <span style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>✓</span>}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◷</span><span>FAQ</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
+            <span style={{ opacity: 0.3 }}>◈</span><span>Support chat</span>
+            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
           </div>
         </div>
-
-        {/* Footer */}
-        <div style={{ padding: '12px' }}>
+        <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
-            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#534AB7', flexShrink: 0 }}>
                   {(profile.full_name || user?.email || 'U')[0].toUpperCase()}
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name || user?.email?.split('@')[0]}</div>
-                  <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'capitalize' }}>{profile.plan} plan</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name || user?.email?.split('@')[0]}</div>
+                  <div style={{ fontSize: 10, color: '#aaa', textTransform: 'capitalize' }}>{profile.plan} plan</div>
                 </div>
               </div>
-              {profile.credits_limit !== 999999 && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 10, color: '#9ca3af' }}>Credits</span>
-                    <span style={{ fontSize: 10, color: creditsColor, fontWeight: 500 }}>{profile.credits_used}/{profile.credits_limit}</span>
+              {profile.credits_limit !== 999999 ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: '#aaa' }}>Credits</span>
+                    <span style={{ fontSize: 10, color: creditsColor, fontWeight: 600 }}>{profile.credits_used}/{profile.credits_limit}</span>
                   </div>
-                  <div style={{ height: 3, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 3, transition: 'width 0.3s' }} />
+                  <div style={{ height: 4, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${creditsPercent}%`, background: creditsColor, borderRadius: 4, transition: 'width 0.3s' }} />
                   </div>
-                  {creditsPercent >= 90 && <div style={{ marginTop: 6, fontSize: 11, color: '#ef4444' }}>Credits almost used up</div>}
-                </div>
+                  {creditsPercent >= 90 && <div style={{ marginTop: 8, fontSize: 11, color: '#E24B4A', fontWeight: 500 }}>Credits almost used up</div>}
+                </>
+              ) : (
+                <div style={{ fontSize: 10, color: '#1D9E75', fontWeight: 600, marginTop: 4 }}>✓ Unlimited credits</div>
               )}
-              {profile.credits_limit === 999999 && <div style={{ fontSize: 10, color: '#15803d', marginTop: 4 }}>Unlimited credits</div>}
             </div>
           )}
-          <div onClick={signOut} style={{ fontSize: 12, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px' }}>
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 7H3M5.5 4.5L3 7l2.5 2.5M8 2h3a1 1 0 011 1v8a1 1 0 01-1 1H8"/></svg>
-            Sign out
+          <div onClick={signOut} style={{ fontSize: 12, color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <span>→</span> Sign out
           </div>
         </div>
       </div>
@@ -1018,35 +987,26 @@ export default function Dashboard() {
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '0.5px solid #e5e7eb', padding: '13px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#111827', letterSpacing: '-0.2px' }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.2px' }}>
               {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'candidates' ? 'All Candidates' : 'Jobs'}
             </div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>
+            <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>
               {activeTab === 'dashboard' ? `Welcome back${profile?.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}` : activeTab === 'candidates' ? `${filteredAll.length} candidates total` : `${jobs.length} jobs — ${jobs.filter(j => j.status === 'active').length} active`}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {activeTab === 'candidates' && <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9fafb', color: '#111827' }} />}
+            {activeTab === 'candidates' && <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />}
             {activeTab === 'jobs' ? (
-              <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg>
-                Add Job
-              </button>
+              <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add Job</button>
             ) : activeTab === 'candidates' ? (
               <>
                 <button onClick={() => { setBulkJobId(undefined); setBulkJobTitle(undefined); setShowBulkUpload(true) }} style={{ background: 'white', color: '#4F46E5', border: '0.5px solid #c7d2fe', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Bulk upload</button>
-                <button onClick={() => setShowAdd(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg>
-                  Add Candidate
-                </button>
+                <button onClick={() => setShowAdd(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add Candidate</button>
               </>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { setBulkJobId(undefined); setBulkJobTitle(undefined); setShowBulkUpload(true) }} style={{ background: 'white', color: '#4F46E5', border: '0.5px solid #c7d2fe', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Bulk upload</button>
-                <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg>
-                  Add Job
-                </button>
+                <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add Job</button>
               </div>
             )}
           </div>
@@ -1065,14 +1025,14 @@ export default function Dashboard() {
                   { label: 'Interviews booked', value: stats.interviews },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'white', borderRadius: 10, padding: '16px 18px', border: '0.5px solid #e5e7eb' }}>
-                    <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>{s.label}</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 6 }}>{s.label}</div>
                     <div style={{ fontSize: 28, fontWeight: 500, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1 }}>{s.value}</div>
                   </div>
                 ))}
               </div>
 
               {/* STATS ROW 2 */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
                 {[
                   { label: 'Active jobs', value: stats.activeJobs, suffix: '' },
                   { label: 'In pipeline', value: stats.matched, suffix: '' },
@@ -1080,7 +1040,7 @@ export default function Dashboard() {
                   { label: 'Conversion rate', value: stats.conversionRate, suffix: '%' },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'white', borderRadius: 10, padding: '14px 16px', border: '0.5px solid #e5e7eb' }}>
-                    <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 5 }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 5 }}>{s.label}</div>
                     <div style={{ fontSize: 24, fontWeight: 500, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1 }}>{s.value}{s.suffix}</div>
                   </div>
                 ))}
@@ -1090,25 +1050,25 @@ export default function Dashboard() {
               <div style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', padding: '18px 22px', marginBottom: 22 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>Activity</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>Activity</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button onClick={prevMonth} style={{ background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12, color: '#6b7280', lineHeight: 1 }}>←</button>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: '#4F46E5', minWidth: 130, textAlign: 'center' as const }}>{MONTH_NAMES[activityMonth]} {activityYear}</span>
-                      <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: 'none', border: '0.5px solid #e5e7eb', borderRadius: 6, padding: '3px 10px', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: 12, color: isCurrentMonth ? '#d1d5db' : '#6b7280', lineHeight: 1 }}>→</button>
+                      <button onClick={prevMonth} style={{ background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12, color: '#555', lineHeight: 1 }}>←</button>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', minWidth: 130, textAlign: 'center' }}>{MONTH_NAMES[activityMonth]} {activityYear}</span>
+                      <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '3px 10px', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: 12, color: isCurrentMonth ? '#ccc' : '#555', lineHeight: 1 }}>→</button>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <span style={{ fontSize: 11, background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{monthStats.candidates} candidates</span>
-                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{monthStats.voiceNotes} voice notes</span>
+                      <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>{monthStats.candidates} candidates</span>
+                      <span style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>{monthStats.voiceNotes} voice notes</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4F46E5' }} />
-                      <span style={{ fontSize: 11, color: '#9ca3af' }}>Candidates</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: '#534AB7' }} />
+                      <span style={{ fontSize: 11, color: '#888' }}>Candidates</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: '#15803d' }} />
-                      <span style={{ fontSize: 11, color: '#9ca3af' }}>Voice notes</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: '#1D9E75' }} />
+                      <span style={{ fontSize: 11, color: '#888' }}>Voice notes</span>
                     </div>
                   </div>
                 </div>
@@ -1116,9 +1076,9 @@ export default function Dashboard() {
               </div>
 
               {/* RECENT JOBS */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Active jobs</div>
-                <div onClick={() => setActiveTab('jobs')} style={{ fontSize: 12, color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>View all →</div>
+                <div onClick={() => setActiveTab('jobs')} style={{ fontSize: 12, color: '#4F46E5', cursor: 'pointer' }}>View all →</div>
               </div>
 
               {recentJobs.length === 0 ? (
@@ -1128,7 +1088,7 @@ export default function Dashboard() {
                   <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add your first job</button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {recentJobs.map(job => renderJobCard(job))}
                 </div>
               )}
@@ -1221,7 +1181,7 @@ export default function Dashboard() {
                   <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add your first job</button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {jobs.map(job => renderJobCard(job))}
                 </div>
               )}
@@ -1311,7 +1271,6 @@ export default function Dashboard() {
 
             {(profileCandidate as any).no_cv && (
               <div style={{ background: '#FFF3E0', border: '1px solid #f0d080', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16 }}>📋</span>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#BA7517' }}>No CV uploaded</div>
                   <div style={{ fontSize: 11, color: '#BA7517', opacity: 0.8 }}>This candidate applied directly via interview link. Score is based on interview performance only.</div>
@@ -1461,22 +1420,22 @@ export default function Dashboard() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#f9f9f9', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
       <div style={{
         width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
-        background: getScoreBg(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score)),
+        background: (profileCandidate as any).interview_score >= 75 ? '#E1F5EE' : (profileCandidate as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee',
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
         <span style={{
           fontSize: 16, fontWeight: 800,
-          color: getScoreColor(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))
+          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
         }}>
-          {getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score)}%
+          {(profileCandidate as any).interview_score}%
         </span>
       </div>
       <div>
         <div style={{
           fontSize: 13, fontWeight: 700, marginBottom: 2,
-          color: getScoreColor(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))
+          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
         }}>
-          {getScoreLabel(getCombinedScore((profileCandidate as any).cv_match_score, (profileCandidate as any).interview_score))}
+          {(profileCandidate as any).interview_score >= 75 ? 'Strong candidate' : (profileCandidate as any).interview_score >= 55 ? 'Average candidate' : 'Weak candidate'}
         </div>
         <div style={{ fontSize: 12, color: '#888' }}>Overall interview score</div>
       </div>
@@ -1804,7 +1763,5 @@ export default function Dashboard() {
         </div>
       )}
     </div>
-    </div>
-  </div>
   )
 }
