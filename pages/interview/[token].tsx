@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next'
+import Head from 'next/head'
 import { createClient } from '@supabase/supabase-js'
 import { useState, useRef, useEffect } from 'react'
 import React from 'react'
@@ -141,7 +142,27 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
   if (notFound || !candidate) return <SorryPage message="Sorry, we could not find this opportunity. It may have already been filled or the link may be incorrect." />
   if (expired) return <SorryPage message="This link has expired and the position has now been filled. But we have plenty of other exciting opportunities that might be perfect for you." />
 
+  const ogTitle = job ? `${job.title} at ${job.company}` : 'Voice Interview'
+  const ogDescription = job
+    ? `${job.salary ? job.salary + ' · ' : ''}${job.location ? job.location + ' · ' : ''}Apply via a quick 10-minute voice interview. No CV needed.`
+    : 'You have been invited to a voice interview.'
+  const ogImage = job?.logo_url || 'https://voicereach.co.uk/og-default.png'
+
   return (
+    <>
+    <Head>
+      <title>{ogTitle}</title>
+      <meta name="description" content={ogDescription} />
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={ogTitle} />
+      <meta property="og:description" content={ogDescription} />
+      <meta property="og:image" content={ogImage} />
+      <meta property="og:site_name" content="Voice Reach" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={ogTitle} />
+      <meta name="twitter:description" content={ogDescription} />
+      <meta name="twitter:image" content={ogImage} />
+    </Head>
     <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
 
       <style>{`
@@ -317,6 +338,7 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
         </div>
       </div>
     </main>
+    </>
   )
 }
 
