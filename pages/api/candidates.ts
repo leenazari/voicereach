@@ -85,13 +85,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PATCH') {
-      const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary, last_employer, location, candidate_summary, qualifications, all_employers, skills, strength_keywords, job_id } = req.body
+      const { candidateId, status, name, email, phone, role_applied, experience_summary, years_experience, job_title, job_salary, last_employer, location, candidate_summary, qualifications, all_employers, skills, strength_keywords, job_id, pipeline_stage } = req.body
       if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
       // Ensure user owns this candidate
       const { data: candidate } = await supabase.from('candidates').select('user_id').eq('id', candidateId).single()
       if (!candidate || candidate.user_id !== userId) return res.status(403).json({ error: 'Forbidden' })
       const updates: any = {}
       if (status !== undefined) updates.status = status
+      if (pipeline_stage !== undefined) updates.pipeline_stage = pipeline_stage
       if (name !== undefined) updates.name = name
       if (email !== undefined) updates.email = email
       if (phone !== undefined) updates.phone = phone
