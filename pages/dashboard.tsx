@@ -750,6 +750,25 @@ export default function Dashboard() {
                 {expandedJobs.has(job.id) ? '▲ Hide' : `▼ Show (${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches)`}
               </button>
             )}
+   {interviewPacks[job.id] ? (
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/interview/apply/${job.id}`
+                  navigator.clipboard.writeText(url)
+                  notify('Interview link copied ✓')
+                }}
+                style={{ padding: '8px 14px', background: '#E1F5EE', color: '#1D9E75', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                🔗 Copy link
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/interviews')}
+                style={{ padding: '8px 14px', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ✦ Create interview
+              </button>
+            )}
             <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ padding: '8px 14px', border: '1px solid #1D9E75', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#1D9E75', fontWeight: 600 }}>◈ Pipeline</button>
             <button onClick={() => { setBulkJobId(job.id); setBulkJobTitle(job.title); setShowBulkUpload(true) }} style={{ padding: '8px 14px', border: '1px solid #534AB7', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'white', color: '#534AB7', fontWeight: 500 }}>📦 Bulk CVs</button>
             <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={{ padding: '8px 16px', background: matchingJob === job.id ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matchingJob === job.id ? 'not-allowed' : 'pointer' }}>
