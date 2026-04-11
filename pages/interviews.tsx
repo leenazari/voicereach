@@ -217,13 +217,7 @@ export default function Interviews() {
   <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
 </div>
 
-          <div style={{ padding: '16px 12px 4px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#ccc', fontWeight: 600 }}>Help & Support</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px', fontSize: 13, color: '#ccc', borderLeft: '3px solid transparent', margin: '1px 0' }}>
-            <span style={{ opacity: 0.3 }}>◷</span>
-            <span>FAQ</span>
-            <span style={{ fontSize: 10, background: '#f0f0f0', color: '#bbb', padding: '1px 8px', borderRadius: 8, fontWeight: 600 }}>Soon</span>
-          </div>
-        </div>
+        
 
         <div style={{ padding: '16px 20px', borderTop: '1px solid #ebebeb' }}>
           {profile && (
