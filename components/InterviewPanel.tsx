@@ -26,9 +26,6 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   const [isCandidateSpeaking, setIsCandidateSpeaking] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [sessionReady, setSessionReady] = useState(false)
-  const [signedUrl, setSignedUrl] = useState<string | null>(null)
-  const [systemPrompt, setSystemPrompt] = useState<string | null>(null)
   const conversationRef = useRef<any>(null)
   const transcriptRef = useRef<string>('')
   const durationRef = useRef<NodeJS.Timeout | null>(null)
@@ -36,80 +33,93 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   const firstName = candidateName.split(' ')[0]
 
   useEffect(() => {
-  return () => cleanup()
-}, [])
+    return () => cleanup()
+  }, [])
 
-async function startInterview() {
-  setStatus('connecting')
-  try {
-    const res = await fetch('/api/interview-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    })
-    const data = await res.json()
-    if (!res.ok || !data.signed_url) {
-      onError(data.error || 'Could not start interview session')
-      setStatus('error')
-      return
-    }
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-    const conversation = await Conversation.startSession({
-      signedUrl: data.signed_url,
-      overrides: {
-        agent: {
-          prompt: {
-            prompt: data.system_prompt
-          },
-          firstMessage: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${jobTitle} position. We have ${questionCount} questions and the whole thing should take around 9 minutes. Are you ready to get started?`
-        },
-        tts: {
-          voiceId: 'bDTlr4ICxntY9qVWyL0o'
-        }
-      },
-      onConnect: () => setStatus('connected'),
-      onDisconnect: () => {
-        setStatus('disconnected')
-        onComplete(transcriptRef.current)
-      },
-      onError: (error: any) => {
-        console.error('Conversation error:', error)
-        setStatus('error')
-        onError('Connection error — please try again')
-      },
-      onModeChange: (mode: any) => {
-        setIsSpeaking(mode.mode === 'speaking')
-        setIsCandidateSpeaking(mode.mode === 'listening')
-      },
-      onMessage: (message: any) => {
-        if (message.source === 'ai') {
-          setMessages(prev => {
-            const updated = [...prev, { role: 'agent' as const, text: message.message }]
-            transcriptRef.current = buildTranscript(updated)
-            detectQuestionProgress(message.message)
-            return updated
-          })
-        } else if (message.source === 'user') {
-          setMessages(prev => {
-            const updated = [...prev, { role: 'candidate' as const, text: message.message }]
-            transcriptRef.current = buildTranscript(updated)
-            return updated
-          })
-        }
-      }
-    })
-
-    conversationRef.current = conversation
-
-  } catch (err: any) {
-    if (err.message?.includes('Permission') || err.message?.includes('microphone')) {
-      onError('Microphone access denied — please allow microphone access and try again')
+  useEffect(() => {
+    if (status === 'connected') {
+      durationRef.current = setInterval(() => setDuration(d => d + 1), 1000)
     } else {
-      onError(err.message || 'Could not start interview')
+      if (durationRef.current) clearInterval(durationRef.current)
     }
-    setStatus('error')
+    return () => { if (durationRef.current) clearInterval(durationRef.current) }
+  }, [status])
+
+  async function startInterview() {
+    setStatus('connecting')
+    try {
+      const res = await fetch('/api/interview-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.signed_url) {
+        onError(data.error || 'Could not start interview session')
+        setStatus('error')
+        return
+      }
+
+      const conversation = await Conversation.startSession({
+        signedUrl: data.signed_url,
+        overrides: {
+          agent: {
+            prompt: {
+              prompt: data.system_prompt
+            },
+            firstMessage: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${jobTitle} position. We have ${questionCount} questions and the whole thing should take around 9 minutes. Are you ready to get started?`
+          },
+          tts: {
+            voiceId: 'bDTlr4ICxntY9qVWyL0o'
+          }
+        },
+        onConnect: () => setStatus('connected'),
+        onDisconnect: () => {
+          setStatus('disconnected')
+          onComplete(transcriptRef.current)
+        },
+        onError: (error: any) => {
+          console.error('Conversation error:', error)
+          setStatus('error')
+          onError('Connection error — please try again')
+        },
+        onModeChange: (mode: any) => {
+          setIsSpeaking(mode.mode === 'speaking')
+          setIsCandidateSpeaking(mode.mode === 'listening')
+        },
+        onMessage: (message: any) => {
+          if (message.source === 'ai') {
+            setMessages(prev => {
+              const updated = [...prev, { role: 'agent' as const, text: message.message }]
+              transcriptRef.current = buildTranscript(updated)
+              detectQuestionProgress(message.message)
+              return updated
+            })
+          } else if (message.source === 'user') {
+            setMessages(prev => {
+              const updated = [...prev, { role: 'candidate' as const, text: message.message }]
+              transcriptRef.current = buildTranscript(updated)
+              return updated
+            })
+          }
+        }
+      })
+
+      conversationRef.current = conversation
+
+    } catch (err: any) {
+      if (err.message?.includes('Permission') || err.message?.includes('microphone')) {
+        onError('Microphone access denied — please allow microphone access and try again')
+      } else {
+        onError(err.message || 'Could not start interview')
+      }
+      setStatus('error')
+    }
   }
-}
 
   function detectQuestionProgress(text: string) {
     const lower = text.toLowerCase()
@@ -148,19 +158,21 @@ async function startInterview() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
+  // ERROR
   if (status === 'error') {
     return (
       <div style={{ textAlign: 'center', padding: 40 }}>
         <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 8 }}>Something went wrong</div>
-        <button onClick={initSession} style={{ padding: '12px 24px', background: 'white', color: '#302b63', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 16 }}>
+        <button onClick={() => setStatus('idle')} style={{ padding: '12px 24px', background: 'white', color: '#302b63', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 16 }}>
           Try again
         </button>
       </div>
     )
   }
 
-  if (sessionReady && status === 'idle') {
+  // READY
+  if (status === 'idle') {
     return (
       <div style={{ textAlign: 'center', padding: 40 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 12 }}>Ready when you are, {firstName}</div>
@@ -191,6 +203,7 @@ async function startInterview() {
     )
   }
 
+  // CONNECTING
   if (status === 'connecting') {
     return (
       <div style={{ textAlign: 'center', padding: 40 }}>
@@ -201,6 +214,7 @@ async function startInterview() {
     )
   }
 
+  // COMPLETE
   if (status === 'disconnected') {
     return (
       <div style={{ textAlign: 'center', padding: 40 }}>
@@ -213,6 +227,7 @@ async function startInterview() {
     )
   }
 
+  // LIVE INTERVIEW
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 } as React.CSSProperties}>
 
@@ -234,7 +249,7 @@ async function startInterview() {
         </div>
       </div>
 
-      {/* QUESTION PROGRESS */}
+      {/* QUESTION PROGRESS BARS */}
       <div style={{ display: 'flex', gap: 6 }}>
         {Array.from({ length: questionCount }).map((_, i) => (
           <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < currentQuestion ? '#1D9E75' : i === currentQuestion ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)', transition: 'all 0.3s' }} />
