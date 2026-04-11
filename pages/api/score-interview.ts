@@ -12,7 +12,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Get candidate
   const { data: candidate, error: candError } = await supabase
     .from('candidates')
     .select('*')
@@ -21,48 +20,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (candError || !candidate) return res.status(404).json({ error: 'Candidate not found' })
 
-  // Get job
   let job: any = null
   let pack: any = null
 
   if (candidate.job_id) {
-    const { data: jobData } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', candidate.job_id)
-      .single()
+    const { data: jobData } = await supabase.from('jobs').select('*').eq('id', candidate.job_id).single()
     if (jobData) job = jobData
-
-    const { data: packData } = await supabase
-      .from('interview_packs')
-      .select('*')
-      .eq('job_id', candidate.job_id)
-      .single()
+    const { data: packData } = await supabase.from('interview_packs').select('*').eq('job_id', candidate.job_id).single()
     if (packData) pack = packData
   }
 
   const questions = pack?.questions?.questions || []
 
-  // Build scoring prompt
-  const scoringPrompt = `You are an expert recruitment assessor. You have just received the transcript of a structured job interview.
+  const scoringPrompt = `You are an expert recruitment assessor reviewing a structured job interview transcript.
 
-Your job is to score each of the 6 interview questions based on the candidate's answers, using the scoring context and red flags provided for each question.
+Your job is to:
+1. Score each interview question based on the candidate's answers
+2. Extract new keywords and skills revealed during the interview
+3. Identify any CV claims that could not be verified or appeared contradicted in the interview
+4. Produce an overall hiring recommendation
 
 ROLE: ${job?.title || 'Not specified'}
 COMPANY: ${job?.company || 'Not specified'}
 
-CANDIDATE CV CONTEXT:
+CANDIDATE CV:
 Name: ${candidate.name}
-Role: ${candidate.role_applied || 'Not specified'}
-Experience: ${candidate.years_experience || 'Not specified'} years
+Role applied for: ${candidate.role_applied || 'Not specified'}
+Years experience: ${candidate.years_experience || 'Not specified'}
 Last employer: ${candidate.last_employer || 'Not specified'}
-Skills: ${(candidate.skills || []).join(', ') || 'Not specified'}
+All employers: ${(candidate.all_employers || []).join(', ') || 'Not specified'}
+Skills listed on CV: ${(candidate.skills || []).join(', ') || 'Not specified'}
+Strength keywords on CV: ${(candidate.strength_keywords || []).join(', ') || 'Not specified'}
 Experience summary: ${candidate.experience_summary || 'Not specified'}
 
 INTERVIEW QUESTIONS AND SCORING CONTEXT:
 ${questions.map((q: any) => `
 Question ${q.number} — ${q.competency}
-Question asked: ${q.main_question}
+Question: ${q.main_question}
 Scoring context: ${q.scoring_context}
 Red flags: ${(q.red_flags || []).join(', ')}
 `).join('\n')}
@@ -70,37 +64,54 @@ Red flags: ${(q.red_flags || []).join(', ')}
 FULL INTERVIEW TRANSCRIPT:
 ${transcript}
 
-SCORING INSTRUCTIONS:
-- Score each question 1 to 10 based on the quality of the candidate's answer
-- Use the scoring context to determine what a strong answer looks like
-- Note any red flags you observed
-- Be fair but rigorous — a score of 7 or above means genuinely strong evidence
-- A score of 5 or 6 means adequate but not compelling
-- A score of 4 or below means weak, vague or missing evidence
+SCORING RULES:
+- Score each question 1 to 10
+- 8-10: Excellent — strong evidence, specific examples, measurable outcomes
+- 6-7: Good — solid answer with some evidence
+- 4-5: Average — adequate but vague or lacking proof
+- 1-3: Weak — no evidence, deflecting, or clearly fabricated
 
-Calculate an overall percentage score as a weighted average of all question scores.
+CV VERIFICATION RULES:
+- Review every skill, employer and claim on the CV
+- If the candidate was asked about something from their CV and gave a strong, specific answer — mark as VERIFIED
+- If the candidate was asked about something and gave a vague, shallow or deflecting answer — mark as UNVERIFIED with a note
+- If the candidate's answer directly contradicts something on their CV — mark as CONTRADICTED with details
+- Always use neutral, professional language — never accusatory
+- Focus on what was and was not demonstrated, not character judgements
 
-Write a 3 to 4 sentence hiring recommendation that summarises the candidate's performance, their strongest areas, any concerns, and whether you would recommend progressing them.
+INTERVIEW KEYWORD EXTRACTION:
+- Extract specific skills, tools, systems, sectors and competencies the candidate demonstrated knowledge of during the interview
+- Include things they mentioned that were NOT on their CV
+- Only include things they spoke about with genuine knowledge and depth
+- These will be used for job matching so use standard industry terminology
 
 Respond ONLY with valid JSON, no markdown, no backticks:
 {
-  "overall_score": number between 0 and 100,
+  "overall_score": number 0-100,
   "recommendation": "3-4 sentence hiring recommendation",
   "question_scores": [
     {
       "number": 1,
       "competency": "string",
-      "score": number between 1 and 10,
-      "reasoning": "1-2 sentence explanation of the score",
-      "red_flags_observed": ["string"] 
+      "score": number 1-10,
+      "reasoning": "1-2 sentences",
+      "red_flags_observed": ["string"]
     }
   ],
-  "strengths": ["string", "string", "string"],
-  "concerns": ["string", "string"]
+  "strengths": ["string"],
+  "concerns": ["string"],
+  "interview_keywords": ["keyword1", "keyword2"],
+  "cv_contradictions": [
+    {
+      "claim": "what was on the CV",
+      "status": "VERIFIED | UNVERIFIED | CONTRADICTED",
+      "note": "what was observed in the interview — neutral professional language",
+      "severity": "LOW | MEDIUM | HIGH"
+    }
+  ]
 }`
 
   try {
-    // Score the interview
     const scoreResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -110,7 +121,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 3000,
         messages: [{ role: 'user', content: scoringPrompt }]
       })
     })
@@ -122,7 +133,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
     const scoreClean = scoreText.replace(/```json|```/g, '').trim()
     const scored = JSON.parse(scoreClean)
 
-    // Save to candidate record
+    // Save everything to candidate
     await supabase
       .from('candidates')
       .update({
@@ -130,21 +141,19 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         interview_score: scored.overall_score,
         interview_answers: scored,
         interview_recommendation: scored.recommendation,
-        interview_completed_at: new Date().toISOString()
+        interview_completed_at: new Date().toISOString(),
+        interview_keywords: scored.interview_keywords || [],
+        cv_contradictions: scored.cv_contradictions || []
       })
       .eq('id', candidate.id)
 
-    // Send recruiter notification email
-    if (job) {
-      await sendRecruiterNotification(candidate, job, scored)
-    }
+    // Send recruiter notification
+    if (job) await sendRecruiterNotification(candidate, job, scored)
 
     return res.status(200).json({ success: true, score: scored.overall_score })
 
   } catch (err: any) {
     console.error('Score interview error:', err)
-
-    // Still mark as completed even if scoring fails
     await supabase
       .from('candidates')
       .update({
@@ -152,7 +161,6 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         interview_completed_at: new Date().toISOString()
       })
       .eq('id', candidate.id)
-
     return res.status(200).json({ success: true, score: null, warning: 'Scoring failed but interview saved' })
   }
 }
@@ -172,14 +180,24 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
       </tr>
     `).join('')
 
+    const contradictionRows = (scored.cv_contradictions || [])
+      .filter((c: any) => c.status !== 'VERIFIED')
+      .map((c: any) => `
+        <div style="padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+          <span style="background: ${c.status === 'CONTRADICTED' ? '#fff0ee' : '#FFF3E0'}; color: ${c.status === 'CONTRADICTED' ? '#E24B4A' : '#BA7517'}; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; margin-right: 8px;">${c.status}</span>
+          <strong>${c.claim}</strong>
+          <div style="color: #888; font-size: 12px; margin-top: 4px;">${c.note}</div>
+        </div>
+      `).join('')
+
     const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body style="margin: 0; padding: 0; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; padding: 32px 16px;">
-    
-    <div style="background: linear-gradient(135deg, #0f0c29, #302b63); borderRadius: 16px; padding: 28px; margin-bottom: 16px; text-align: center; border-radius: 16px;">
+
+    <div style="background: linear-gradient(135deg, #0f0c29, #302b63); border-radius: 16px; padding: 28px; margin-bottom: 16px; text-align: center;">
       <div style="font-size: 13px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Interview completed</div>
       <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 4px;">${candidate.name}</div>
       <div style="font-size: 14px; color: rgba(255,255,255,0.6);">${job.title}${job.company ? ` at ${job.company}` : ''}</div>
@@ -194,15 +212,31 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
     </div>
 
     ${scored.strengths?.length > 0 ? `
-    <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Strengths</div>
-      ${scored.strengths.map((s: string) => `<div style="font-size: 13px; color: #1D9E75; padding: 4px 0; display: flex; gap: 8px;"><span>✓</span><span>${s}</span></div>`).join('')}
+    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Strengths</div>
+      ${scored.strengths.map((s: string) => `<div style="font-size: 13px; color: #1D9E75; padding: 3px 0;">✓ ${s}</div>`).join('')}
     </div>` : ''}
 
     ${scored.concerns?.length > 0 ? `
-    <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Concerns</div>
-      ${scored.concerns.map((c: string) => `<div style="font-size: 13px; color: #E24B4A; padding: 4px 0; display: flex; gap: 8px;"><span>⚠</span><span>${c}</span></div>`).join('')}
+    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Concerns</div>
+      ${scored.concerns.map((c: string) => `<div style="font-size: 13px; color: #E24B4A; padding: 3px 0;">⚠ ${c}</div>`).join('')}
+    </div>` : ''}
+
+    ${contradictionRows ? `
+    <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+        <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">CV verification flags</div>
+      </div>
+      ${contradictionRows}
+    </div>` : ''}
+
+    ${scored.interview_keywords?.length > 0 ? `
+    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">New keywords from interview</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        ${scored.interview_keywords.map((k: string) => `<span style="font-size: 12px; background: #E1F5EE; color: #1D9E75; padding: 3px 10px; border-radius: 20px; font-weight: 500;">⚡ ${k}</span>`).join('')}
+      </div>
     </div>` : ''}
 
     <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
@@ -222,7 +256,7 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
     </div>
 
     <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Candidate contact</div>
+      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Candidate contact</div>
       <div style="font-size: 13px; color: #555; margin-bottom: 4px;">📧 ${candidate.email}</div>
       ${candidate.phone ? `<div style="font-size: 13px; color: #555;">📞 ${candidate.phone}</div>` : ''}
     </div>
