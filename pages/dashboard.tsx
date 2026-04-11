@@ -1077,9 +1077,20 @@ export default function Dashboard() {
                       onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
                       <td style={{ padding: '12px 16px' }}>
-                        <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{c.name}</div>
-                        {c.phone && <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{c.phone}</div>}
-                      </td>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{c.name}</div>
+    {(c as any).interview_completed_at && (
+      <span
+        onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
+        style={{ fontSize: 10, background: (c as any).interview_score >= 75 ? '#E1F5EE' : (c as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee', color: (c as any).interview_score >= 75 ? '#1D9E75' : (c as any).interview_score >= 55 ? '#BA7517' : '#E24B4A', padding: '2px 7px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+        title="View interview results"
+      >
+        🎙 {(c as any).interview_score}%
+      </span>
+    )}
+  </div>
+  {c.phone && <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{c.phone}</div>}
+</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>{c.role_applied}</td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).last_employer || '—'}</td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).location || '—'}</td>
