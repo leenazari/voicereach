@@ -1132,8 +1132,6 @@ export default function Dashboard() {
                   {recentJobs.map(job => renderJobCard(job))}
                 </div>
               )}
-                </div>
-              )}
             </>
           )}
 
