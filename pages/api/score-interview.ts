@@ -211,6 +211,50 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
         </div>
       `).join('')
 
+    const strengthsHtml = scored.strengths?.length > 0
+      ? `<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+          <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Strengths</div>
+          ${scored.strengths.map((s: string) => `<div style="font-size: 13px; color: #1D9E75; padding: 3px 0;">✓ ${s}</div>`).join('')}
+        </div>`
+      : ''
+
+    const concernsHtml = scored.concerns?.length > 0
+      ? `<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+          <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Concerns</div>
+          ${scored.concerns.map((c: string) => `<div style="font-size: 13px; color: #E24B4A; padding: 3px 0;">⚠ ${c}</div>`).join('')}
+        </div>`
+      : ''
+
+    const contradictionsHtml = contradictionRows
+      ? `<div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+            <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">CV verification flags</div>
+          </div>
+          ${contradictionRows}
+        </div>`
+      : ''
+
+    const nextQuestionsHtml = scored.next_round_questions?.length > 0
+      ? `<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+          <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">Suggested next round questions</div>
+          ${scored.next_round_questions.map((q: any, i: number) => `
+            <div style="margin-bottom: 12px; padding: 12px 14px; background: #f9f9f9; border-radius: 8px; border-left: 3px solid #534AB7;">
+              <div style="font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">${i + 1}. ${q.question}</div>
+              <div style="font-size: 12px; color: #888; line-height: 1.5;">${q.rationale}</div>
+            </div>
+          `).join('')}
+        </div>`
+      : ''
+
+    const keywordsHtml = scored.interview_keywords?.length > 0
+      ? `<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
+          <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">New keywords from interview</div>
+          <div>
+            ${scored.interview_keywords.map((k: string) => `<span style="display: inline-block; font-size: 12px; background: #E1F5EE; color: #1D9E75; padding: 3px 10px; border-radius: 20px; font-weight: 500; margin: 3px 3px 3px 0;">⚡ ${k}</span>`).join('')}
+          </div>
+        </div>`
+      : ''
+
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -232,44 +276,11 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
       </div>
     </div>
 
-    ${scored.strengths?.length > 0 ? `
-    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Strengths</div>
-      ${scored.strengths.map((s: string) => `<div style="font-size: 13px; color: #1D9E75; padding: 3px 0;">✓ ${s}</div>`).join('')}
-    </div>` : ''}
-
-    ${scored.concerns?.length > 0 ? `
-    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Concerns</div>
-      ${scored.concerns.map((c: string) => `<div style="font-size: 13px; color: #E24B4A; padding: 3px 0;">⚠ ${c}</div>`).join('')}
-    </div>` : ''}
-
-    ${contradictionRows ? `
-    <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
-      <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
-        <div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">CV verification flags</div>
-      </div>
-      ${contradictionRows}
-    </div>` : ''}
-
-${scored.next_round_questions?.length > 0 ? (
-      '<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">' +
-      '<div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">Suggested next round questions</div>' +
-      (scored.next_round_questions || []).map((q: any, i: number) =>
-        '<div style="margin-bottom: 12px; padding: 12px 14px; background: #f9f9f9; border-radius: 8px; border-left: 3px solid #534AB7;">' +
-        '<div style="font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">' + (i + 1) + '. ' + q.question + '</div>' +
-        '<div style="font-size: 12px; color: #888; line-height: 1.5;">' + q.rationale + '</div>' +
-        '</div>'
-      ).join('') +
-      '</div>'
-    ) : ''}
-      ${scored.interview_keywords?.length > 0 ? (
-      '<div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #ebebeb;">' +
-      '<div style="font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">New keywords from interview</div>' +
-      '<div>' +
-      (scored.interview_keywords || []).map((k: string) => '<span style="display: inline-block; font-size: 12px; background: #E1F5EE; color: #1D9E75; padding: 3px 10px; border-radius: 20px; font-weight: 500; margin: 3px 3px 3px 0;">⚡ ' + k + '</span>').join('') +
-      '</div></div>'
-    ) : ''}
+    ${strengthsHtml}
+    ${concernsHtml}
+    ${contradictionsHtml}
+    ${nextQuestionsHtml}
+    ${keywordsHtml}
 
     <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
       <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
