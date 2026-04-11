@@ -371,8 +371,7 @@ export default function Interviews() {
                 const pack = getPackForJob(job.id)
                 const isGenerating = generatingJobId === job.id
 
-                return (() => {
-                  const gradients: Record<string, string> = {
+                const gradients: Record<string, string> = {
                     sales:      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
                     tech:       'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
                     marketing:  'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
@@ -390,7 +389,7 @@ export default function Interviews() {
                   const sectorKey = Object.keys(gradients).find(k => k !== 'default' && sector.includes(k))
                   const gradient = sectorKey ? gradients[sectorKey] : fallbacks[(job.company || job.title).charCodeAt(0) % fallbacks.length]
 
-                  return (
+                return (
                   <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)' }}>
 
                     {/* GRADIENT BANNER */}
@@ -543,8 +542,8 @@ export default function Interviews() {
                       </div>
                     )}
                   </div>
-                  )
-                })()
+                )
+              })}
             </div>
           )}
         </div>
