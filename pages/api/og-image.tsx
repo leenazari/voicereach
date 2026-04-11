@@ -94,33 +94,33 @@ export default async function handler(req: NextRequest) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '24px',
-            marginBottom: '28px',
+            gap: '32px',
+            marginBottom: '36px',
           }}
         >
           {logoUrl ? (
             <img
               src={logoUrl}
               style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '16px',
+                width: '120px',
+                height: '120px',
+                borderRadius: '24px',
                 objectFit: 'contain',
                 background: 'white',
-                padding: '8px',
+                padding: '12px',
               }}
             />
           ) : (
             <div
               style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '16px',
+                width: '120px',
+                height: '120px',
+                borderRadius: '24px',
                 background: 'linear-gradient(135deg, #667eea, #764ba2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '28px',
+                fontSize: '44px',
                 fontWeight: 'bold',
                 color: 'white',
               }}
@@ -132,11 +132,11 @@ export default async function handler(req: NextRequest) {
           {company && (
             <span
               style={{
-                color: 'rgba(255,255,255,0.6)',
-                fontSize: '22px',
-                letterSpacing: '3px',
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: '32px',
+                letterSpacing: '4px',
                 textTransform: 'uppercase',
-                fontWeight: '600',
+                fontWeight: '700',
               }}
             >
               {company}
@@ -147,28 +147,28 @@ export default async function handler(req: NextRequest) {
         {/* Job title */}
         <div
           style={{
-            fontSize: '64px',
-            fontWeight: '800',
+            fontSize: '80px',
+            fontWeight: '900',
             color: 'white',
-            lineHeight: '1.1',
-            marginBottom: '28px',
-            maxWidth: '900px',
-            letterSpacing: '-1px',
+            lineHeight: '1.05',
+            marginBottom: '36px',
+            maxWidth: '1000px',
+            letterSpacing: '-2px',
           }}
         >
           {title}
         </div>
 
         {/* Salary + location pills */}
-        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {salary && (
             <div
               style={{
                 background: 'linear-gradient(135deg, #f093fb, #f5576c)',
                 color: 'white',
-                padding: '10px 24px',
+                padding: '14px 32px',
                 borderRadius: '100px',
-                fontSize: '22px',
+                fontSize: '28px',
                 fontWeight: '700',
                 display: 'flex',
               }}
@@ -181,9 +181,9 @@ export default async function handler(req: NextRequest) {
               style={{
                 background: 'rgba(255,255,255,0.12)',
                 color: 'rgba(255,255,255,0.9)',
-                padding: '10px 24px',
+                padding: '14px 32px',
                 borderRadius: '100px',
-                fontSize: '22px',
+                fontSize: '28px',
                 border: '1px solid rgba(255,255,255,0.2)',
                 display: 'flex',
               }}
@@ -195,9 +195,9 @@ export default async function handler(req: NextRequest) {
             style={{
               background: 'rgba(102,126,234,0.3)',
               color: 'rgba(255,255,255,0.9)',
-              padding: '10px 24px',
+              padding: '14px 32px',
               borderRadius: '100px',
-              fontSize: '22px',
+              fontSize: '28px',
               border: '1px solid rgba(102,126,234,0.4)',
               display: 'flex',
             }}
