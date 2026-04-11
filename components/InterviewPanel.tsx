@@ -64,50 +64,39 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
         return
       }
 
-      const conversation = await Conversation.startSession({
-        signedUrl: data.signed_url,
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: data.system_prompt
-            },
-            firstMessage: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${jobTitle} position. We have ${questionCount} questions and the whole thing should take around 9 minutes. Are you ready to get started?`
-          },
-          tts: {
-            voiceId: 'bDTlr4ICxntY9qVWyL0o'
-          }
-        },
-        onConnect: () => setStatus('connected'),
-        onDisconnect: () => {
-          setStatus('disconnected')
-          onComplete(transcriptRef.current)
-        },
-        onError: (error: any) => {
-          console.error('Conversation error:', error)
-          setStatus('error')
-          onError('Connection error — please try again')
-        },
-        onModeChange: (mode: any) => {
-          setIsSpeaking(mode.mode === 'speaking')
-          setIsCandidateSpeaking(mode.mode === 'listening')
-        },
-        onMessage: (message: any) => {
-          if (message.source === 'ai') {
-            setMessages(prev => {
-              const updated = [...prev, { role: 'agent' as const, text: message.message }]
-              transcriptRef.current = buildTranscript(updated)
-              detectQuestionProgress(message.message)
-              return updated
-            })
-          } else if (message.source === 'user') {
-            setMessages(prev => {
-              const updated = [...prev, { role: 'candidate' as const, text: message.message }]
-              transcriptRef.current = buildTranscript(updated)
-              return updated
-            })
-          }
-        }
+   const conversation = await Conversation.startSession({
+  signedUrl: data.signed_url,
+  onConnect: () => setStatus('connected'),
+  onDisconnect: () => {
+    setStatus('disconnected')
+    onComplete(transcriptRef.current)
+  },
+  onError: (error: any) => {
+    console.error('Conversation error:', error)
+    setStatus('error')
+    onError('Connection error — please try again')
+  },
+  onModeChange: (mode: any) => {
+    setIsSpeaking(mode.mode === 'speaking')
+    setIsCandidateSpeaking(mode.mode === 'listening')
+  },
+  onMessage: (message: any) => {
+    if (message.source === 'ai') {
+      setMessages(prev => {
+        const updated = [...prev, { role: 'agent' as const, text: message.message }]
+        transcriptRef.current = buildTranscript(updated)
+        detectQuestionProgress(message.message)
+        return updated
       })
+    } else if (message.source === 'user') {
+      setMessages(prev => {
+        const updated = [...prev, { role: 'candidate' as const, text: message.message }]
+        transcriptRef.current = buildTranscript(updated)
+        return updated
+      })
+    }
+  }
+})
 
       conversationRef.current = conversation
 
