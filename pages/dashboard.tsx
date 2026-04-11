@@ -1331,6 +1331,106 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+            {/* INTERVIEW RESULTS */}
+{(profileCandidate as any).interview_completed_at && (
+  <div style={{ marginBottom: 20 }}>
+    <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>
+      AI Interview Results
+      <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: 8 }}>
+        — {new Date((profileCandidate as any).interview_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </span>
+    </div>
+
+    {/* SCORE */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#f9f9f9', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+        background: (profileCandidate as any).interview_score >= 75 ? '#E1F5EE' : (profileCandidate as any).interview_score >= 55 ? '#FFF3E0' : '#fff0ee',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <span style={{
+          fontSize: 16, fontWeight: 800,
+          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
+        }}>
+          {(profileCandidate as any).interview_score}%
+        </span>
+      </div>
+      <div>
+        <div style={{
+          fontSize: 13, fontWeight: 700, marginBottom: 2,
+          color: (profileCandidate as any).interview_score >= 75 ? '#1D9E75' : (profileCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A'
+        }}>
+          {(profileCandidate as any).interview_score >= 75 ? 'Strong candidate' : (profileCandidate as any).interview_score >= 55 ? 'Average candidate' : 'Weak candidate'}
+        </div>
+        <div style={{ fontSize: 12, color: '#888' }}>Overall interview score</div>
+      </div>
+    </div>
+
+    {/* RECOMMENDATION */}
+    {(profileCandidate as any).interview_recommendation && (
+      <div style={{ background: '#f9f9f9', borderRadius: 8, padding: '12px 14px', marginBottom: 12, fontSize: 13, color: '#444', lineHeight: 1.7 }}>
+        {(profileCandidate as any).interview_recommendation}
+      </div>
+    )}
+
+    {/* PER QUESTION SCORES */}
+    {(profileCandidate as any).interview_answers?.question_scores && (
+      <div>
+        <div style={{ fontSize: 11, color: '#aaa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Question breakdown</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(profileCandidate as any).interview_answers.question_scores.map((q: any) => (
+            <div key={q.number} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0' }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                background: q.score >= 7 ? '#E1F5EE' : q.score >= 5 ? '#FFF3E0' : '#fff0ee',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 800,
+                color: q.score >= 7 ? '#1D9E75' : q.score >= 5 ? '#BA7517' : '#E24B4A'
+              }}>
+                {q.score}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 2 }}>Q{q.number}: {q.competency}</div>
+                <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{q.reasoning}</div>
+                {(q.red_flags_observed || []).length > 0 && (
+                  <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {q.red_flags_observed.map((rf: string, i: number) => (
+                      <span key={i} style={{ fontSize: 10, background: '#fff0ee', color: '#E24B4A', padding: '1px 6px', borderRadius: 4 }}>⚠ {rf}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* STRENGTHS AND CONCERNS */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+      {(profileCandidate as any).interview_answers?.strengths?.length > 0 && (
+        <div style={{ background: '#f0fff8', border: '1px solid #d4f0e8', borderRadius: 8, padding: '10px 12px' }}>
+          <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Strengths</div>
+          {(profileCandidate as any).interview_answers.strengths.map((s: string, i: number) => (
+            <div key={i} style={{ fontSize: 11, color: '#1D9E75', padding: '2px 0', display: 'flex', gap: 6 }}>
+              <span>✓</span><span>{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {(profileCandidate as any).interview_answers?.concerns?.length > 0 && (
+        <div style={{ background: '#fff8f8', border: '1px solid #fdd', borderRadius: 8, padding: '10px 12px' }}>
+          <div style={{ fontSize: 11, color: '#E24B4A', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Concerns</div>
+          {(profileCandidate as any).interview_answers.concerns.map((c: string, i: number) => (
+            <div key={i} style={{ fontSize: 11, color: '#E24B4A', padding: '2px 0', display: 'flex', gap: 6 }}>
+              <span>⚠</span><span>{c}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
             {(profileCandidate as any).last_script && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>
