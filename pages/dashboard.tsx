@@ -1572,6 +1572,121 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* INTERVIEW RESULTS MODAL */}
+      {showInterviewModal && interviewCandidate && (
+        <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowInterviewModal(false); setInterviewCandidate(null) })} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 620, maxHeight: '88vh', overflowY: 'auto', animation: 'modalIn 0.2s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#534AB7' }}>
+                  {interviewCandidate.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>{interviewCandidate.name}</div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{interviewCandidate.role_applied}</div>
+                </div>
+              </div>
+              <button onClick={() => { setShowInterviewModal(false); setInterviewCandidate(null) }} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+            </div>
+            <div style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63)', borderRadius: 12, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: (interviewCandidate as any).interview_score >= 75 ? '#1D9E75' : (interviewCandidate as any).interview_score >= 55 ? '#BA7517' : '#E24B4A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 20, fontWeight: 900, color: 'white' }}>{(interviewCandidate as any).interview_score}%</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 4 }}>
+                  {(interviewCandidate as any).interview_score >= 75 ? 'Strong candidate' : (interviewCandidate as any).interview_score >= 55 ? 'Average candidate' : 'Weak candidate'}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                  Interviewed {new Date((interviewCandidate as any).interview_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+              </div>
+            </div>
+            {(interviewCandidate as any).interview_recommendation && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>AI Recommendation</div>
+                <div style={{ fontSize: 13, color: '#444', lineHeight: 1.7, background: '#f9f9f9', borderRadius: 8, padding: '14px 16px' }}>{(interviewCandidate as any).interview_recommendation}</div>
+              </div>
+            )}
+            {((interviewCandidate as any).interview_answers?.strengths?.length > 0 || (interviewCandidate as any).interview_answers?.concerns?.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                {(interviewCandidate as any).interview_answers?.strengths?.length > 0 && (
+                  <div style={{ background: '#f0fff8', border: '1px solid #d4f0e8', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Strengths</div>
+                    {(interviewCandidate as any).interview_answers.strengths.map((s: string, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: '#1D9E75', padding: '3px 0', display: 'flex', gap: 6 }}><span>✓</span><span>{s}</span></div>
+                    ))}
+                  </div>
+                )}
+                {(interviewCandidate as any).interview_answers?.concerns?.length > 0 && (
+                  <div style={{ background: '#fff8f8', border: '1px solid #fdd', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#E24B4A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Concerns</div>
+                    {(interviewCandidate as any).interview_answers.concerns.map((c: string, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: '#E24B4A', padding: '3px 0', display: 'flex', gap: 6 }}><span>⚠</span><span>{c}</span></div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {(interviewCandidate as any).interview_answers?.question_scores?.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, fontWeight: 600 }}>Question breakdown</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(interviewCandidate as any).interview_answers.question_scores.map((q: any) => (
+                    <div key={q.number} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: q.score >= 7 ? '#E1F5EE' : q.score >= 5 ? '#FFF3E0' : '#fff0ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: q.score >= 7 ? '#1D9E75' : q.score >= 5 ? '#BA7517' : '#E24B4A' }}>{q.score}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', marginBottom: 3 }}>Q{q.number}: {q.competency}</div>
+                        <div style={{ fontSize: 12, color: '#888', lineHeight: 1.5 }}>{q.reasoning}</div>
+                        {(q.red_flags_observed || []).length > 0 && (
+                          <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {q.red_flags_observed.map((rf: string, i: number) => (
+                              <span key={i} style={{ fontSize: 10, background: '#fff0ee', color: '#E24B4A', padding: '1px 6px', borderRadius: 4 }}>⚠ {rf}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {((interviewCandidate as any).interview_answers?.cv_contradictions || []).filter((c: any) => c.status !== 'VERIFIED').length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, fontWeight: 600 }}>CV Verification flags</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(interviewCandidate as any).interview_answers.cv_contradictions.filter((c: any) => c.status !== 'VERIFIED').map((c: any, i: number) => (
+                    <div key={i} style={{ padding: '12px 14px', background: c.status === 'CONTRADICTED' ? '#fff8f8' : '#fffbf0', border: `1px solid ${c.status === 'CONTRADICTED' ? '#fdd' : '#f0d080'}`, borderRadius: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, background: c.status === 'CONTRADICTED' ? '#fff0ee' : '#FFF3E0', color: c.status === 'CONTRADICTED' ? '#E24B4A' : '#BA7517', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>{c.status}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>{c.claim}</span>
+                        <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '1px 6px', borderRadius: 4, marginLeft: 'auto' }}>{c.severity}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#888', lineHeight: 1.5 }}>{c.note}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {((interviewCandidate as any).interview_keywords || []).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, fontWeight: 600 }}>Keywords from interview</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {((interviewCandidate as any).interview_keywords || []).map((kw: string) => (
+                    <span key={kw} style={{ fontSize: 11, background: '#E1F5EE', color: '#1D9E75', padding: '4px 10px', borderRadius: 8, fontWeight: 500 }}>⚡ {kw}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+              <button onClick={() => { setShowInterviewModal(false); setInterviewCandidate(null) }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Close</button>
+              <button onClick={() => { setShowInterviewModal(false); setInterviewCandidate(null); openProfile(interviewCandidate) }} style={{ padding: '9px 18px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>View full profile</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
