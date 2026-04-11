@@ -137,13 +137,14 @@ Respond ONLY with valid JSON, no markdown, no backticks:
     await supabase
       .from('candidates')
       .update({
-        interview_transcript: transcript,
-        interview_score: scored.overall_score,
-        interview_answers: scored,
-        interview_recommendation: scored.recommendation,
-        interview_completed_at: new Date().toISOString(),
-        interview_keywords: scored.interview_keywords || [],
-        cv_contradictions: scored.cv_contradictions || []
+       interview_transcript: transcript,
+      interview_score: scored.overall_score,
+      interview_answers: scored,
+      interview_recommendation: scored.recommendation,
+      interview_completed_at: new Date().toISOString(),
+      interview_keywords: scored.interview_keywords || [],
+      cv_contradictions: scored.cv_contradictions || [],
+      status: 'interviewed'
       })
       .eq('id', candidate.id)
 
