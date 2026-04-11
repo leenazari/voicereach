@@ -265,8 +265,9 @@ export default function Dashboard() {
             }
           }
         })
-        fetchCandidates()
+         fetchCandidates()
         fetchJobs()
+        fetchInterviewPacks()
         fetchShortlistedThisWeek()
       } else if (!session) {
         setTimeout(async () => {
