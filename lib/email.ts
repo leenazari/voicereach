@@ -26,7 +26,7 @@ function buildCalendarInvite(candidate: Candidate, interviewLink: string): strin
     start,
     end,
     summary: `Interview - ${candidate.job_title || candidate.role_applied}`,
-    description: `Your interview link: ${interviewLink}\n\nThis link is valid for 24 hours.`,
+    description: `Your interview link: ${interviewLink}\n\nClick the link to start your AI interview or schedule for later.`,
     url: interviewLink,
     organizer: { name: 'VoiceReach', email: FROM }
   })
@@ -70,25 +70,35 @@ export async function sendVoiceOutreachEmail(
 
   <!-- BODY -->
   <div style="padding: 32px 32px 0;">
-    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why. Hit play above to hear it!</p>
+    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">
+      Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why. Hit play above to hear it!
+    </p>
 
     <!-- URGENCY BOX -->
-    <div style="background: linear-gradient(135deg, #f093fb22, #667eea22); border: 1px solid #667eea44; border-radius: 14px; padding: 18px 20px; margin-bottom: 28px;">
+    <div style="background: linear-gradient(135deg, #f093fb22, #667eea22); border: 1px solid #667eea44; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
       <p style="font-size: 14px; color: #534AB7; font-weight: 700; margin: 0 0 6px;">🚀 Interviews have already started</p>
       <p style="font-size: 13px; color: #555; margin: 0; line-height: 1.6;">They are actively interviewing right now and spaces are filling up fast. Your interview link is waiting. Do not let this one slip away.</p>
     </div>
 
-    <!-- CTA BUTTON -->
-    <div style="text-align: center; margin-bottom: 28px;">
-      <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 8px 24px rgba(102,126,234,0.3);">
-        Claim this opportunity
+    <!-- START INTERVIEW BUTTON -->
+    <div style="background: linear-gradient(135deg, #1D9E75, #0d7a5a); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center;">
+      <p style="font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎙 AI Interview</p>
+      <p style="font-size: 15px; color: white; font-weight: 700; margin: 0 0 16px; line-height: 1.5;">
+        Ready to interview for ${jobTitle}?<br/>
+        <span style="font-size: 13px; font-weight: 400; opacity: 0.8;">Takes around 9 minutes. Start now or schedule for later.</span>
+      </p>
+      <a href="${interviewLink}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);">
+        Start my interview →
       </a>
-      <p style="font-size: 12px; color: #aaa; margin: 10px 0 0;">This is your actual interview for this job. Click and go straight in.</p>
+      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">AI powered · No download needed · Go straight in</p>
     </div>
 
-    <!-- CALENDAR NOTE -->
-    <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px;">
-      <p style="font-size: 13px; color: #555; margin: 0;">📅 <strong>Prefer to schedule?</strong> Open the calendar invite attached to this email to pick a time that suits you.</p>
+    <!-- SCHEDULE OPTION -->
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px; text-align: center;">
+      <p style="font-size: 13px; color: #555; margin: 0 0 10px;">📅 <strong>Prefer to schedule?</strong> Pick a time that suits you.</p>
+      <a href="${interviewLink}" style="display: inline-block; background: white; color: #534AB7; padding: 10px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #534AB7;">
+        Schedule for later
+      </a>
     </div>
   </div>
 
@@ -104,7 +114,7 @@ export async function sendVoiceOutreachEmail(
 </body>
 </html>`
 
-  const text = `Hi ${firstName}, I recorded a personal message for you about a ${jobTitle} role I think you would be a strong fit for. Listen here: ${interviewLink}`
+  const text = `Hi ${firstName}, I recorded a personal message for you about a ${jobTitle} role. Listen and start your interview here: ${interviewLink}`
 
   const attachments: any[] = [
     {
