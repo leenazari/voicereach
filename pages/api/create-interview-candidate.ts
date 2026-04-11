@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (job.status === 'closed') return res.status(400).json({ error: 'Job is closed' })
 
     // Check for existing candidate with same email for this job
-    so this   .eq('email', email)
+      .eq('email', email)
       .eq('job_id', jobId)
       .single()
     if (existing) {
