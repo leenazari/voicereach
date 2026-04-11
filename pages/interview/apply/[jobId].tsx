@@ -115,6 +115,8 @@ export default function ApplyPage({ job, pack, notFound, jobClosed }: Props) {
       <meta property="og:description" content={ogDescription} />
       <meta property="og:image" content={ogImage} />
       <meta property="og:site_name" content="Voice Reach" />
+      <meta property="og:url" content={`https://www.voicereach.co.uk/interview/apply/${job?.id}`} />
+      <meta property="fb:app_id" content="YOUR_FACEBOOK_APP_ID" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={ogTitle} />
       <meta name="twitter:description" content={ogDescription} />
