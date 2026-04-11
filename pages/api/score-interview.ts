@@ -279,7 +279,6 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
     ${strengthsHtml}
     ${concernsHtml}
     ${contradictionsHtml}
-    ${nextQuestionsHtml}
     ${keywordsHtml}
 
     <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
