@@ -19,6 +19,7 @@ For each main question you must generate:
 - a scoring context explaining what strong answers should include
 - red flags to watch for
 - the exact competency or trait being tested
+- cv_probe: a natural friendly question to verify a specific CV claim relevant to this question area
 
 Rules:
 - Questions must be specific to the role, not generic interview filler
@@ -30,22 +31,16 @@ Rules:
 - Avoid repetitive phrasing across questions
 - Avoid double barrelled or overly long questions
 - Avoid cliche wording
-- Focus on extracting proof, judgement, ownership and measurable outcomes where relevant
+- Focus on extracting proof, judgement, ownership and measurable outcomes
 
-Question design logic:
-- The main question opens the topic naturally
-- Sub-question 1 should clarify the candidate's thinking
-- Sub-question 2 should push for specifics
-- Sub-question 3 should test judgement or decision making
-- Sub-question 4 should test measurable outcome or result
-- Sub-question 5 where useful should test reflection or improvement
-
-Fallback logic:
-- If a candidate answer is vague ask for a specific example
-- If a candidate stays theoretical ask what they actually did in practice
-- If a candidate gives no outcome ask what happened in the end
-- If a candidate avoids ownership ask what their personal role was
-- If a candidate gives a polished but shallow answer ask what was difficult about it
+CV VERIFICATION INTEGRATION:
+- Each question should include a cv_probe — a natural, warm, curious question that could be used to verify a CV claim relevant to that competency area
+- cv_probe questions must never sound accusatory — always curious and friendly
+- Examples of good cv_probe questions:
+  "You mentioned working at [employer] — what did a typical week look like in that role?"
+  "Your background shows experience with [skill] — can you walk me through a specific time you used that?"
+  "With [X] years in [sector], what was the most complex challenge you navigated?"
+- The cv_probe is a template — the interviewer fills in specific employer/skill names from the candidate's actual CV at runtime
 
 Role adaptation:
 - Sales roles: lean into motivation, qualification, objection handling, targets, CRM hygiene
@@ -70,6 +65,7 @@ Respond ONLY with valid JSON, no markdown, no backticks, in exactly this format:
       "competency": "string",
       "sub_questions": ["string"],
       "fallback_questions": ["string"],
+      "cv_probe": "string",
       "scoring_context": "string",
       "red_flags": ["string"]
     }
@@ -87,9 +83,11 @@ Review this interview pack and check for:
 - Fallback questions that recover missing detail effectively
 - Scoring contexts that match the question and distinguish weak from strong answers
 - Red flags that are realistic, practical and tied to the role
+- cv_probe questions that are warm, natural and curious — never accusatory
 - Enough emphasis on evidence, ownership, judgement and outcomes
 
 If any question is weak, vague, repetitive or badly placed — rewrite it.
+If any cv_probe sounds accusatory or robotic — rewrite it to be warmer and more natural.
 Return the improved and validated interview pack ONLY as valid JSON with no markdown, no backticks, in exactly the same format as the input.`
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -117,7 +115,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (jobError || !job) return res.status(404).json({ error: 'Job not found' })
 
   try {
-    // Determine seniority from title
     const title = (job.title || '').toLowerCase()
     let seniority = 'mid level'
     if (title.includes('junior') || title.includes('graduate') || title.includes('entry') || title.includes('apprentice')) seniority = 'junior'
@@ -126,16 +123,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const roleInput = `ROLE TITLE: ${job.title}
 SENIORITY: ${seniority}
 INDUSTRY: ${job.sector || 'Not specified'}
-INTERVIEW PURPOSE: Assess candidate suitability for the role
+INTERVIEW PURPOSE: Assess candidate suitability for the role and verify CV claims
 
 CORE RESPONSIBILITIES:
-${job.description ? job.description.substring(0, 500) : 'Not specified'}
+${job.description ? job.description.substring(0, 600) : 'Not specified'}
 
 MUST HAVE SKILLS:
 ${(job.required_skills || []).map((s: string) => `- ${s}`).join('\n') || '- Not specified'}
 
 QUESTION STYLE: mixed
-INTERVIEW LENGTH: standard`
+INTERVIEW LENGTH: standard
+
+ADDITIONAL CONTEXT:
+Generate cv_probe questions that could verify whether a candidate genuinely has experience in the key skill areas for this role. The probes should feel like natural conversation, not interrogation. They should give genuine candidates the opportunity to shine while revealing if someone is overstating their experience.`
 
     // Step 1 — Generate
     const generateResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -160,7 +160,7 @@ INTERVIEW LENGTH: standard`
     const rawClean = rawText.replace(/```json|```/g, '').trim()
     const rawPack = JSON.parse(rawClean)
 
-    // Step 2 — Validate and improve
+    // Step 2 — Validate
     const validateResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -183,7 +183,6 @@ INTERVIEW LENGTH: standard`
     const validatedClean = validatedText.replace(/```json|```/g, '').trim()
     const validatedPack = JSON.parse(validatedClean)
 
-    // Save to job record
     await supabase
       .from('jobs')
       .update({
