@@ -409,6 +409,21 @@ export default function Dashboard() {
     setJobs(data.jobs || [])
   }
 
+  async function fetchInterviewPacks() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { data } = await supabase
+      .from('interview_packs')
+      .select('job_id')
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+    if (data) {
+      const map: Record<string, string> = {}
+      data.forEach((p: any) => { if (p.job_id) map[p.job_id] = p.job_id })
+      setInterviewPacks(map)
+    }
+  }
+
   async function regenerateKeywords(candidate: Candidate) {
     setRegeneratingKeywords(true)
     try {
