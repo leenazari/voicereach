@@ -192,6 +192,7 @@ export default function Dashboard() {
   const [regeneratingKeywords, setRegeneratingKeywords] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '', candidate_summary: '', skills: '', qualifications: '', all_employers: '', strength_keywords: '' })
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role_applied: '', experience_summary: '', years_experience: '', job_title: '', job_salary: '', last_employer: '', location: '' })
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [extracting, setExtracting] = useState(false)
@@ -212,7 +213,6 @@ export default function Dashboard() {
   const scriptDebounce = useRef<any>(null)
   const mouseDownOnOverlay = useRef(false)
   const initialized = useRef(false)
-  const router = useRouter()
   const { state: bulkState } = useBulkUpload()
 
   const isCurrentMonth = activityMonth === new Date().getMonth() && activityYear === new Date().getFullYear()
