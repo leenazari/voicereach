@@ -458,7 +458,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const results = []
 
     for (const candidate of candidates || []) {
-      const { score: cvScore, matches } = calculateMatch(candidate, job, priority)
+      // Detect if candidate has no CV data (came in via interview link only)
+      const hasNoCv = !candidate.experience_summary &&
+        !candidate.skills?.length &&
+        !candidate.strength_keywords?.length &&
+        !candidate.years_experience &&
+        !candidate.last_employer
+
+      let cvScore: number | null = null
+      let matches: string[] = []
+
+      if (!hasNoCv) {
+        const result = calculateMatch(candidate, job, priority)
+        cvScore = result.score
+        matches = result.matches
+      }
+
       const interviewScore = candidate.interview_score || null
       const combinedScore = getCombinedScore(cvScore, interviewScore)
       const existingStatus = existingStatusMap[candidate.id]
@@ -479,7 +494,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Save cv_match_score back to the candidate for unified scoring across all views
       await supabase
         .from('candidates')
-        .update({ cv_match_score: cvScore })
+        .update({ cv_match_score: cvScore ?? null, no_cv: hasNoCv })
         .eq('id', candidate.id)
 
       results.push({
