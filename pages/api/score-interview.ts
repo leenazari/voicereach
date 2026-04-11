@@ -20,6 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (candError || !candidate) return res.status(404).json({ error: 'Candidate not found' })
 
+  // Guard against double scoring
+  if (candidate.interview_completed_at) {
+    return res.status(200).json({ success: true, score: candidate.interview_score, warning: 'Already scored' })
+  }
+
   let job: any = null
   let pack: any = null
 
