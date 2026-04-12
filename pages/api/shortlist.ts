@@ -141,12 +141,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }, { onConflict: 'job_id,candidate_id' })
     }
 
-    if (profile) {
-      await supabase
-        .from('profiles')
-        .update({ credits_used: profile.credits_used + 1 })
-        .eq('id', userId)
-    }
+    // Increment credits — use RPC to avoid race conditions and null profile issues
+    await supabase.rpc('increment_credits', { user_id: userId })
 
     return res.status(200).json({
       success: true,
