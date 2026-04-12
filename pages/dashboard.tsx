@@ -75,10 +75,13 @@ type ActivityDay = { date: string; label: string; candidates: number; voice_note
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
 
 const PIPELINE_STAGES = [
-  { id: 'shortlisted', label: 'Shortlisted', color: '#4F46E5', bg: '#EEF2FF' },
-  { id: 'interviewed', label: 'Interviewed', color: '#0891b2', bg: '#e0f2fe' },
-  { id: 'job_offer', label: 'Job Offer', color: '#15803d', bg: '#dcfce7' },
-  { id: 'rejected', label: 'Rejected', color: '#dc2626', bg: '#fee2e2' },
+  { id: 'matched',        label: 'Matched',          color: '#6b7280', bg: '#f3f4f6' },
+  { id: 'shortlisted',    label: 'Shortlisted',      color: '#0891b2', bg: '#e0f2fe' },
+  { id: 'invited',        label: 'Invited',          color: '#7c3aed', bg: '#f3e8ff' },
+  { id: 'interview_done', label: 'Interview Done',   color: '#4F46E5', bg: '#EEF2FF' },
+  { id: 'second_round',   label: '2nd Round',        color: '#7c3aed', bg: '#f3e8ff' },
+  { id: 'job_offer',      label: 'Job Offer',        color: '#15803d', bg: '#dcfce7' },
+  { id: 'rejected',       label: 'Rejected',         color: '#dc2626', bg: '#fee2e2' },
 ]
 const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -702,16 +705,23 @@ export default function Dashboard() {
   async function moveCandidateStage(candidateId: string, jobId: string, newStage: string) {
     setMovingCandidate(candidateId)
     try {
+      const dbStatus = newStage === 'matched' ? 'shortlist' : newStage
       const { error } = await supabase
         .from('job_candidates')
-        .update({ status: newStage, updated_at: new Date().toISOString() })
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
         .eq('candidate_id', candidateId)
         .eq('job_id', jobId)
+      if (newStage === 'rejected') {
+        await supabase.from('job_candidates')
+          .update({ permanently_rejected: true })
+          .eq('candidate_id', candidateId)
+          .eq('job_id', jobId)
+      }
       if (!error) {
         setMatchResults(prev => ({
           ...prev,
           [jobId]: (prev[jobId] || []).map(m =>
-            m.candidate_id === candidateId ? { ...m, status: newStage } : m
+            m.candidate_id === candidateId ? { ...m, status: dbStatus } : m
           )
         }))
       }
@@ -1021,10 +1031,13 @@ export default function Dashboard() {
         {expandedPipeline.has(job.id) && matchResults[job.id] && (
           <div style={{ borderTop: '0.5px solid #e5e7eb', padding: 16, background: '#f9fafb' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-              {PIPELINE_STAGES.map(stage => {
+              {PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done'].includes(s.id)).map(stage => {
                 const stageCandidates = matchResults[job.id].filter(m => {
                   const st = m.status
-                  if (stage.id === 'shortlisted') return st === 'shortlist' || st === 'shortlisted' || st === 'longlist' || !['interviewed', 'job_offer', 'rejected'].includes(st)
+                  if (stage.id === 'matched') return st === 'shortlist' || st === 'matched' || st === 'longlist'
+                  if (stage.id === 'shortlisted') return st === 'shortlisted'
+                  if (stage.id === 'invited') return st === 'invited' || st === 'voice_sent'
+                  if (stage.id === 'interview_done') return st === 'interview_done' || st === 'interview_booked' || st === 'interviewed'
                   return st === stage.id
                 })
                 return (
@@ -1069,7 +1082,7 @@ export default function Dashboard() {
                           </button>
                           {/* Move to stage buttons */}
                           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                            {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
+                            {PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done', 'rejected'].includes(s.id) && s.id !== stage.id).map(s => (
                               <button key={s.id}
                                 onClick={() => moveCandidateStage(m.candidate_id, job.id, s.id)}
                                 disabled={movingCandidate === m.candidate_id}
