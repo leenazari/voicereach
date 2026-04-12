@@ -444,31 +444,23 @@ export default function Dashboard() {
     if (!session || !jobList.length) return
     const jobIds = jobList.map(j => j.id)
 
-    // Fetch job_candidates rows
     const { data: rows } = await supabase
       .from('job_candidates')
-      .select('job_id, candidate_id, match_score, keyword_matches, status, updated_at')
+      .select(`
+        job_id, candidate_id, match_score, keyword_matches, status, updated_at,
+        candidates (id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url)
+      `)
       .in('job_id', jobIds)
-    if (!rows || rows.length === 0) return
+    if (!rows) return
 
-    // Fetch candidate details separately (avoids RLS join issues)
-    const candidateIds = Array.from(new Set(rows.map(r => r.candidate_id)))
-    const { data: candidateData } = await supabase
-      .from('candidates')
-      .select('id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url, no_cv')
-      .in('id', candidateIds)
-
-    const candidateMap: Record<string, any> = {}
-    for (const c of candidateData || []) candidateMap[c.id] = c
     const grouped: Record<string, MatchResult[]> = {}
     for (const row of rows) {
-      const c = candidateMap[row.candidate_id]
+      const c = (row as any).candidates
       if (!c) continue
       const alreadySent = ['voice_sent', 'interview_booked', 'hired', 'shortlisted', 'invited', 'interview_done', 'second_round', 'job_offer'].includes(row.status)
       if (!grouped[row.job_id]) grouped[row.job_id] = []
       const cvScore = c.cv_match_score || null
       const interviewScore = c.interview_score || null
-      const displayScore = getCombinedScore(cvScore, interviewScore, c.no_cv)
       grouped[row.job_id].push({
         candidate_id: row.candidate_id,
         name: c.name,
@@ -478,7 +470,7 @@ export default function Dashboard() {
         last_employer: c.last_employer,
         location: c.location,
         strength_keywords: c.strength_keywords,
-        match_score: displayScore || row.match_score,
+        match_score: getCombinedScore(cvScore, interviewScore) || row.match_score,
         cv_score: cvScore,
         interview_score: interviewScore,
         keyword_matches: row.keyword_matches || [],
@@ -487,20 +479,19 @@ export default function Dashboard() {
         voice_note_url: c.voice_note_url || null
       })
     }
-    // Sort each job's results by match_score desc
+
     for (const jobId of Object.keys(grouped)) {
       grouped[jobId].sort((a, b) => b.match_score - a.match_score)
     }
     setMatchResults(grouped)
 
-    // Reorder jobs by most recent pipeline activity (latest job_candidates.updated_at)
+    // Reorder jobs by most recent pipeline activity
     const latestActivity: Record<string, string> = {}
     for (const row of rows) {
       if (!latestActivity[row.job_id] || row.updated_at > latestActivity[row.job_id]) {
         latestActivity[row.job_id] = row.updated_at
       }
     }
-    // Jobs with pipeline activity sorted by recency, then remaining jobs by created_at
     setJobs(prev => {
       const sorted = [...prev].sort((a, b) => {
         const aActivity = latestActivity[a.id]
@@ -513,6 +504,7 @@ export default function Dashboard() {
       return sorted
     })
   }
+
 
   async function fetchInterviewPacks() {
     const { data: { session } } = await supabase.auth.getSession()
