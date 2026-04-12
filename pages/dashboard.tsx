@@ -317,8 +317,14 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    fetchActivityData(activityYear, activityMonth)
-  }, [activityMonth, activityYear])
+    const handleVisibility = () => {
+      if (!document.hidden && jobs.length > 0) {
+        loadMatchResults(jobs)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [jobs])
 
   useEffect(() => {
     if (bulkState.done) {
@@ -544,8 +550,10 @@ export default function Dashboard() {
       const res = await fetch('/api/match-candidates', { method: 'POST', headers, body: JSON.stringify({ jobId: job.id }) })
       const data = await res.json()
       if (data.success) {
-        await loadMatchResults([job, ...jobs.filter(j => j.id !== job.id)])
         notify(`Found ${data.shortlist} strong matches out of ${data.total} candidates`)
+        // Small delay to ensure all DB writes are committed before re-reading
+        await new Promise(resolve => setTimeout(resolve, 800))
+        await loadMatchResults([job, ...jobs.filter(j => j.id !== job.id)])
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
     finally { setMatchingJob(null) }
