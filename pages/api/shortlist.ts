@@ -1,155 +1,152 @@
-import { Resend } from 'resend'
-import ical from 'ical-generator'
-import { Candidate } from './supabase'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
+import { generateVoiceNoteFromMatch, getAudioSizeMb } from '../../lib/voice'
+import { sendVoiceOutreachEmail } from '../../lib/email'
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
-const FROM = process.env.RESEND_FROM_EMAIL || 'outreach@voicereach.co.uk'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-function generateInterviewToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
-}
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return res.status(401).json({ error: 'Unauthorised' })
 
-function buildInterviewLink(token: string): string {
-  return `${APP_URL}/interview/${token}`
-}
+    const authClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { user } } = await authClient.auth.getUser(token)
+    if (!user) return res.status(401).json({ error: 'Unauthorised' })
+    const userId = user.id
 
-function buildDirectInterviewLink(jobId: string | null): string {
-  return jobId ? `${APP_URL}/interview/apply/${jobId}` : ''
-}
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-function buildCalendarInvite(candidate: Candidate, interviewLink: string): string {
-  const cal = ical({ name: 'Interview' })
-  const start = new Date()
-  start.setDate(start.getDate() + 1)
-  start.setHours(10, 0, 0, 0)
-  const end = new Date(start)
-  end.setMinutes(end.getMinutes() + 45)
+    const { candidateId, jobId, jobTitle, jobSalary, customScript } = req.body
+    if (!candidateId) return res.status(400).json({ error: 'candidateId required' })
 
-  cal.createEvent({
-    start,
-    end,
-    summary: `Interview - ${candidate.job_title || candidate.role_applied}`,
-    description: `Your interview link: ${interviewLink}\n\nClick the link to start your interview or schedule for later.`,
-    url: interviewLink,
-    organizer: { name: 'VoiceReach', email: FROM }
-  })
+    const { data: candidate, error: fetchError } = await supabase
+      .from('candidates')
+      .select('*')
+      .eq('id', candidateId)
+      .eq('user_id', userId)
+      .single()
 
-  return cal.toString()
-}
+    if (fetchError || !candidate) return res.status(404).json({ error: 'Candidate not found' })
 
-export async function sendVoiceOutreachEmail(
-  candidate: Candidate,
-  voiceNoteUrl: string,
-  voiceNoteBuffer: Buffer,
-  audioSizeMb: number,
-  hasActivePack: boolean = false
-): Promise<{ token: string }> {
-  const token = generateInterviewToken()
-  const interviewLink = buildInterviewLink(token)
-  const directInterviewLink = buildDirectInterviewLink(candidate.job_id)
-  const firstName = candidate.name.split(' ')[0]
-  const calendarIcs = buildCalendarInvite(candidate, interviewLink)
-  const jobTitle = candidate.job_title || candidate.role_applied
-  const calUrl = process.env.NEXT_PUBLIC_CALCOM_URL || 'https://cal.com/lee-nazari-ohfnvf/15min'
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credits_used, credits_limit')
+      .eq('id', userId)
+      .single()
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 0; color: #1a1a1a; background: #ffffff;">
-
-  <!-- HERO HEADER -->
-  <div style="background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); padding: 40px 32px; text-align: center; border-radius: 0 0 24px 24px;">
-    <div style="font-size: 22px; font-weight: 800; color: white; margin-bottom: 20px; letter-spacing: -0.5px;">
-      Voice<span style="color: #a78bfa;">Reach</span>
-    </div>
-    <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1.5px;">Personal message for</p>
-    <h1 style="font-size: 26px; font-weight: 900; color: white; margin: 0 0 6px; letter-spacing: -0.5px;">${firstName}</h1>
-    <p style="font-size: 16px; color: rgba(255,255,255,0.7); margin: 0 0 20px;">${jobTitle}${candidate.job_salary ? ` · ${candidate.job_salary}` : ''}</p>
-
-    <!-- PLAY BUTTON -->
-    <a href="${interviewLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 17px; letter-spacing: 0.3px; box-shadow: 0 8px 24px rgba(102,126,234,0.4);">
-      &#9654;&nbsp;&nbsp;Play your personal message
-    </a>
-    <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 12px 0 0;">Tap to hear why we think you are the perfect fit</p>
-  </div>
-
-  <!-- BODY -->
-  <div style="padding: 32px 32px 0;">
-    <p style="font-size: 15px; line-height: 1.8; color: #444; margin: 0 0 24px;">
-      Hi ${firstName}! We have got an exciting opportunity that we think is absolutely perfect for you. We have recorded a personal voice message explaining exactly why. Hit play above to hear it!
-    </p>
-
-    <!-- URGENCY BOX -->
-    <div style="background: linear-gradient(135deg, #f093fb22, #667eea22); border: 1px solid #667eea44; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
-      <p style="font-size: 14px; color: #534AB7; font-weight: 700; margin: 0 0 6px;">🚀 Interviews have already started</p>
-      <p style="font-size: 13px; color: #555; margin: 0; line-height: 1.6;">They are actively interviewing right now and spaces are filling up fast. Your interview link is waiting. Do not let this one slip away.</p>
-    </div>
-
-    <!-- START INTERVIEW BUTTON -->
-    <div style="background: linear-gradient(135deg, #1D9E75, #0d7a5a); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center;">
-      <p style="font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎙 Interview</p>
-      <p style="font-size: 15px; color: white; font-weight: 700; margin: 0 0 16px; line-height: 1.5;">
-        Ready to interview for ${jobTitle}?<br/>
-        <span style="font-size: 13px; font-weight: 400; opacity: 0.8;">${hasActivePack ? 'Takes around 9 minutes. Start now or schedule for later.' : 'Pick a time that suits you and we will be in touch.'}</span>
-      </p>
-      ${hasActivePack
-        ? `<a href="${directInterviewLink || interviewLink}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
-        Start my interview →
-      </a>
-      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">No download needed · Go straight in</p>`
-        : `<a href="${calUrl}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
-        📅 Book your interview slot →
-      </a>
-      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">Pick a time that works for you</p>`
-      }
-    </div>
-
-    <!-- SCHEDULE OPTION (only shown if active pack) -->
-    ${hasActivePack ? `<div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px; text-align: center;">
-      <p style="font-size: 13px; color: #555; margin: 0 0 10px;">📅 <strong>Prefer to schedule?</strong> Pick a time that suits you.</p>
-      <a href="${calUrl}" style="display: inline-block; background: white; color: #534AB7; padding: 10px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #534AB7;">
-        Schedule for later
-      </a>
-    </div>` : ''}
-  </div>
-
-  <!-- FOOTER -->
-  <div style="padding: 20px 32px 32px; border-top: 1px solid #eee; text-align: center;">
-    <p style="font-size: 12px; color: #bbb; margin: 0 0 8px;">Sent by VoiceReach · Personalised for ${candidate.name}</p>
-    <p style="font-size: 11px; color: #ccc; margin: 0;">
-      You are receiving this because a recruiter identified you as a potential fit for this role.<br/>
-      <a href="mailto:outreach@voicereach.co.uk?subject=Unsubscribe&body=Please remove me from future outreach" style="color: #ccc;">Unsubscribe</a>
-    </p>
-  </div>
-
-</body>
-</html>`
-
-  const text = `Hi ${firstName}, I recorded a personal message for you about a ${jobTitle} role. Listen and start your interview here: ${interviewLink}`
-
-  const attachments: any[] = [
-    {
-      filename: 'interview-invite.ics',
-      content: Buffer.from(calendarIcs).toString('base64'),
-      type: 'text/calendar',
-      disposition: 'attachment'
+    if (profile && profile.credits_limit !== 999999 && profile.credits_used >= profile.credits_limit) {
+      return res.status(403).json({ error: 'Credit limit reached. Please upgrade your plan.' })
     }
-  ]
 
-  await resend.emails.send({
-    from: FROM,
-    to: candidate.email,
-    subject: `${firstName}, I recorded a personal message for you`,
-    html,
-    text,
-    headers: {
-      'List-Unsubscribe': `<mailto:outreach@voicereach.co.uk?subject=Unsubscribe>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-    attachments
-  })
+    let matchData = null
+    let job = null
 
-  return { token }
+    if (jobId) {
+      const { data: jobData } = await supabase.from('jobs').select('*').eq('id', jobId).eq('user_id', userId).single()
+      job = jobData
+      if (job) {
+        const matchRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/match`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidateId, jobId })
+        })
+        const matchResult = await matchRes.json()
+        matchData = matchResult.match
+      }
+    }
+
+    const updatedCandidate = {
+      ...candidate,
+      job_title: job?.title || jobTitle || candidate.job_title,
+      job_salary: job?.salary || jobSalary || candidate.job_salary
+    }
+
+    await supabase
+      .from('candidates')
+      .update({
+        status: 'shortlisted',
+        job_title: updatedCandidate.job_title,
+        job_salary: updatedCandidate.job_salary,
+        job_id: jobId || candidate.job_id
+      })
+      .eq('id', candidateId)
+
+    const { buffer: voiceBuffer, script: generatedScript } = await generateVoiceNoteFromMatch(
+      updatedCandidate,
+      matchData,
+      job,
+      customScript
+    )
+
+    const sizeMb = getAudioSizeMb(voiceBuffer)
+    const fileName = `${userId}/${candidateId}-${Date.now()}.mp3`
+
+    const { error: uploadError } = await supabase.storage
+      .from('voice-notes')
+      .upload(fileName, voiceBuffer, { contentType: 'audio/mpeg', upsert: true })
+
+    if (uploadError) throw uploadError
+
+    // Generate a signed URL that expires in 7 days
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('voice-notes')
+      .createSignedUrl(fileName, 60 * 60 * 24 * 7)
+
+    if (signedError || !signedData?.signedUrl) throw new Error('Could not generate signed URL')
+
+    const voiceNoteUrl = signedData.signedUrl
+
+    // Check if there's an active interview pack for this job
+    let hasActivePack = false
+    if (jobId) {
+      const { data: pack } = await supabase
+        .from('interview_packs')
+        .select('id, status')
+        .eq('job_id', jobId)
+        .eq('status', 'active')
+        .single()
+      hasActivePack = !!pack
+    }
+
+    const { token: interviewToken } = await sendVoiceOutreachEmail(updatedCandidate, voiceNoteUrl, voiceBuffer, sizeMb, hasActivePack)
+
+    await supabase
+      .from('candidates')
+      .update({
+        status: 'voice_sent',
+        interview_token: interviewToken,
+        voice_note_url: voiceNoteUrl,
+        voice_note_path: fileName,
+        last_script: generatedScript,
+        last_script_at: new Date().toISOString()
+      })
+      .eq('id', candidateId)
+
+    if (profile) {
+      await supabase
+        .from('profiles')
+        .update({ credits_used: profile.credits_used + 1 })
+        .eq('id', userId)
+    }
+
+    return res.status(200).json({
+      success: true,
+      candidateId,
+      audioSizeMb: sizeMb,
+      underSizeLimit: sizeMb < 2,
+      voiceNoteUrl,
+      script: generatedScript
+    })
+
+  } catch (err: any) {
+    console.error('Shortlist error:', err)
+    return res.status(500).json({ error: err.message || 'Failed' })
+  }
 }
