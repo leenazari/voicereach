@@ -164,7 +164,6 @@ function ActivityChart({ data }: { data: ActivityDay[] }) {
         </div>
       </div>
     </div>
-  </>
   )
 }
 
