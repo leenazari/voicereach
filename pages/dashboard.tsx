@@ -62,6 +62,8 @@ type MatchResult = {
   location: string
   strength_keywords: string[]
   match_score: number
+  cv_score?: number | null
+  interview_score?: number | null
   keyword_matches: string[]
   status: string
   already_sent: boolean
@@ -71,6 +73,13 @@ type OnboardingSteps = { job: boolean; candidates: boolean; voice_note: boolean 
 type ActivityDay = { date: string; label: string; candidates: number; voice_notes: number }
 
 const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
+
+const PIPELINE_STAGES = [
+  { id: 'shortlisted', label: 'Shortlisted', color: '#4F46E5', bg: '#EEF2FF' },
+  { id: 'interviewed', label: 'Interviewed', color: '#0891b2', bg: '#e0f2fe' },
+  { id: 'job_offer', label: 'Job Offer', color: '#15803d', bg: '#dcfce7' },
+  { id: 'rejected', label: 'Rejected', color: '#dc2626', bg: '#fee2e2' },
+]
 const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -167,6 +176,8 @@ export default function Dashboard() {
   const [matchingJob, setMatchingJob] = useState<string | null>(null)
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
+  const [expandedPipeline, setExpandedPipeline] = useState<Set<string>>(new Set())
+  const [movingCandidate, setMovingCandidate] = useState<string | null>(null)
   const [shortlisting, setShortlisting] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -419,6 +430,50 @@ export default function Dashboard() {
     const res = await fetch('/api/jobs', { headers })
     const data = await res.json()
     setJobs(data.jobs || [])
+    // Load saved match results after jobs are fetched
+    loadMatchResults(data.jobs || [])
+  }
+
+  async function loadMatchResults(jobList: Job[]) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session || !jobList.length) return
+    const jobIds = jobList.map(j => j.id)
+    const { data: rows } = await supabase
+      .from('job_candidates')
+      .select(`
+        job_id, candidate_id, match_score, keyword_matches, status, updated_at,
+        candidates (id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score)
+      `)
+      .in('job_id', jobIds)
+    if (!rows) return
+    const grouped: Record<string, MatchResult[]> = {}
+    for (const row of rows) {
+      const c = (row as any).candidates
+      if (!c) continue
+      const alreadySent = ['voice_sent', 'interview_booked', 'hired', 'shortlisted'].includes(row.status)
+      if (!grouped[row.job_id]) grouped[row.job_id] = []
+      grouped[row.job_id].push({
+        candidate_id: row.candidate_id,
+        name: c.name,
+        email: c.email,
+        role_applied: c.role_applied,
+        years_experience: c.years_experience,
+        last_employer: c.last_employer,
+        location: c.location,
+        strength_keywords: c.strength_keywords,
+        match_score: row.match_score,
+        cv_score: c.cv_match_score,
+        interview_score: c.interview_score,
+        keyword_matches: row.keyword_matches || [],
+        status: row.status === 'voice_sent' ? 'shortlist' : row.status,
+        already_sent: alreadySent
+      })
+    }
+    // Sort each job's results by match_score desc
+    for (const jobId of Object.keys(grouped)) {
+      grouped[jobId].sort((a, b) => b.match_score - a.match_score)
+    }
+    setMatchResults(grouped)
   }
 
   async function fetchInterviewPacks() {
@@ -642,6 +697,25 @@ export default function Dashboard() {
     const data = await res.json()
     if (data.success) { fetchCandidates(); notify(`${candidate.name} deleted`) }
     else notify('Could not delete candidate', 'error')
+  }
+
+  async function moveCandidateStage(candidateId: string, jobId: string, newStage: string) {
+    setMovingCandidate(candidateId)
+    try {
+      const { error } = await supabase
+        .from('job_candidates')
+        .update({ status: newStage, updated_at: new Date().toISOString() })
+        .eq('candidate_id', candidateId)
+        .eq('job_id', jobId)
+      if (!error) {
+        setMatchResults(prev => ({
+          ...prev,
+          [jobId]: (prev[jobId] || []).map(m =>
+            m.candidate_id === candidateId ? { ...m, status: newStage } : m
+          )
+        }))
+      }
+    } finally { setMovingCandidate(null) }
   }
 
   async function addCandidate() {
@@ -928,6 +1002,67 @@ export default function Dashboard() {
             )}
           </div>
         )}
+
+        {/* PIPELINE TOGGLE */}
+        {matchResults[job.id] && matchResults[job.id].length > 0 && (
+          <div
+            onClick={() => setExpandedPipeline(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
+            style={{ padding: '8px 16px', borderTop: '0.5px solid #e5e7eb', background: expandedPipeline.has(job.id) ? '#f9fafb' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="3" height="8" rx="1"/><rect x="5.5" y="1" width="3" height="10" rx="1"/><rect x="10" y="4" width="3" height="7" rx="1"/></svg>
+            {expandedPipeline.has(job.id) ? 'Hide pipeline' : `View pipeline (${matchResults[job.id].length} candidates)`}
+          </div>
+        )}
+
+        {/* PIPELINE KANBAN */}
+        {expandedPipeline.has(job.id) && matchResults[job.id] && (
+          <div style={{ borderTop: '0.5px solid #e5e7eb', padding: 16, background: '#f9fafb' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {PIPELINE_STAGES.map(stage => {
+                const stageCandidates = matchResults[job.id].filter(m => {
+                  if (stage.id === 'shortlisted') return m.status === 'shortlist' || m.status === 'shortlisted' || (m.already_sent && m.status !== 'interviewed' && m.status !== 'job_offer' && m.status !== 'rejected')
+                  return m.status === stage.id
+                })
+                return (
+                  <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
+                    <div style={{ padding: '8px 12px', background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #e5e7eb' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: stage.color }}>{stage.label}</span>
+                      <span style={{ fontSize: 10, background: 'white', color: stage.color, padding: '1px 6px', borderRadius: 10, fontWeight: 600 }}>{stageCandidates.length}</span>
+                    </div>
+                    <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 60 }}>
+                      {stageCandidates.length === 0 ? (
+                        <div style={{ fontSize: 11, color: '#d1d5db', textAlign: 'center' as const, padding: '12px 0', fontStyle: 'italic' }}>Empty</div>
+                      ) : stageCandidates.map(m => (
+                        <div key={m.candidate_id} style={{ background: '#f9fafb', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '8px 10px' }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <div onClick={() => { const full = candidates.find(c => c.id === m.candidate_id); if (full) openProfile(full) }}
+                              style={{ fontSize: 12, fontWeight: 600, color: '#111827', cursor: 'pointer' }}>{m.name}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: getScoreBg(m.match_score), color: getScoreColor(m.match_score) }}>
+                              {m.match_score}%
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>{m.role_applied}{m.last_employer ? ` · ${m.last_employer}` : ''}</div>
+                          {/* Move buttons */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
+                            {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
+                              <button key={s.id}
+                                onClick={() => moveCandidateStage(m.candidate_id, job.id, s.id)}
+                                disabled={movingCandidate === m.candidate_id}
+                                style={{ fontSize: 9, padding: '2px 6px', border: `0.5px solid ${s.color}33`, borderRadius: 5, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 500 }}>
+                                → {s.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1187,7 +1322,7 @@ export default function Dashboard() {
               'linear-gradient(135deg,#7c3aed,#a855f7)',
             ]
 
-            const cols = '2fr 1.2fr 1.2fr 1fr 0.6fr 70px 200px'
+            const cols = '2fr 1.2fr 1.2fr 1fr 0.6fr 70px 70px 200px'
 
             const colHeader = (
               <div style={{ display: 'grid', gridTemplateColumns: cols, padding: '6px 16px', fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: 2 }}>
@@ -1196,7 +1331,8 @@ export default function Dashboard() {
                 <div>Last Employer</div>
                 <div>Location</div>
                 <div>Exp</div>
-                <div>Score</div>
+                <div>CV</div>
+                <div>Interview</div>
                 <div style={{ textAlign: 'right' as const }}>Actions</div>
               </div>
             )
@@ -1241,13 +1377,22 @@ export default function Dashboard() {
                   <div>
                     {c.years_experience > 0 && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 500, background: '#EEF2FF', color: '#4F46E5' }}>{c.years_experience}yr</span>}
                   </div>
-                  {/* Score */}
+                  {/* CV Score */}
+                  <div>
+                    {(c as any).cv_match_score ? (
+                      <div style={{ width: 46, height: 40, borderRadius: 8, background: getScoreBg((c as any).cv_match_score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: getScoreColor((c as any).cv_match_score), lineHeight: 1 }}>{(c as any).cv_match_score}%</div>
+                        <div style={{ fontSize: 8, fontWeight: 500, color: getScoreColor((c as any).cv_match_score), marginTop: 2, opacity: 0.85 }}>CV</div>
+                      </div>
+                    ) : null}
+                  </div>
+                  {/* Interview Score */}
                   <div>
                     {hasInterview ? (
                       <div onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
                         style={{ width: 46, height: 40, borderRadius: 8, background: getScoreBg(score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: getScoreColor(score), lineHeight: 1 }}>{score}%</div>
-                        <div style={{ fontSize: 8, fontWeight: 500, color: getScoreColor(score), marginTop: 2, opacity: 0.85 }}>{getScoreLabel(score).split(' ')[0]}</div>
+                        <div style={{ fontSize: 8, fontWeight: 500, color: getScoreColor(score), marginTop: 2, opacity: 0.85 }}>AI</div>
                       </div>
                     ) : null}
                   </div>
