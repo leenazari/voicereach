@@ -395,7 +395,7 @@ function calculateMatch(candidate: any, job: any, priority: string, jobFamily: s
   const candidateFamily = detectCandidateFamily(candidateRole, allCandidateKeywords as string[])
   const familyPenalty = (jobFamily !== 'unknown' && candidateFamily !== 'unknown' && jobFamily !== candidateFamily) ? 0.35 : 1.0
 
-  const keywordMatches: string[] = []  const keywordMatches: string[] = []
+  const keywordMatches: string[] = []
   let keywordScore = 0
   if (jobSkills.length > 0) {
     for (const jobSkill of jobSkills) {
