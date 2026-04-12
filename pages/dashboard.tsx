@@ -1027,7 +1027,6 @@ export default function Dashboard() {
                   if (stage.id === 'shortlisted') return st === 'shortlist' || st === 'shortlisted' || st === 'longlist' || !['interviewed', 'job_offer', 'rejected'].includes(st)
                   return st === stage.id
                 })
-                })
                 return (
                   <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
                     <div style={{ padding: '8px 12px', background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #e5e7eb' }}>
