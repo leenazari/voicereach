@@ -26,6 +26,7 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
   const [isCandidateSpeaking, setIsCandidateSpeaking] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [subQuestion, setSubQuestion] = useState(0)
   const conversationRef = useRef<any>(null)
   const transcriptRef = useRef<string>('')
   const completedRef = useRef<boolean>(false)
@@ -121,20 +122,43 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
  function detectQuestionProgress(text: string, agentTurns: number) {
     const lower = text.toLowerCase()
 
-    // Each agent message after the first (greeting) = advancing through questions
-    // agentTurns=1 is the greeting, agentTurns=2 is Q1, agentTurns=3 is Q2, etc.
-    const questionNum = Math.max(0, agentTurns - 1)
-    if (questionNum > 0 && questionNum < questionCount) {
-      setCurrentQuestion(questionNum)
+    // Explicit question number — most reliable signal
+    const numMatch = lower.match(/question\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i)
+    if (numMatch) {
+      const wordToNum: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }
+      const raw = numMatch[1].toLowerCase()
+      const num = wordToNum[raw] || parseInt(raw)
+      if (num && num >= 1 && num <= questionCount) {
+        setCurrentQuestion(num - 1)
+        setSubQuestion(0)
+        return
+      }
     }
 
-    // Explicit question number patterns as backup
-    const match = lower.match(/question\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i)
-    if (match) {
-      const wordToNum: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }
-      const raw = match[1].toLowerCase()
-      const num = wordToNum[raw] || parseInt(raw)
-      if (num && num >= 1 && num <= questionCount) setCurrentQuestion(num - 1)
+    // Detect moving to next question — only after first question has started (agentTurns > 1)
+    // and only on phrases that clearly signal a transition, not a greeting
+    const isTransition = agentTurns > 1 && (
+      lower.match(/let'?s\s+move\s+on\s+to\s+(the\s+)?next/i) ||
+      lower.match(/moving\s+on\s+to\s+(the\s+)?next/i) ||
+      lower.match(/for\s+(my\s+)?(next|the\s+next)\s+question/i) ||
+      lower.match(/next\s+question\s+(is|for you|i'd like)/i) ||
+      lower.match(/^(great|okay|ok|right|perfect|brilliant|fantastic|wonderful)[,.]?\s+(so\s+)?(let'?s|for|moving)/i)
+    )
+
+    // Detect a sub-question / probe — not a new question
+    const isProbe = !isTransition && agentTurns > 1 && (
+      lower.match(/can\s+you\s+(give|tell|walk|share)\s+(me\s+)?(a\s+)?(specific|concrete|example)/i) ||
+      lower.match(/what\s+was\s+(the\s+)?(actual|specific|result|impact|outcome)/i) ||
+      lower.match(/what\s+was\s+your\s+(specific|role|part)\s+in/i) ||
+      lower.match(/could\s+you\s+(elaborate|expand|give\s+me\s+a\s+specific)/i) ||
+      lower.match(/tell\s+me\s+more\s+about/i)
+    )
+
+    if (isTransition) {
+      setCurrentQuestion(prev => Math.min(prev + 1, questionCount - 1))
+      setSubQuestion(0)
+    } else if (isProbe) {
+      setSubQuestion(prev => prev + 1)
     }
 
     // End of interview
@@ -142,11 +166,12 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
       lower.includes("that's all my questions") ||
       lower.includes("those are all my questions") ||
       lower.includes('hiring team will review') ||
-      lower.includes('thank you for your time') ||
+      lower.includes('do you have any questions for me') ||
       lower.includes('wish you the best') ||
-      lower.includes('do you have any questions for me')
+      lower.includes('thank you so much for your time')
     ) {
       setCurrentQuestion(questionCount)
+      setSubQuestion(0)
     }
   }
 
@@ -263,7 +288,14 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>Live interview</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Q{Math.min(currentQuestion + 1, questionCount)}/{questionCount}</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            {currentQuestion >= questionCount
+              ? `${questionCount}/${questionCount}`
+              : subQuestion > 0
+                ? `Q${currentQuestion + 1}.${subQuestion}/${questionCount}`
+                : `Q${currentQuestion + 1}/${questionCount}`
+            }
+          </span>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>{formatTime(duration)}</span>
         </div>
       </div>
