@@ -446,7 +446,7 @@ export default function Dashboard() {
       .from('job_candidates')
       .select(`
         job_id, candidate_id, match_score, keyword_matches, status, updated_at,
-        candidates (id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score)
+        candidates (id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url)
       `)
       .in('job_id', jobIds)
     if (!rows) return
@@ -470,7 +470,8 @@ export default function Dashboard() {
         interview_score: c.interview_score,
         keyword_matches: row.keyword_matches || [],
         status: row.status === 'voice_sent' ? 'shortlist' : row.status,
-        already_sent: alreadySent
+        already_sent: alreadySent,
+        voice_note_url: c.voice_note_url || null
       })
     }
     // Sort each job's results by match_score desc
@@ -1045,11 +1046,15 @@ export default function Dashboard() {
                 const currentStageIndex = allJobStages.findIndex(s => s.id === stage.id)
                 return (
                   <div key={stage.id}
-                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.background = stage.bg }}
+                    onDragOver={e => { e.preventDefault(); if (stage.id !== 'interview_done') e.currentTarget.style.background = stage.bg }}
                     onDragLeave={e => { e.currentTarget.style.background = 'white' }}
                     onDrop={async e => {
                       e.preventDefault()
                       e.currentTarget.style.background = 'white'
+                      if (stage.id === 'interview_done') {
+                        notify('Interview Done is set automatically when a candidate completes their interview', 'error')
+                        return
+                      }
                       const candidateId = e.dataTransfer.getData('candidateId')
                       const fromJobId = e.dataTransfer.getData('jobId')
                       if (candidateId && fromJobId === job.id) {
