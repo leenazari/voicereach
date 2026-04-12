@@ -71,6 +71,7 @@ export default function Interviews() {
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
   const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
   const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({})
+  const [activeFilter, setActiveFilter] = useState<'all' | 'ready' | 'candidates' | 'needs_setup'>('all')
   const [loadingCandidates, setLoadingCandidates] = useState<string | null>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<InterviewCandidate | null>(null)
   const [movingCandidate, setMovingCandidate] = useState<string | null>(null)
@@ -299,23 +300,18 @@ export default function Interviews() {
             </div>
           )}
 
-          <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
-              <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const }}>{job.status}</span>
-              {pack && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓ Interview ready</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
-              {job.company && <span>{job.company}</span>}
-              {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
-              {job.location && <span>{job.location}</span>}
-              {candidateCount > 0 && (
-                <span style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.3)', padding: '2px 9px', borderRadius: 20, color: 'white', fontSize: 11, fontWeight: 600 }}>
-                  🎙 {candidateCount} interviewed
-                </span>
-              )}
-            </div>
-          </div>
+           <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+               <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{job.title}</div>
+               <span style={{ fontSize: 10, background: job.status === 'active' ? '#16a34a' : '#ef4444', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const, flexShrink: 0 }}>{job.status}</span>
+             </div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.75)', flexWrap: 'nowrap' as const, overflow: 'hidden' }}>
+               {job.company && <span style={{ whiteSpace: 'nowrap' as const }}>{job.company}</span>}
+               {job.salary && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '1px 8px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 10, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{job.salary}</span></>}
+               {job.location && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.location}</span></>}
+               {candidateCount > 0 && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.3)', padding: '1px 8px', borderRadius: 20, color: 'white', fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>🎙 {candidateCount} interviewed</span></>}
+             </div>
+           </div>
 
           <div style={{ display: 'flex', gap: 6, flexShrink: 0, zIndex: 1 }}>
             {pack ? (
@@ -552,53 +548,89 @@ export default function Interviews() {
             const readyJobs = jobs.filter(j => getPackForJob(j.id))
             const needsSetupJobs = jobs.filter(j => !getPackForJob(j.id))
             const totalInterviewed = Object.values(candidateCounts).reduce((a, b) => a + b, 0)
-            const awaitingReview = Object.entries(candidateCounts)
-              .filter(([jobId]) => (jobCandidates[jobId] || []).some(c => (c.pipeline_stage || 'interviewed') === 'interviewed'))
-              .reduce((a, [, count]) => a + count, 0)
+
+            const filteredReady = activeFilter === 'all' || activeFilter === 'ready'
+              ? readyJobs.filter(j => activeFilter === 'candidates' ? (candidateCounts[j.id] || 0) > 0 : true)
+              : activeFilter === 'candidates' ? readyJobs.filter(j => (candidateCounts[j.id] || 0) > 0)
+              : []
+            const filteredNeeds = activeFilter === 'all' || activeFilter === 'needs_setup' ? needsSetupJobs : []
+
+            const statBoxStyle = (color: string, ring: string, isActive: boolean): React.CSSProperties => ({
+              background: 'white',
+              border: isActive ? `1.5px solid ${color}` : '1.5px solid #e5e7eb',
+              borderRadius: 12,
+              padding: '16px 18px',
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: isActive ? `0 0 0 3px ${ring}` : 'none',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+            })
 
             return (
               <>
                 {/* STATS BAR */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
                   {[
-                    { label: 'Interview ready', value: readyJobs.length, color: '#15803d', bg: '#dcfce7' },
-                    { label: 'Candidates interviewed', value: totalInterviewed, color: '#4F46E5', bg: '#EEF2FF' },
-                    { label: 'Needs setup', value: needsSetupJobs.length, color: '#f59e0b', bg: '#fef3c7' },
-                  ].map(s => (
-                    <div key={s.label} style={{ background: 'white', borderRadius: 10, padding: '16px 18px', border: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 20, fontWeight: 600, color: s.color }}>{s.value}</div>
+                    { key: 'ready', label: 'Interview ready', value: readyJobs.length, color: '#16a34a', ring: 'rgba(22,163,74,0.1)', iconBg: '#dcfce7', iconColor: '#16a34a',
+                      icon: <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2a4 4 0 014 4v1.5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M7 13.5c0 1.1.9 2 2 2s2-.9 2-2"/></svg> },
+                    { key: 'candidates', label: 'Candidates interviewed', value: totalInterviewed, color: '#4F46E5', ring: 'rgba(79,70,229,0.1)', iconBg: '#EEF2FF', iconColor: '#4F46E5',
+                      icon: <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
+                    { key: 'needs_setup', label: 'Needs setup', value: needsSetupJobs.length, color: '#f59e0b', ring: 'rgba(245,158,11,0.1)', iconBg: '#fef3c7', iconColor: '#d97706',
+                      icon: <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 4V2M12 4V2M2 8h14"/></svg> },
+                  ].map(s => {
+                    const isActive = activeFilter === s.key
+                    return (
+                      <div key={s.key} onClick={() => setActiveFilter(isActive ? 'all' : s.key as any)} style={statBoxStyle(s.color, s.ring, isActive)}>
+                        {/* top accent bar */}
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: '12px 12px 0 0', background: s.color, opacity: isActive ? 1 : 0, transition: 'opacity 0.15s' }} />
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: 8, background: s.iconBg, color: s.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {s.icon}
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: isActive ? s.iconBg : '#f3f4f6', color: isActive ? s.iconColor : '#9ca3af', transition: 'all 0.15s' }}>
+                            {isActive ? '✓ Active filter' : 'Filter'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 30, fontWeight: 500, color: s.color, letterSpacing: '-1px', lineHeight: 1, marginBottom: 3 }}>{s.value}</div>
+                        <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>{s.label}</div>
                       </div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>{s.label}</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* SECTION 1: READY TO SHARE */}
-                {readyJobs.length > 0 && (
-                  <div style={{ marginBottom: 28 }}>
+                {(activeFilter === 'all' || activeFilter === 'ready' || activeFilter === 'candidates') && filteredReady.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Ready to share</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.6px', whiteSpace: 'nowrap' as const }}>Ready to share</div>
                       <div style={{ height: 1, flex: 1, background: '#e5e7eb' }} />
-                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{readyJobs.length} jobs</span>
+                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{filteredReady.length} jobs</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {readyJobs.map(job => renderJobCard(job, getPackForJob(job.id), generatingJobId === job.id, candidateCounts[job.id] || 0))}
+                      {filteredReady.map(job => renderJobCard(job, getPackForJob(job.id), generatingJobId === job.id, candidateCounts[job.id] || 0))}
                     </div>
                   </div>
                 )}
 
                 {/* SECTION 2: NEEDS SETUP */}
-                {needsSetupJobs.length > 0 && (
+                {(activeFilter === 'all' || activeFilter === 'needs_setup') && filteredNeeds.length > 0 && (
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Needs interview setup</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.6px', whiteSpace: 'nowrap' as const }}>Needs interview setup</div>
                       <div style={{ height: 1, flex: 1, background: '#e5e7eb' }} />
-                      <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{needsSetupJobs.length} jobs</span>
+                      <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{filteredNeeds.length} jobs</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {needsSetupJobs.map(job => renderJobCard(job, null, generatingJobId === job.id, 0))}
+                      {filteredNeeds.map(job => renderJobCard(job, null, generatingJobId === job.id, 0))}
                     </div>
+                  </div>
+                )}
+
+                {/* EMPTY FILTER STATE */}
+                {filteredReady.length === 0 && filteredNeeds.length === 0 && (
+                  <div style={{ textAlign: 'center' as const, padding: '48px 0', color: '#9ca3af', fontSize: 13 }}>
+                    No jobs match this filter.
                   </div>
                 )}
               </>
