@@ -503,9 +503,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Protected: update score in job_candidates but keep their pipeline status
         await supabase
           .from('job_candidates')
-          .update({ match_score: cvScore ?? 0, keyword_matches: matches, updated_at: new Date().toISOString() })
-          .eq('job_id', jobId)
-          .eq('candidate_id', candidate.id)
+          .upsert({
+            job_id: jobId,
+            candidate_id: candidate.id,
+            match_score: cvScore ?? 0,
+            keyword_matches: matches,
+            status: existingStatus || 'voice_sent',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'job_id,candidate_id' })
 
         const interviewScore = candidate.interview_score || null
         const combinedScore = getCombinedScore(cvScore, interviewScore, hasNoCv)
