@@ -23,6 +23,7 @@ export type Candidate = {
   years_experience: number
   skills: string[]
   status: string
+  job_id: string | null
   job_title: string
   job_salary: string
   voice_note_url: string | null
