@@ -1068,78 +1068,90 @@ export default function Dashboard() {
                         <div key={m.candidate_id}
                           draggable
                           onDragStart={e => { e.dataTransfer.setData('candidateId', m.candidate_id); e.dataTransfer.setData('jobId', job.id) }}
-                          style={{ background: 'white', border: '0.5px solid #e5e7eb', borderLeft: `3px solid ${getScoreColor(m.match_score)}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab' }}
+                          style={{ background: 'white', border: '0.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', cursor: 'grab', transition: 'border-color 0.15s' }}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
                           onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-
-                          {/* Name + score */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <div onClick={() => { const full = candidates.find(c => c.id === m.candidate_id); if (full) openProfile(full) }}
-                              style={{ fontSize: 13, fontWeight: 700, color: '#111827', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{m.name}</div>
-                            <div style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: getScoreBg(m.match_score), color: getScoreColor(m.match_score), flexShrink: 0, marginLeft: 6 }}>
-                              {m.match_score}%
+                          {/* Score bar */}
+                          <div style={{ height: 2, background: getScoreColor(m.match_score) }} />
+                          <div style={{ padding: '10px 11px 9px' }}>
+                            {/* Name + score pill */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div onClick={() => { const full = candidates.find(c => c.id === m.candidate_id); if (full) openProfile(full) }}
+                                  style={{ fontSize: 12, fontWeight: 600, color: '#111827', cursor: 'pointer', marginBottom: 1 }}>{m.name}</div>
+                                <div style={{ fontSize: 11, color: '#6b7280' }}>{m.role_applied}</div>
+                                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>
+                                  {[m.last_employer, m.location].filter(Boolean).join(' · ')}
+                                </div>
+                              </div>
+                              <div style={{ background: getScoreBg(m.match_score), borderRadius: 8, padding: '3px 8px', textAlign: 'center' as const, minWidth: 46, flexShrink: 0 }}>
+                                <div style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(m.match_score), lineHeight: 1 }}>{m.match_score}%</div>
+                                <div style={{ fontSize: 8, color: getScoreColor(m.match_score), opacity: 0.7, marginTop: 1 }}>match</div>
+                              </div>
                             </div>
-                          </div>
-
-                          {/* Role + employer */}
-                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{m.role_applied}</div>
-                          {m.last_employer && <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{m.last_employer}</div>}
-
-                          {/* Location */}
-                          {m.location && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>
-                              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
-                              {m.location}
-                            </div>
-                          )}
-
-                          {/* Strength keywords from interview */}
-                          {(m as any).keyword_matches && (m as any).keyword_matches.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
-                              {((m as any).keyword_matches as string[]).slice(0, 3).map((kw: string) => (
-                                <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>⚡ {kw}</span>
-                              ))}
-                              {(m as any).keyword_matches.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{(m as any).keyword_matches.length - 3}</span>}
-                            </div>
-                          )}
-
-                          {/* Send voice note button */}
-                          {(stage.id === 'matched' || stage.id === 'shortlisted') && (
-                            <button onClick={async e => {
-                              e.stopPropagation()
-                              setShortlisting(m.candidate_id)
-                              try {
-                                const headers = await authHeaders()
-                                const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                                const data = await res.json()
-                                if (data.success) {
-                                  notify(`Voice note sent to ${m.name} ✓`)
-                                  setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true, status: 'invited' } : r) }))
-                                  fetchCandidates()
-                                  if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                                } else notify('Error: ' + data.error, 'error')
-                              } finally { setShortlisting(null) }
-                            }} disabled={shortlisting === m.candidate_id}
-                              style={{ width: '100%', marginBottom: 8, padding: '7px 0', background: m.already_sent ? '#fef3c7' : '#7c3aed', color: m.already_sent ? '#92400e' : 'white', border: m.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlisting === m.candidate_id ? 'not-allowed' : 'pointer' }}>
-                              {shortlisting === m.candidate_id ? '...' : m.already_sent ? '🎙 Resend' : '🎙 Send voice note & invite'}
-                            </button>
-                          )}
-
-                          {/* Move stage buttons — left arrow for back, right arrow for forward */}
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {allJobStages.map((s, si) => {
-                              if (s.id === stage.id) return null
-                              const isForward = si > currentStageIndex
-                              const arrow = isForward ? '→' : '←'
-                              return (
-                                <button key={s.id}
-                                  onClick={() => moveCandidateStage(m.candidate_id, job.id, s.id)}
-                                  disabled={movingCandidate === m.candidate_id}
-                                  style={{ flex: 1, padding: '5px 4px', border: `0.5px solid ${s.color}44`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600, fontSize: 10, textAlign: 'center' as const }}>
-                                  {arrow} {s.label}
+                            {/* Keywords */}
+                            {(m as any).keyword_matches && (m as any).keyword_matches.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                                {((m as any).keyword_matches as string[]).slice(0, 3).map((kw: string) => (
+                                  <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>⚡ {kw}</span>
+                                ))}
+                                {(m as any).keyword_matches.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{(m as any).keyword_matches.length - 3}</span>}
+                              </div>
+                            )}
+                            <div style={{ height: '0.5px', background: '#e5e7eb', margin: '0 -11px 8px' }} />
+                            {/* Stage actions */}
+                            {stage.id === 'matched' && (
+                              <button onClick={() => moveCandidateStage(m.candidate_id, job.id, 'shortlisted')}
+                                style={{ width: '100%', height: 28, background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
+                                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
+                                Shortlist
+                              </button>
+                            )}
+                            {stage.id === 'shortlisted' && (
+                              <button onClick={async e => {
+                                e.stopPropagation()
+                                setShortlisting(m.candidate_id)
+                                try {
+                                  const headers = await authHeaders()
+                                  const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
+                                  const data = await res.json()
+                                  if (data.success) {
+                                    notify(`Voice note sent to ${m.name} ✓`)
+                                    setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true, status: 'invited' } : r) }))
+                                    fetchCandidates()
+                                    if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+                                  } else notify('Error: ' + data.error, 'error')
+                                } finally { setShortlisting(null) }
+                              }} disabled={shortlisting === m.candidate_id}
+                                style={{ width: '100%', height: 28, background: '#7c3aed', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
+                                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2a3 3 0 013 3v1.5a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M5 12c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+                                {shortlisting === m.candidate_id ? '...' : '+ Invite'}
+                              </button>
+                            )}
+                            {stage.id === 'invited' && (
+                              <div style={{ fontSize: 9, color: '#7c3aed', background: '#f3e8ff', borderRadius: 5, padding: '5px 0', textAlign: 'center' as const, marginBottom: 5 }}>
+                                <svg width="9" height="9" viewBox="0 0 14 14" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" style={{ verticalAlign: 'middle', marginRight: 2 }}><path d="M7 2a3 3 0 013 3v1.5a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M5 12c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+                                Invite sent · awaiting interview
+                              </div>
+                            )}
+                            {stage.id === 'interview_done' && (
+                              <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                                <button onClick={() => moveCandidateStage(m.candidate_id, job.id, 'second_round')}
+                                  style={{ flex: 1, height: 28, background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                                  → 2nd Round
                                 </button>
-                              )
-                            })}
+                                <button onClick={() => moveCandidateStage(m.candidate_id, job.id, 'rejected')}
+                                  style={{ width: 28, height: 28, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                              </div>
+                            )}
+                            {!['rejected', 'job_offer', 'interview_done'].includes(stage.id) && (
+                              <button onClick={() => moveCandidateStage(m.candidate_id, job.id, 'rejected')}
+                                style={{ width: '100%', height: 28, background: 'transparent', color: '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 6, fontSize: 10, cursor: 'pointer' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#dc2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#fecaca' }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb' }}>
+                                Reject
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
