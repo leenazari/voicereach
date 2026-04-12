@@ -163,7 +163,7 @@ Generate cv_probe questions that could verify whether a candidate genuinely has 
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: roleInput }]
@@ -174,8 +174,18 @@ Generate cv_probe questions that could verify whether a candidate genuinely has 
     if (!generateResponse.ok) throw new Error(generateData.error?.message || 'Generation failed')
 
     const rawText = generateData.content?.[0]?.text || ''
-    const rawClean = rawText.replace(/```json|```/g, '').trim()
-    const rawPack = JSON.parse(rawClean)
+    if (!rawText) throw new Error('Empty response from generation')
+
+    // Extract JSON — try clean parse first, then find JSON block
+    let rawPack: any
+    try {
+      const rawClean = rawText.replace(/```json|```/g, '').trim()
+      rawPack = JSON.parse(rawClean)
+    } catch {
+      const match = rawText.match(/\{[\s\S]*\}/)
+      if (!match) throw new Error('Could not extract JSON from generation response')
+      rawPack = JSON.parse(match[0])
+    }
 
     // Step 2 — Validate
     const validateResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -186,7 +196,7 @@ Generate cv_probe questions that could verify whether a candidate genuinely has 
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: VALIDATOR_PROMPT,
         messages: [{ role: 'user', content: JSON.stringify(rawPack) }]
@@ -197,8 +207,23 @@ Generate cv_probe questions that could verify whether a candidate genuinely has 
     if (!validateResponse.ok) throw new Error(validateData.error?.message || 'Validation failed')
 
     const validatedText = validateData.content?.[0]?.text || ''
-    const validatedClean = validatedText.replace(/```json|```/g, '').trim()
-    const validatedPack = JSON.parse(validatedClean)
+    if (!validatedText) throw new Error('Empty response from validation')
+
+    // Extract JSON with fallback
+    let validatedPack: any
+    try {
+      const validatedClean = validatedText.replace(/```json|```/g, '').trim()
+      validatedPack = JSON.parse(validatedClean)
+    } catch {
+      const match = validatedText.match(/\{[\s\S]*\}/)
+      if (!match) {
+        // Validator failed — use raw pack instead of failing entirely
+        console.error('Validator JSON parse failed, using raw pack')
+        validatedPack = rawPack
+      } else {
+        validatedPack = JSON.parse(match[0])
+      }
+    }
 
     await supabase
       .from('jobs')
