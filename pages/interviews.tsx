@@ -205,7 +205,6 @@ export default function Interviews() {
         .from('candidates')
         .select('*')
         .in('id', candidateIds)
-        .eq('user_id', session.user.id)
 
       if (candError) console.error('candidates fetch error:', candError)
 
