@@ -171,6 +171,7 @@ function ActivityChart({ data }: { data: ActivityDay[] }) {
 export default function Dashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingResults, setLoadingResults] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [sessionToken, setSessionToken] = useState('')
@@ -317,13 +318,15 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>
     const handleVisibility = () => {
       if (!document.hidden && jobs.length > 0) {
-        loadMatchResults(jobs)
+        clearTimeout(timeout)
+        timeout = setTimeout(() => loadMatchResults(jobs), 1000)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    return () => { document.removeEventListener('visibilitychange', handleVisibility); clearTimeout(timeout) }
   }, [jobs])
 
   useEffect(() => {
@@ -448,6 +451,8 @@ export default function Dashboard() {
   async function loadMatchResults(jobList: Job[]) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session || !jobList.length) return
+    setLoadingResults(true)
+    try {
     const jobIds = jobList.map(j => j.id)
 
     const { data: rows } = await supabase
@@ -511,6 +516,9 @@ export default function Dashboard() {
       })
       return sorted
     })
+    } finally {
+      setLoadingResults(false)
+    }
   }
 
 
@@ -525,7 +533,6 @@ export default function Dashboard() {
    if (data) {
       const map: Record<string, string> = {}
       data.forEach((p: any) => { if (p.job_id) map[p.job_id] = p.job_id })
-      console.log('Interview packs loaded:', map)
       setInterviewPacks(map)
     }
   }
@@ -986,6 +993,7 @@ export default function Dashboard() {
             style={{ padding: '8px 16px', borderTop: '0.5px solid #e5e7eb', background: expandedPipeline.has(job.id) ? '#f9fafb' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="3" height="8" rx="1"/><rect x="5.5" y="1" width="3" height="10" rx="1"/><rect x="10" y="4" width="3" height="7" rx="1"/></svg>
             {expandedPipeline.has(job.id) ? 'Hide pipeline' : `View pipeline (${matchResults[job.id].length} candidates)`}
+            {loadingResults && <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 6 }}>⟳ refreshing...</span>}
           </div>
         )}
 
