@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { Candidate } from '../lib/supabase'
@@ -163,6 +164,7 @@ function ActivityChart({ data }: { data: ActivityDay[] }) {
         </div>
       </div>
     </div>
+  </>
   )
 }
 
@@ -1156,6 +1158,13 @@ export default function Dashboard() {
 
 
   return (
+    <>
+    <Head>
+      <title>VoiceReach</title>
+      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      <link rel="apple-touch-icon" href="/icon-192.png" />
+    </Head>
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f9fafb' }}>
 
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -2133,5 +2142,6 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+    </>
   )
 }
