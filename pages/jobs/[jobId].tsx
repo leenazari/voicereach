@@ -658,7 +658,7 @@ export default function JobPipeline() {
                   <div key={stage.id}
                     onDragOver={e => handleDragOver(e, stage.id)}
                     onDrop={e => handleDrop(e, stage.id)}
-                    onDragLeave={() => setDragOver(null)}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
                     style={{ background: isDragTarget ? stage.bg : 'white', border: `1.5px ${isDragTarget ? 'dashed' : 'solid'} ${isDragTarget ? stage.color : '#e5e7eb'}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s', minHeight: 500 }}
                   >
                     {/* COLUMN HEADER */}
@@ -694,6 +694,7 @@ export default function JobPipeline() {
                           onDragStart={e => handleDragStart(e, candidate.id)}
                           onDragEnd={handleDragEnd}
                           style={{ background: 'white', border: '0.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', cursor: 'grab', opacity: dragId === candidate.id ? 0.4 : 1, transition: 'border-color 0.15s', userSelect: 'none' as const }}
+                          onDragOver={e => e.preventDefault()}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
                           onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
                         >
