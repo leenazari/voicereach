@@ -544,8 +544,7 @@ export default function Dashboard() {
       const res = await fetch('/api/match-candidates', { method: 'POST', headers, body: JSON.stringify({ jobId: job.id }) })
       const data = await res.json()
       if (data.success) {
-        setMatchResults(prev => ({ ...prev, [job.id]: data.results }))
-        setExpandedJobs(prev => new Set(prev).add(job.id))
+        await loadMatchResults(jobs)
         notify(`Found ${data.shortlist} strong matches out of ${data.total} candidates`)
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
