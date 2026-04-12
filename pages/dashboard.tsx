@@ -1031,7 +1031,7 @@ export default function Dashboard() {
         {expandedPipeline.has(job.id) && matchResults[job.id] && (
           <div style={{ borderTop: '0.5px solid #e5e7eb', padding: 16, background: '#f9fafb' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-              {PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done'].includes(s.id)).map(stage => {
+              {PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done'].includes(s.id)).map((stage, stageIndex) => {
                 const stageCandidates = matchResults[job.id].filter(m => {
                   const st = m.status
                   if (stage.id === 'matched') return st === 'shortlist' || st === 'matched' || st === 'longlist'
@@ -1040,56 +1040,105 @@ export default function Dashboard() {
                   if (stage.id === 'interview_done') return st === 'interview_done' || st === 'interview_booked' || st === 'interviewed'
                   return st === stage.id
                 })
+                const allJobStages = PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done', 'rejected'].includes(s.id))
+                const currentStageIndex = allJobStages.findIndex(s => s.id === stage.id)
                 return (
-                  <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
-                    <div style={{ padding: '8px 12px', background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #e5e7eb' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: stage.color }}>{stage.label}</span>
-                      <span style={{ fontSize: 10, background: 'white', color: stage.color, padding: '1px 6px', borderRadius: 10, fontWeight: 600 }}>{stageCandidates.length}</span>
+                  <div key={stage.id}
+                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.background = stage.bg }}
+                    onDragLeave={e => { e.currentTarget.style.background = 'white' }}
+                    onDrop={async e => {
+                      e.preventDefault()
+                      e.currentTarget.style.background = 'white'
+                      const candidateId = e.dataTransfer.getData('candidateId')
+                      const fromJobId = e.dataTransfer.getData('jobId')
+                      if (candidateId && fromJobId === job.id) {
+                        await moveCandidateStage(candidateId, job.id, stage.id)
+                      }
+                    }}
+                    style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden', transition: 'background 0.15s' }}>
+                    <div style={{ padding: '10px 12px', background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #e5e7eb' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: stage.color, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>{stage.label}</span>
+                      <span style={{ fontSize: 10, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>{stageCandidates.length}</span>
                     </div>
-                    <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 60 }}>
+                    <div style={{ padding: 8, display: 'flex', flexDirection: 'column' as const, gap: 8, minHeight: 80 }}>
                       {stageCandidates.length === 0 ? (
-                        <div style={{ fontSize: 11, color: '#d1d5db', textAlign: 'center' as const, padding: '12px 0', fontStyle: 'italic' }}>Empty</div>
+                        <div style={{ fontSize: 11, color: '#d1d5db', textAlign: 'center' as const, padding: '20px 0', fontStyle: 'italic' }}>Drop here</div>
                       ) : stageCandidates.map(m => (
-                        <div key={m.candidate_id} style={{ background: '#f9fafb', border: '0.5px solid #e5e7eb', borderRadius: 8, padding: '8px 10px' }}
+                        <div key={m.candidate_id}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.setData('candidateId', m.candidate_id); e.dataTransfer.setData('jobId', job.id) }}
+                          style={{ background: 'white', border: '0.5px solid #e5e7eb', borderLeft: `3px solid ${getScoreColor(m.match_score)}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab' }}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
                           onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+
+                          {/* Name + score */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                             <div onClick={() => { const full = candidates.find(c => c.id === m.candidate_id); if (full) openProfile(full) }}
-                              style={{ fontSize: 12, fontWeight: 600, color: '#111827', cursor: 'pointer' }}>{m.name}</div>
-                            <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: getScoreBg(m.match_score), color: getScoreColor(m.match_score) }}>
+                              style={{ fontSize: 13, fontWeight: 700, color: '#111827', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{m.name}</div>
+                            <div style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: getScoreBg(m.match_score), color: getScoreColor(m.match_score), flexShrink: 0, marginLeft: 6 }}>
                               {m.match_score}%
                             </div>
                           </div>
-                          <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>{m.role_applied}{m.last_employer ? ` · ${m.last_employer}` : ''}</div>
-                          {/* Send voice note */}
-                          <button onClick={async e => {
-                            e.stopPropagation()
-                            setShortlisting(m.candidate_id)
-                            try {
-                              const headers = await authHeaders()
-                              const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                              const data = await res.json()
-                              if (data.success) {
-                                notify(`Voice note sent to ${m.name} ✓`)
-                                setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true } : r) }))
-                                fetchCandidates()
-                                if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                              } else notify('Error: ' + data.error, 'error')
-                            } finally { setShortlisting(null) }
-                          }} disabled={shortlisting === m.candidate_id}
-                            style={{ width: '100%', marginBottom: 6, padding: '5px 0', background: m.already_sent ? '#fef3c7' : '#4F46E5', color: m.already_sent ? '#92400e' : 'white', border: m.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: shortlisting === m.candidate_id ? 'not-allowed' : 'pointer' }}>
-                            {shortlisting === m.candidate_id ? '...' : m.already_sent ? '🎙 Resend voice note' : '🎙 Send voice note'}
-                          </button>
-                          {/* Move to stage buttons */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                            {PIPELINE_STAGES.filter(s => ['matched', 'shortlisted', 'invited', 'interview_done', 'rejected'].includes(s.id) && s.id !== stage.id).map(s => (
-                              <button key={s.id}
-                                onClick={() => moveCandidateStage(m.candidate_id, job.id, s.id)}
-                                disabled={movingCandidate === m.candidate_id}
-                                style={{ fontSize: 9, padding: '2px 6px', border: `0.5px solid ${s.color}33`, borderRadius: 5, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 500 }}>
-                                → {s.label}
-                              </button>
-                            ))}
+
+                          {/* Role + employer */}
+                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{m.role_applied}</div>
+                          {m.last_employer && <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{m.last_employer}</div>}
+
+                          {/* Location */}
+                          {m.location && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>
+                              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
+                              {m.location}
+                            </div>
+                          )}
+
+                          {/* Strength keywords from interview */}
+                          {(m as any).keyword_matches && (m as any).keyword_matches.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                              {((m as any).keyword_matches as string[]).slice(0, 3).map((kw: string) => (
+                                <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>⚡ {kw}</span>
+                              ))}
+                              {(m as any).keyword_matches.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{(m as any).keyword_matches.length - 3}</span>}
+                            </div>
+                          )}
+
+                          {/* Send voice note button */}
+                          {(stage.id === 'matched' || stage.id === 'shortlisted') && (
+                            <button onClick={async e => {
+                              e.stopPropagation()
+                              setShortlisting(m.candidate_id)
+                              try {
+                                const headers = await authHeaders()
+                                const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
+                                const data = await res.json()
+                                if (data.success) {
+                                  notify(`Voice note sent to ${m.name} ✓`)
+                                  setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true, status: 'invited' } : r) }))
+                                  fetchCandidates()
+                                  if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+                                } else notify('Error: ' + data.error, 'error')
+                              } finally { setShortlisting(null) }
+                            }} disabled={shortlisting === m.candidate_id}
+                              style={{ width: '100%', marginBottom: 8, padding: '7px 0', background: m.already_sent ? '#fef3c7' : '#7c3aed', color: m.already_sent ? '#92400e' : 'white', border: m.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlisting === m.candidate_id ? 'not-allowed' : 'pointer' }}>
+                              {shortlisting === m.candidate_id ? '...' : m.already_sent ? '🎙 Resend' : '🎙 Send voice note & invite'}
+                            </button>
+                          )}
+
+                          {/* Move stage buttons — left arrow for back, right arrow for forward */}
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {allJobStages.map((s, si) => {
+                              if (s.id === stage.id) return null
+                              const isForward = si > currentStageIndex
+                              const arrow = isForward ? '→' : '←'
+                              return (
+                                <button key={s.id}
+                                  onClick={() => moveCandidateStage(m.candidate_id, job.id, s.id)}
+                                  disabled={movingCandidate === m.candidate_id}
+                                  style={{ flex: 1, padding: '5px 4px', border: `0.5px solid ${s.color}44`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600, fontSize: 10, textAlign: 'center' as const }}>
+                                  {arrow} {s.label}
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                       ))}
