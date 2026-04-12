@@ -443,20 +443,32 @@ export default function Dashboard() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session || !jobList.length) return
     const jobIds = jobList.map(j => j.id)
+
+    // Fetch job_candidates rows
     const { data: rows } = await supabase
       .from('job_candidates')
-      .select(`
-        job_id, candidate_id, match_score, keyword_matches, status, updated_at,
-        candidates (id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url)
-      `)
+      .select('job_id, candidate_id, match_score, keyword_matches, status, updated_at')
       .in('job_id', jobIds)
-    if (!rows) return
+    if (!rows || rows.length === 0) return
+
+    // Fetch candidate details separately (avoids RLS join issues)
+    const candidateIds = [...new Set(rows.map(r => r.candidate_id))]
+    const { data: candidateData } = await supabase
+      .from('candidates')
+      .select('id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url, no_cv')
+      .in('id', candidateIds)
+
+    const candidateMap: Record<string, any> = {}
+    for (const c of candidateData || []) candidateMap[c.id] = c
     const grouped: Record<string, MatchResult[]> = {}
     for (const row of rows) {
-      const c = (row as any).candidates
+      const c = candidateMap[row.candidate_id]
       if (!c) continue
-      const alreadySent = ['voice_sent', 'interview_booked', 'hired', 'shortlisted'].includes(row.status)
+      const alreadySent = ['voice_sent', 'interview_booked', 'hired', 'shortlisted', 'invited', 'interview_done', 'second_round', 'job_offer'].includes(row.status)
       if (!grouped[row.job_id]) grouped[row.job_id] = []
+      const cvScore = c.cv_match_score || null
+      const interviewScore = c.interview_score || null
+      const displayScore = getCombinedScore(cvScore, interviewScore, c.no_cv)
       grouped[row.job_id].push({
         candidate_id: row.candidate_id,
         name: c.name,
@@ -466,11 +478,11 @@ export default function Dashboard() {
         last_employer: c.last_employer,
         location: c.location,
         strength_keywords: c.strength_keywords,
-        match_score: row.match_score,
-        cv_score: c.cv_match_score,
-        interview_score: c.interview_score,
+        match_score: displayScore || row.match_score,
+        cv_score: cvScore,
+        interview_score: interviewScore,
         keyword_matches: row.keyword_matches || [],
-        status: row.status === 'voice_sent' ? 'shortlist' : row.status,
+        status: row.status,
         already_sent: alreadySent,
         voice_note_url: c.voice_note_url || null
       })
