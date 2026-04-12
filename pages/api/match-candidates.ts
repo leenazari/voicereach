@@ -618,7 +618,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updated_at: new Date().toISOString()
           }, { onConflict: 'job_id,candidate_id' })
 
-        const interviewScore = candidate.interview_score || null
+        // Only apply interview score if the interview was for THIS specific job
+        const interviewScore = (candidate.interview_score && candidate.job_id === jobId) ? candidate.interview_score : null
         const combinedScore = getCombinedScore(cvScore, interviewScore, hasNoCv)
         results.push({
           candidate_id: candidate.id,
@@ -639,7 +640,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
-      const interviewScore = candidate.interview_score || null
+      // Only apply interview score if the interview was for THIS specific job
+      const interviewScore = (candidate.interview_score && candidate.job_id === jobId) ? candidate.interview_score : null
       const combinedScore = getCombinedScore(cvScore, interviewScore, hasNoCv)
       const newStatus = combinedScore >= threshold ? 'shortlist' : 'longlist'
 
