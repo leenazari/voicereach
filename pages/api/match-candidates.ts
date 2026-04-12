@@ -457,12 +457,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Filter out permanently rejected candidates before matching
     const activeCandidates = candidates.filter((c: any) => !permanentlyRejected.has(c.id))
 
-    const SENT_STATUSES = ['voice_sent', 'invited', 'interview_booked', 'interview_done', 'hired']
+    // Any candidate past the matched stage should not be re-evaluated
+    // This protects interview data and pipeline position from being overwritten
+    const PROTECTED_STATUSES = [
+      'shortlisted', 'shortlist',
+      'voice_sent', 'invited',
+      'interview_booked', 'interview_done', 'interviewed',
+      'second_round', 'job_offer',
+      'hired', 'rejected'
+    ]
     const priority = job.match_priority || 'skills'
     const threshold = job.match_threshold || 70
     const results = []
 
     for (const candidate of activeCandidates || []) {
+      const existingStatus = existingStatusMap[candidate.id]
+      const isProtected = existingStatus && PROTECTED_STATUSES.includes(existingStatus)
+
+      // Skip full re-scoring for candidates past matched stage
+      // Just include them in results with their existing status preserved
+      if (isProtected && existingStatus !== 'shortlist' && existingStatus !== 'longlist') {
+        // Still include in results for display but don't touch their record
+        results.push({
+          candidate_id: candidate.id,
+          name: candidate.name,
+          email: candidate.email,
+          role_applied: candidate.role_applied,
+          years_experience: candidate.years_experience,
+          last_employer: candidate.last_employer,
+          location: candidate.location,
+          strength_keywords: candidate.strength_keywords,
+          match_score: candidate.cv_match_score || 0,
+          cv_score: candidate.cv_match_score || null,
+          interview_score: candidate.interview_score || null,
+          keyword_matches: [],
+          status: existingStatus,
+          already_sent: true
+        })
+        continue
+      }
       // Detect if candidate has no CV data (came in via interview link only)
       const hasNoCv = !candidate.experience_summary &&
         !candidate.skills?.length &&
@@ -481,9 +514,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const interviewScore = candidate.interview_score || null
       const combinedScore = getCombinedScore(cvScore, interviewScore)
-      const existingStatus = existingStatusMap[candidate.id]
-      const alreadySent = existingStatus && SENT_STATUSES.includes(existingStatus)
-      const newStatus = alreadySent ? existingStatus : combinedScore >= threshold ? 'shortlist' : 'longlist'
+      const newStatus = combinedScore >= threshold ? 'shortlist' : 'longlist'
 
       await supabase
         .from('job_candidates')
@@ -516,7 +547,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         interview_score: interviewScore,
         keyword_matches: matches,
         status: newStatus,
-        already_sent: alreadySent
+        already_sent: false
       })
     }
 
