@@ -183,37 +183,52 @@ export default function Interviews() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Use the same join pattern as dashboard — let job_candidates join to candidates
-      const { data: rows } = await supabase
+      // Use exact same query as jobs pipeline page — fetch ALL job_candidates then join candidates by user_id
+      const { data: jcRows, error: jcError } = await supabase
         .from('job_candidates')
-        .select(`
-          candidate_id, status,
-          candidates (id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv)
-        `)
+        .select('candidate_id, match_score, keyword_matches, status')
         .eq('job_id', jobId)
-        .in('status', ['interview_done', 'interviewed', 'second_round', 'job_offer', 'rejected'])
 
-      const merged: any[] = []
-      for (const row of rows || []) {
-        const c = (row as any).candidates
-        if (!c) continue
-        merged.push({ ...c, pipeline_stage: c.pipeline_stage || 'interview_done' })
+      if (jcError) console.error('job_candidates fetch error:', jcError)
+
+      if (!jcRows || jcRows.length === 0) {
+        setJobCandidates(prev => ({ ...prev, [jobId]: [] }))
+        return
       }
 
-      // Also get any candidates linked by job_id with interview completed (belt and braces)
-      const { data: byJobId } = await supabase
+      const candidateIds = jcRows.map((r: any) => r.candidate_id)
+      const { data: candidateData, error: candError } = await supabase
         .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
+        .select('*')
+        .in('id', candidateIds)
         .eq('user_id', session.user.id)
-        .eq('job_id', jobId)
-        .not('interview_completed_at', 'is', null)
 
-      // Merge and deduplicate
-      const all = [...merged, ...(byJobId || [])]
-      const seen = new Set()
-      const deduped = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
-      deduped.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
-      setJobCandidates(prev => ({ ...prev, [jobId]: deduped }))
+      if (candError) console.error('candidates fetch error:', candError)
+      console.log('jcRows:', jcRows.length, 'candidateData:', candidateData?.length)
+
+      const merged = (candidateData || []).map((c: any) => {
+        const jc = jcRows.find((r: any) => r.candidate_id === c.id)
+        const cvScore = jc?.match_score || 0
+        const interviewScore = c.interview_score || null
+        const displayScore = getCombinedScore(cvScore, interviewScore, c.no_cv)
+        return {
+          ...c,
+          match_score: displayScore,
+          keyword_matches: jc?.keyword_matches || [],
+          pipeline_stage: c.pipeline_stage || 'interview_done',
+          no_cv: c.no_cv || false
+        }
+      })
+
+      // Only show candidates who have reached interview stage
+      const INTERVIEW_STATUSES = ['interview_done', 'interviewed', 'second_round', 'job_offer', 'rejected']
+      const interviewCandidates = merged.filter((c: any) => {
+        const jc = jcRows.find((r: any) => r.candidate_id === c.id)
+        return jc && INTERVIEW_STATUSES.includes(jc.status)
+      })
+
+      interviewCandidates.sort((a: any, b: any) => (b.interview_score || 0) - (a.interview_score || 0))
+      setJobCandidates(prev => ({ ...prev, [jobId]: interviewCandidates }))
     } finally {
       setLoadingCandidates(null)
     }
@@ -224,7 +239,7 @@ export default function Interviews() {
       setExpandedPipeline(null)
     } else {
       setExpandedPipeline(jobId)
-      if (!jobCandidates[jobId]) await fetchJobCandidates(jobId)
+      await fetchJobCandidates(jobId)
     }
   }
 
