@@ -1108,24 +1108,22 @@ export default function Dashboard() {
                               </button>
                             )}
                             {stage.id === 'shortlisted' && (
-                              <button onClick={async e => {
+                              <button onClick={e => {
                                 e.stopPropagation()
-                                setShortlisting(m.candidate_id)
-                                try {
-                                  const headers = await authHeaders()
-                                  const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                                  const data = await res.json()
-                                  if (data.success) {
-                                    notify(`Voice note sent to ${m.name} ✓`)
-                                    setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true, status: 'invited' } : r) }))
-                                    fetchCandidates()
-                                    if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                                  } else notify('Error: ' + data.error, 'error')
-                                } finally { setShortlisting(null) }
-                              }} disabled={shortlisting === m.candidate_id}
+                                // Open send modal with job pre-filled
+                                const full = candidates.find(c => c.id === m.candidate_id)
+                                if (full) {
+                                  setJobModalCandidate(full)
+                                  setSelectedJobId(job.id)
+                                  setJobSendForm({ jobTitle: job.title, jobSalary: job.salary || '' })
+                                  setScriptPreview('')
+                                  setShowJobModal(true)
+                                  generatePreview(full.id, job.title, job.salary || '')
+                                }
+                              }}
                                 style={{ width: '100%', height: 28, background: '#7c3aed', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
                                 <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2a3 3 0 013 3v1.5a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M5 12c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
-                                {shortlisting === m.candidate_id ? '...' : '+ Invite'}
+                                + Invite
                               </button>
                             )}
                             {stage.id === 'invited' && (
