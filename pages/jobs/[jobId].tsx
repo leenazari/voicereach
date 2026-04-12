@@ -545,6 +545,7 @@ export default function JobPipeline() {
         @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
         * { box-sizing: border-box; }
       `}</style>
 
@@ -1124,6 +1125,34 @@ export default function JobPipeline() {
           onClose={() => setShowEditJob(false)}
           notify={notify}
         />
+      )}
+
+      {/* PROCESSING MODAL — shown during match refresh */}
+      {matching && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: '40px 48px', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 380, width: '90%' }}>
+            <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #EEF2FF' }} />
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#4F46E5', animation: 'spin 0.9s linear infinite' }} />
+              <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #EEF2FF, #DDD6FE)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🔍</div>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Running matches</div>
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>Scoring your candidates against<br/>the job requirements</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#4F46E5', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+              ))}
+            </div>
+            <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+              {['Classifying role family', 'Scoring skills & experience', 'Applying location & sector weights'].map((step, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#4F46E5', animation: `spin ${1 + i * 0.3}s linear infinite`, flexShrink: 0 }} />
+                  {step}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
