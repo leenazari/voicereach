@@ -455,14 +455,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Filter out permanently rejected candidates before matching
-    candidates = candidates.filter((c: any) => !permanentlyRejected.has(c.id))
+    const activeCandidates = candidates.filter((c: any) => !permanentlyRejected.has(c.id))
 
     const SENT_STATUSES = ['voice_sent', 'invited', 'interview_booked', 'interview_done', 'hired']
     const priority = job.match_priority || 'skills'
     const threshold = job.match_threshold || 70
     const results = []
 
-    for (const candidate of candidates || []) {
+    for (const candidate of activeCandidates || []) {
       // Detect if candidate has no CV data (came in via interview link only)
       const hasNoCv = !candidate.experience_summary &&
         !candidate.skills?.length &&
