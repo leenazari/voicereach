@@ -182,7 +182,7 @@ export default function Interviews() {
       // Then fetch completed interviews — either by job_id or by being in job_candidates
       let query = supabase
         .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
         .eq('user_id', session.user.id)
         .not('interview_completed_at', 'is', null)
         .order('interview_score', { ascending: false })
@@ -191,14 +191,14 @@ export default function Interviews() {
         // Get candidates that are either linked by job_id OR appear in job_candidates
         const { data: byJobId } = await supabase
           .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
           .eq('user_id', session.user.id)
           .eq('job_id', jobId)
           .not('interview_completed_at', 'is', null)
 
         const { data: byJc } = await supabase
           .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
           .eq('user_id', session.user.id)
           .in('id', jcIds)
           .not('interview_completed_at', 'is', null)
@@ -212,7 +212,7 @@ export default function Interviews() {
       } else {
         const { data } = await supabase
           .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
           .eq('user_id', session.user.id)
           .eq('job_id', jobId)
           .not('interview_completed_at', 'is', null)
@@ -478,7 +478,7 @@ export default function Interviews() {
                         {stageCandidates.length === 0 ? (
                           <div style={{ fontSize: 11, color: '#d1d5db', textAlign: 'center' as const, padding: '24px 0', fontStyle: 'italic' }}>Drop here</div>
                         ) : stageCandidates.map(c => {
-                          const score = getCombinedScore(c.cv_match_score, c.interview_score)
+                          const score = getCombinedScore(c.cv_match_score, c.interview_score, c.no_cv)
                           const initials = c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                           return (
                             <div key={c.id}
@@ -503,13 +503,16 @@ export default function Interviews() {
                                   <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 3 }}>
                                     <div style={{ background: getScoreBg(score), borderRadius: 8, padding: '3px 8px', textAlign: 'center' as const, minWidth: 46 }}>
                                       <div style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(score), lineHeight: 1 }}>{score}%</div>
-                                      <div style={{ fontSize: 8, color: getScoreColor(score), opacity: 0.7, marginTop: 1 }}>combined</div>
+                                      <div style={{ fontSize: 8, color: getScoreColor(score), opacity: 0.7, marginTop: 1 }}>{c.no_cv ? 'interview' : 'combined'}</div>
                                     </div>
-                                    {c.interview_score && (
-                                      <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '2px 8px', textAlign: 'center' as const, minWidth: 46 }}>
-                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#4F46E5', lineHeight: 1 }}>{c.interview_score}%</div>
-                                        <div style={{ fontSize: 8, color: '#4F46E5', opacity: 0.7, marginTop: 1 }}>interview</div>
+                                    {!c.no_cv && c.cv_match_score && c.interview_score && (
+                                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2, alignItems: 'flex-end' }}>
+                                        <div style={{ fontSize: 9, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>CV {c.cv_match_score}%</div>
+                                        <div style={{ fontSize: 9, color: '#4F46E5', background: '#EEF2FF', padding: '1px 5px', borderRadius: 4 }}>Int {c.interview_score}%</div>
                                       </div>
+                                    )}
+                                    {c.no_cv && c.interview_score && (
+                                      <div style={{ fontSize: 9, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>No CV</div>
                                     )}
                                   </div>
                                 </div>
@@ -815,12 +818,30 @@ export default function Interviews() {
             {/* HEADER */}
             <div style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63)', borderRadius: '16px 16px 0 0', padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: getScoreColor(getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score)), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score)}%</span>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: getScoreColor(getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score, selectedCandidate.no_cv)), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{getCombinedScore(selectedCandidate.cv_match_score, selectedCandidate.interview_score, selectedCandidate.no_cv)}%</span>
                 </div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>{selectedCandidate.name}</div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{selectedCandidate.role_applied}{selectedCandidate.last_employer ? ` · ${selectedCandidate.last_employer}` : ''}</div>
+                  {/* Score breakdown */}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    {selectedCandidate.interview_score && (
+                      <span style={{ fontSize: 11, background: 'rgba(79,70,229,0.3)', color: '#a5b4fc', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+                        Interview {selectedCandidate.interview_score}%
+                      </span>
+                    )}
+                    {!selectedCandidate.no_cv && selectedCandidate.cv_match_score && (
+                      <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>
+                        CV {selectedCandidate.cv_match_score}%
+                      </span>
+                    )}
+                    {selectedCandidate.no_cv && (
+                      <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', padding: '2px 8px', borderRadius: 6 }}>
+                        No CV · interview score only
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setSelectedCandidate(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 24, cursor: 'pointer' }}>×</button>
