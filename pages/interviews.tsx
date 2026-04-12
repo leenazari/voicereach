@@ -123,19 +123,37 @@ export default function Interviews() {
 
     // Fetch candidate counts for all jobs
     if (jobData && jobData.length > 0) {
+      // Count interviewed candidates via both job_id and job_candidates linkage
       const { data: candidateData } = await supabase
         .from('candidates')
-        .select('job_id')
+        .select('job_id, id')
         .eq('user_id', session.user.id)
-        .in('job_id', jobData.map((j: any) => j.id))
         .not('interview_completed_at', 'is', null)
-      if (candidateData) {
-        const counts: Record<string, number> = {}
-        for (const c of candidateData) {
-          if (c.job_id) counts[c.job_id] = (counts[c.job_id] || 0) + 1
+
+      const { data: jcData } = await supabase
+        .from('job_candidates')
+        .select('candidate_id, job_id')
+        .in('job_id', jobData.map((j: any) => j.id))
+
+      const counts: Record<string, Set<string>> = {}
+      // Count by direct job_id
+      for (const c of candidateData || []) {
+        if (c.job_id) {
+          if (!counts[c.job_id]) counts[c.job_id] = new Set()
+          counts[c.job_id].add(c.id)
         }
-        setCandidateCounts(counts)
       }
+      // Also count via job_candidates
+      const completedIds = new Set((candidateData || []).map((c: any) => c.id))
+      for (const jc of jcData || []) {
+        if (completedIds.has(jc.candidate_id)) {
+          if (!counts[jc.job_id]) counts[jc.job_id] = new Set()
+          counts[jc.job_id].add(jc.candidate_id)
+        }
+      }
+      const finalCounts: Record<string, number> = {}
+      for (const [jobId, set] of Object.entries(counts)) finalCounts[jobId] = set.size
+      setCandidateCounts(finalCounts)
     }
   }
 
@@ -152,14 +170,58 @@ export default function Interviews() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      const { data } = await supabase
+
+      // First get candidate IDs from job_candidates table (covers all pipeline candidates)
+      const { data: jcData } = await supabase
+        .from('job_candidates')
+        .select('candidate_id')
+        .eq('job_id', jobId)
+
+      const jcIds = (jcData || []).map((r: any) => r.candidate_id)
+
+      // Then fetch completed interviews — either by job_id or by being in job_candidates
+      let query = supabase
         .from('candidates')
         .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
         .eq('user_id', session.user.id)
-        .eq('job_id', jobId)
         .not('interview_completed_at', 'is', null)
         .order('interview_score', { ascending: false })
-      setJobCandidates(prev => ({ ...prev, [jobId]: data || [] }))
+
+      if (jcIds.length > 0) {
+        // Get candidates that are either linked by job_id OR appear in job_candidates
+        const { data: byJobId } = await supabase
+          .from('candidates')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .eq('user_id', session.user.id)
+          .eq('job_id', jobId)
+          .not('interview_completed_at', 'is', null)
+
+        const { data: byJc } = await supabase
+          .from('candidates')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .eq('user_id', session.user.id)
+          .in('id', jcIds)
+          .not('interview_completed_at', 'is', null)
+
+        // Merge and deduplicate
+        const all = [...(byJobId || []), ...(byJc || [])]
+        const seen = new Set()
+        const merged = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
+        merged.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
+        setJobCandidates(prev => ({ ...prev, [jobId]: merged }))
+      } else {
+        const { data } = await supabase
+          .from('candidates')
+          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id')
+          .eq('user_id', session.user.id)
+          .eq('job_id', jobId)
+          .not('interview_completed_at', 'is', null)
+          .order('interview_score', { ascending: false })
+        setJobCandidates(prev => ({ ...prev, [jobId]: data || [] }))
+      }
+    } finally {
+      setLoadingCandidates(null)
+    }
     } finally {
       setLoadingCandidates(null)
     }
@@ -314,30 +376,32 @@ export default function Interviews() {
            </div>
 
            {/* RIGHT WHITE AREA — buttons */}
-           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 14px', gap: 6, borderLeft: '0.5px solid #e5e7eb', background: 'white' }}>
+           <div onClick={() => setExpandedPipeline(expandedPipeline === job.id ? null : job.id)}
+             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 14px', gap: 6, borderLeft: '0.5px solid #e5e7eb', background: 'white', cursor: 'pointer' }}
+             title="Click to toggle pipeline">
              {pack ? (
                <>
-                 <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
+                 <button onClick={e => { e.stopPropagation(); const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
                    Copy link
                  </button>
-                 <button onClick={() => { setEditingPack(pack); setShowModal(true) }}
+                 <button onClick={e => { e.stopPropagation(); setEditingPack(pack); setShowModal(true) }}
                    style={{ padding: '8px 13px', background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
                    Edit pack
                  </button>
-                 <button onClick={() => generateInterview(job)} disabled={isGenerating}
+                 <button onClick={e => { e.stopPropagation(); generateInterview(job) }} disabled={isGenerating}
                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#f59e0b', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}>
                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 7c0-2.8 2.2-5 5-5a5 5 0 014.9 4M12 7c0 2.8-2.2 5-5 5a5 5 0 01-4.9-4"/><path d="M10 2l2 2-2 2M4 12l-2-2 2-2"/></svg>
                    {isGenerating ? 'Regenerating...' : 'Regenerate'}
                  </button>
-                 <button onClick={() => deletePack(pack)}
+                 <button onClick={e => { e.stopPropagation(); deletePack(pack) }}
                    style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
                  </button>
                </>
              ) : (
-               <button onClick={() => generateInterview(job)} disabled={isGenerating}
+               <button onClick={e => { e.stopPropagation(); generateInterview(job) }} disabled={isGenerating}
                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}>
                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
                  {isGenerating ? 'Generating...' : 'Generate interview'}
