@@ -183,48 +183,35 @@ export default function Interviews() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Get all candidate IDs in this job's pipeline
+      // Get all candidates in this job's pipeline that have progressed past invited
       const { data: jcData } = await supabase
         .from('job_candidates')
         .select('candidate_id, status')
         .eq('job_id', jobId)
+        .in('status', ['interview_done', 'interviewed', 'second_round', 'job_offer', 'rejected'])
 
-      const jcIds = (jcData || []).map((r: any) => r.candidate_id)
-      // Candidates with interview_done status should always show even if interview_completed_at not set yet
-      const interviewDoneIds = (jcData || [])
-        .filter((r: any) => r.status === 'interview_done' || r.status === 'interviewed')
-        .map((r: any) => r.candidate_id)
-
-      if (jcIds.length === 0) {
+      if (!jcData || jcData.length === 0) {
         setJobCandidates(prev => ({ ...prev, [jobId]: [] }))
         return
       }
 
-      // Fetch by job_id with completed interview
+      const candidateIds = jcData.map((r: any) => r.candidate_id)
+
+      // Fetch candidate details — no interview_completed_at filter, use job_candidates status
+      const { data: candidateData } = await supabase
+        .from('candidates')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
+        .in('id', candidateIds)
+
+      // Also check by direct job_id link for candidates who applied via interview link
       const { data: byJobId } = await supabase
         .from('candidates')
         .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-        .eq('user_id', session.user.id)
         .eq('job_id', jobId)
         .not('interview_completed_at', 'is', null)
 
-      // Fetch by job_candidates membership with completed interview
-      const { data: byJc } = await supabase
-        .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-        .eq('user_id', session.user.id)
-        .in('id', jcIds)
-        .not('interview_completed_at', 'is', null)
-
-      // Also fetch interview_done candidates even without interview_completed_at (scoring may have failed)
-      const { data: byStatus } = interviewDoneIds.length > 0 ? await supabase
-        .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-        .eq('user_id', session.user.id)
-        .in('id', interviewDoneIds) : { data: [] }
-
       // Merge and deduplicate
-      const all = [...(byJobId || []), ...(byJc || []), ...(byStatus || [])]
+      const all = [...(candidateData || []), ...(byJobId || [])]
       const seen = new Set()
       const merged = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
       merged.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
