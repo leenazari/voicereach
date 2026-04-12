@@ -549,10 +549,11 @@ export default function Interviews() {
             const needsSetupJobs = jobs.filter(j => !getPackForJob(j.id))
             const totalInterviewed = Object.values(candidateCounts).reduce((a, b) => a + b, 0)
 
-            const filteredReady = activeFilter === 'all' || activeFilter === 'ready'
-              ? readyJobs.filter(j => activeFilter === 'candidates' ? (candidateCounts[j.id] || 0) > 0 : true)
-              : activeFilter === 'candidates' ? readyJobs.filter(j => (candidateCounts[j.id] || 0) > 0)
-              : []
+            const filteredReady = activeFilter === 'candidates'
+              ? readyJobs.filter(j => (candidateCounts[j.id] || 0) > 0)
+              : activeFilter === 'needs_setup'
+              ? []
+              : readyJobs
             const filteredNeeds = activeFilter === 'all' || activeFilter === 'needs_setup' ? needsSetupJobs : []
 
             const statBoxStyle = (color: string, ring: string, isActive: boolean): React.CSSProperties => ({
