@@ -30,7 +30,7 @@ function buildCalendarInvite(candidate: Candidate, interviewLink: string): strin
     start,
     end,
     summary: `Interview - ${candidate.job_title || candidate.role_applied}`,
-    description: `Your interview link: ${interviewLink}\n\nClick the link to start your AI interview or schedule for later.`,
+    description: `Your interview link: ${interviewLink}\n\nClick the link to start your interview or schedule for later.`,
     url: interviewLink,
     organizer: { name: 'VoiceReach', email: FROM }
   })
@@ -87,7 +87,7 @@ export async function sendVoiceOutreachEmail(
 
     <!-- START INTERVIEW BUTTON -->
     <div style="background: linear-gradient(135deg, #1D9E75, #0d7a5a); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center;">
-      <p style="font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎙 AI Interview</p>
+      <p style="font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎙 Interview</p>
       <p style="font-size: 15px; color: white; font-weight: 700; margin: 0 0 16px; line-height: 1.5;">
         Ready to interview for ${jobTitle}?<br/>
         <span style="font-size: 13px; font-weight: 400; opacity: 0.8;">Takes around 9 minutes. Start now or schedule for later.</span>
@@ -95,10 +95,7 @@ export async function sendVoiceOutreachEmail(
       <a href="${directInterviewLink || interviewLink}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
         Start my interview →
       </a>
-      ${interviewLink ? `<br/><a href="${interviewLink}" style="display: inline-block; background: transparent; color: rgba(255,255,255,0.8); padding: 8px 20px; border-radius: 50px; text-decoration: none; font-weight: 500; font-size: 13px; border: 1px solid rgba(255,255,255,0.4); margin-top: 8px;">
-        🎧 Play voice note first
-      </a>` : ''}
-      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">AI powered · No download needed · Go straight in</p>
+      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">No download needed · Go straight in</p>
     </div>
 
     <!-- SCHEDULE OPTION -->
