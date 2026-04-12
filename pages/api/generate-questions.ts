@@ -120,6 +120,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (title.includes('junior') || title.includes('graduate') || title.includes('entry') || title.includes('apprentice')) seniority = 'junior'
     if (title.includes('senior') || title.includes('lead') || title.includes('head') || title.includes('director') || title.includes('manager') || title.includes('principal')) seniority = 'senior'
 
+    const skills = job.required_skills || []
+    const coreSkills = skills.slice(0, 3)
+    const importantSkills = skills.slice(3, 6)
+    const additionalSkills = skills.slice(6)
+
     const roleInput = `ROLE TITLE: ${job.title}
 SENIORITY: ${seniority}
 INDUSTRY: ${job.sector || 'Not specified'}
@@ -128,8 +133,20 @@ INTERVIEW PURPOSE: Assess candidate suitability for the role and verify CV claim
 CORE RESPONSIBILITIES:
 ${job.description ? job.description.substring(0, 600) : 'Not specified'}
 
-MUST HAVE SKILLS:
-${(job.required_skills || []).map((s: string) => `- ${s}`).join('\n') || '- Not specified'}
+MUST-HAVE SKILLS (critical — weight questions heavily around these, probe hard for evidence):
+${coreSkills.map((s: string) => `- ${s}`).join('\n') || '- Not specified'}
+
+IMPORTANT SKILLS (expected — questions should touch on these):
+${importantSkills.map((s: string) => `- ${s}`).join('\n') || '- None specified'}
+
+NICE-TO-HAVE SKILLS (bonus if present, do not penalise absence):
+${additionalSkills.map((s: string) => `- ${s}`).join('\n') || '- None specified'}
+
+QUESTION WEIGHTING INSTRUCTION:
+- At least 3 of the 6 questions must directly probe the MUST-HAVE skills above
+- The scoring_context for each question must explicitly state what a strong answer demonstrates in relation to the must-have skills
+- Red flags should specifically call out inability to evidence the must-have skills
+- cv_probe questions should prioritise verifying claims related to the must-have skills
 
 QUESTION STYLE: mixed
 INTERVIEW LENGTH: standard
