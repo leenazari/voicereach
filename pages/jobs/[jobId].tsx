@@ -445,10 +445,10 @@ export default function JobPipeline() {
     if (dragId) {
       const candidate = candidates.find(c => c.id === dragId)
       if (candidate && candidate.pipeline_status !== status) {
-        if (status === 'invited' && candidate.pipeline_status === 'shortlisted') {
+        if (status === 'interview_done') {
+          notify('Interview Done is set automatically when a candidate completes their interview', 'error')
+        } else if (status === 'invited') {
           openSendModal(candidate)
-        } else if (status === 'invited' && candidate.pipeline_status !== 'shortlisted') {
-          notify('Move to Shortlisted first', 'error')
         } else {
           await updatePipelineStatus(dragId, status)
         }
@@ -743,38 +743,38 @@ export default function JobPipeline() {
 
                               {/* Stage action button */}
                               {stage.id === 'matched' && (
-                                <button onClick={() => updatePipelineStatus(candidate.id, 'shortlisted')} style={{ width: '100%', padding: '6px 0', background: '#e0f2fe', color: '#0891b2', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                                  + Shortlist
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'shortlisted')} style={{ width: '100%', padding: '8px 0', background: '#0891b2', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 6 }}>
+                                  Shortlist →
                                 </button>
                               )}
                               {stage.id === 'shortlisted' && (
-                                <button onClick={() => openSendModal(candidate)} disabled={sending === candidate.id} style={{ width: '100%', padding: '6px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                                  {sending === candidate.id ? 'Sending...' : '🎙 Send voice note & interview'}
+                                <button onClick={() => openSendModal(candidate)} disabled={sending === candidate.id} style={{ width: '100%', padding: '8px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 6 }}>
+                                  {sending === candidate.id ? 'Sending...' : '🎙 Send invite →'}
                                 </button>
                               )}
                               {stage.id === 'invited' && (
-                                <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500 }}>✓ Voice note & interview sent</div>
+                                <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500, marginBottom: 6, padding: '7px 0', textAlign: 'center' as const, background: '#f3e8ff', borderRadius: 8 }}>✓ Invite sent · awaiting interview</div>
                               )}
                               {stage.id === 'interview_done' && (
-                                <div style={{ display: 'flex', gap: 5 }}>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'second_round')} style={{ flex: 1, padding: '5px 0', background: '#f3e8ff', color: '#7c3aed', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>→ 2nd Round</button>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '5px 8px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+                                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'second_round')} style={{ flex: 1, padding: '8px 0', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>2nd Round →</button>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '8px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✕</button>
                                 </div>
                               )}
                               {stage.id === 'second_round' && (
-                                <div style={{ display: 'flex', gap: 5 }}>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'job_offer')} style={{ flex: 1, padding: '5px 0', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>→ Job Offer</button>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '5px 8px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+                                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'job_offer')} style={{ flex: 1, padding: '8px 0', background: '#15803d', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Job Offer →</button>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '8px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✕</button>
                                 </div>
                               )}
                               {stage.id === 'job_offer' && (
-                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600 }}>🎉 Job offer extended</div>
+                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, padding: '7px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 8, marginBottom: 6 }}>🎉 Job offer extended</div>
                               )}
 
-                              {/* Reject button on all non-rejected stages */}
-                              {!['interview_done', 'second_round', 'rejected'].includes(stage.id) && stage.id !== 'job_offer' && (
-                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ width: '100%', marginTop: 4, padding: '4px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, fontSize: 10, cursor: 'pointer' }}>
-                                  Reject
+                              {/* Reject — not on interview_done (handled inline), not on job_offer or rejected */}
+                              {!['interview_done', 'second_round', 'rejected', 'job_offer'].includes(stage.id) && (
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ width: '100%', padding: '6px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                                  ✕ Reject
                                 </button>
                               )}
                             </div>
