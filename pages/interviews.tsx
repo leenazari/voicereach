@@ -49,6 +49,7 @@ type InterviewCandidate = {
   cv_contradictions?: any[]
   pipeline_stage?: string
   job_id?: string
+  no_cv?: boolean
 }
 
 const PIPELINE_STAGES = [
