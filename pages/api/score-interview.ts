@@ -175,6 +175,15 @@ Respond ONLY with valid JSON, no markdown, no backticks:
       })
       .eq('id', candidate.id)
 
+    // Update job_candidates status to interview_done so it appears in pipeline
+    if (candidate.job_id) {
+      await supabase
+        .from('job_candidates')
+        .update({ status: 'interview_done', updated_at: new Date().toISOString() })
+        .eq('candidate_id', candidate.id)
+        .eq('job_id', candidate.job_id)
+    }
+
     // Send recruiter notification
     if (job) await sendRecruiterNotification(candidate, job, scored)
 
@@ -189,6 +198,14 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         interview_completed_at: new Date().toISOString()
       })
       .eq('id', candidate.id)
+    // Still move to interview_done in pipeline even if scoring failed
+    if (candidate.job_id) {
+      await supabase
+        .from('job_candidates')
+        .update({ status: 'interview_done', updated_at: new Date().toISOString() })
+        .eq('candidate_id', candidate.id)
+        .eq('job_id', candidate.job_id)
+    }
     return res.status(200).json({ success: true, score: null, warning: 'Scoring failed but interview saved' })
   }
 }
