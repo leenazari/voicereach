@@ -847,11 +847,11 @@ export default function Dashboard() {
         {/* SPLIT CARD: colour left 30%, white right 70% */}
         <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 68 }}>
 
-          {/* LEFT COLOUR STRIP — clickable, opens pipeline */}
+          {/* LEFT COLOUR STRIP — clickable, toggles pipeline */}
           <div
-            onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
+            onClick={() => setExpandedPipeline(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
             style={{ width: '30%', flexShrink: 0, background: gradient, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer', minWidth: 0 }}
-            title="Click to view pipeline"
+            title="Click to toggle pipeline"
           >
             {job.logo_url ? (
               <img src={job.logo_url} alt={job.company} style={{ width: 40, height: 40, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
