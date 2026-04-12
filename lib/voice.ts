@@ -103,9 +103,9 @@ function pick(options: string[]): string {
 
 const OPENER_VARIANTS = [
   `I have literally just seen your CV and I had to reach out straight away because I have got something really exciting for you.`,
-  `I have just been looking through your profile and honestly I could not wait to get in touch because I think I have got something brilliant for you.`,
-  `I came across your CV today and something immediately jumped out at me because I have got a role that I think is a genuinely great fit for you.`,
-  `I have just been reviewing some profiles and yours stopped me in my tracks because I have got an opportunity I really think you need to hear about.`
+  `I came across your profile today and something immediately jumped out at me — I think I have got a role that could be a brilliant fit for you.`,
+  `I have just been reviewing some CVs and yours stopped me in my tracks. I have got an opportunity I really think you need to hear about.`,
+  `I have just seen your background and honestly I could not wait to get in touch — I think I have got something here that is right up your street.`
 ]
 
 const FIT_VARIANTS = [
@@ -123,24 +123,24 @@ const URGENCY_VARIANTS = [
 ]
 
 const INTERVIEW_LINK_VARIANTS = [
-  `The link I have just sent you in this email is your actual interview for this job. Not a call with me, not a pre-screen, the real thing. You click it and you are straight in.`,
-  `The link in this email takes you straight to your interview for this role. This is not a pre-screen or a chat with me, this is the actual interview. One click and you are in.`,
-  `What I have sent you is a direct link to your interview. Not a registration form, not a call with a consultant, your real interview. Click it and you are straight into the process.`,
-  `The link in this email is your interview. Not a pre-screen, not a form to fill in, the actual interview for this job. Click it and you are straight in.`
+  `I have sent you a direct link to your interview in this email. Click it and you will do a quick nine minute AI interview — your answers go straight to the hiring manager. No phone screen, no waiting, just click and you are straight in the process.`,
+  `The link in this email takes you directly into your interview. It is a nine minute AI interview, no human on the other end, and your answers go straight to the client. Just click, answer a few questions, and you are in.`,
+  `What I have sent you is your actual interview link — not a pre-screen, not a call with me. It is a nine minute AI interview and everything you say goes directly to the decision maker. Click the link and go.`,
+  `I have sent you a link to do your interview right now. Nine minutes, AI powered, your answers go straight to the hiring team. No middleman, no waiting around — just click and you are in the process.`
 ]
 
 const INTEREST_VARIANTS = [
-  `As you can imagine there has been a huge amount of interest in this role and the interview spaces are filling up fast.`,
-  `There has been a really strong response to this one and they are moving through candidates quickly.`,
+  `There has been a strong response to this one and interview spaces are filling up fast.`,
+  `A lot of strong candidates have already applied and they are moving quickly through the process.`,
   `This role has had a lot of attention and they are making decisions fast so timing really does matter here.`,
-  `A lot of strong candidates have already applied for this and they are not hanging around with their decisions.`
+  `There has been a huge amount of interest in this and they are not hanging around with their decisions.`
 ]
 
 const CLOSER_VARIANTS = [
-  `Get in there today, do your interview, and I am really confident that with your skills and background you are exactly what they are looking for. Go and get it!`,
-  `Get in there today and show them what you can do. I genuinely think you are exactly what they need. Go and get it!`,
-  `Do not wait on this one. Get your interview done today and I am confident you will impress them. Go and get it!`,
-  `Jump in today, do your interview and back yourself. With your background I really think this could be yours. Go on, get in there!`
+  `Get in there today, do your nine minute interview, and I am really confident that with your background you are exactly what they are looking for. Go and get it!`,
+  `Do not sit on this one. Click the link, do your interview today, and back yourself. I genuinely think this could be yours. Go and get it!`,
+  `Jump in today, it only takes nine minutes, and I am confident you will impress them. Go on, get in there!`,
+  `Get your interview done today while you are thinking about it. Nine minutes and you are in the process. I am rooting for you, go and get it!`
 ]
 
 async function generateKeywordMatchLine(
@@ -167,7 +167,7 @@ async function generateKeywordMatchLine(
         max_tokens: 200,
         messages: [{
           role: 'user',
-          content: `You are writing one sentence for a recruiter voice note to a candidate. The sentence must naturally describe why the candidate's matched skills make them perfect for this job. Write it in second person (you/your). Make it sound warm, specific and conversational — like a recruiter who genuinely read their CV and is excited about the match. Do not list the keywords mechanically. Weave them into a natural description of what the candidate has done and why it fits.
+          content: `You are writing one sentence for a recruiter voice note to a candidate. The sentence must naturally describe why the candidate's matched skills make them perfect for this job. Write it in second person (you/your). Make it sound warm, specific and conversational — like a recruiter who genuinely read their CV and is excited about the match. Do not list the keywords mechanically. Weave them into a natural description of what the candidate has done and why it fits. IMPORTANT: Do NOT mention the employer name — that is handled separately. Focus purely on skills, experience and fit.
 
 Job title: ${jobTitle}
 Candidate's matched keywords: ${top3.join(', ')}
@@ -268,7 +268,15 @@ export async function buildScriptFromMatchAsync(candidate: Candidate, matchData:
   const interest = pick(INTEREST_VARIANTS)
   const closer = pick(CLOSER_VARIANTS)
 
-  const script = `Hi ${firstName}... I hope you are having a brilliant day! ${opener} We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${keywordMatchLine ? keywordMatchLine + ' ' : ''}${employerLine} makes you such a strong fit for what they need ${sector} ${fitLine} ${locationLine ? locationLine + ' ' : ''}${urgency} ${interviewLink} ${interest} They are going to make a decision very quickly so please do not sit on this one ${firstName}. ${closer}`
+  // Only include employerSuffix if keywordMatchLine didn't already naturally reference the employer
+  const employerMentioned = cleanedLastEmployer
+    ? keywordMatchLine.toLowerCase().includes(cleanedLastEmployer.toLowerCase())
+    : false
+  const employerSuffix = (!employerMentioned && cleanedLastEmployer)
+    ? `Your time at ${cleanedLastEmployer} makes you such a strong fit for what they need.`
+    : ''
+
+  const script = `Hi ${firstName}... I hope you are having a brilliant day! ${opener} We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${keywordMatchLine ? keywordMatchLine + ' ' : ''}${employerSuffix ? employerSuffix + ' ' : ''}${sector ? sector + '. ' : ''}${fitLine} ${locationLine ? locationLine + ' ' : ''}${urgency} ${interviewLink} ${interest} They are going to make a decision very quickly so please do not sit on this one ${firstName}. ${closer}`
 
   return trimToSixtySeconds(script)
 }
@@ -319,7 +327,11 @@ export function buildScriptFromMatch(candidate: Candidate, matchData: any, job: 
   const interest = pick(INTEREST_VARIANTS)
   const closer = pick(CLOSER_VARIANTS)
 
-  const script = `Hi ${firstName}... I hope you are having a brilliant day! ${opener} We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${employerLine} makes you such a strong fit for what they need ${sector} ${fitLine} ${urgency} ${interviewLink} ${interest} They are going to make a decision very quickly so please do not sit on this one ${firstName}. ${closer}`
+  const employerSuffix = cleanedLastEmployer
+    ? `Your time at ${cleanedLastEmployer} makes you such a strong fit for what they need.`
+    : ''
+
+  const script = `Hi ${firstName}... I hope you are having a brilliant day! ${opener} We have got an amazing ${jobTitle} role ${company}${salaryLine} and honestly ${firstName}, ${hookLine}. ${employerSuffix ? employerSuffix + ' ' : ''}${sector ? sector + '. ' : ''}${fitLine} ${urgency} ${interviewLink} ${interest} They are going to make a decision very quickly so please do not sit on this one ${firstName}. ${closer}`
 
   return trimToSixtySeconds(script)
 }
