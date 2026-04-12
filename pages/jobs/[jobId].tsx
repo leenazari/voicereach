@@ -50,6 +50,7 @@ type PipelineCandidate = {
   pipeline_status: string
   interview_score?: number | null
   no_cv?: boolean
+  job_id?: string | null
 }
 
 type Notification = { id: number; message: string; type: 'success' | 'error' }
@@ -169,7 +170,8 @@ export default function JobPipeline() {
       const merged: PipelineCandidate[] = (candidateData || []).map((c: any) => {
         const jc = jobCandidates.find((j: any) => j.candidate_id === c.id)
         const cvScore = jc?.match_score || 0
-        const interviewScore = c.interview_score || null
+        const interviewScore = (c.interview_score && c.job_id === jobId) ? c.interview_score : null
+        const hasOtherInterview = !!(c.interview_score && c.job_id && c.job_id !== jobId)
         const displayScore = getCombinedScore(cvScore, interviewScore, c.no_cv)
         return {
           ...c,
@@ -177,7 +179,9 @@ export default function JobPipeline() {
           keyword_matches: jc?.keyword_matches || [],
           pipeline_status: normaliseStatus(jc?.status || 'matched'),
           interview_score: interviewScore,
-          no_cv: c.no_cv || false
+          no_cv: c.no_cv || false,
+          job_id: c.job_id || null,
+          has_other_interview: hasOtherInterview
         }
       })
 
@@ -745,6 +749,9 @@ export default function JobPipeline() {
                                 )}
                                 {candidate.no_cv && (
                                   <div style={{ fontSize: 9, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>No CV</div>
+                                )}
+                                {(candidate as any).has_other_interview && (
+                                  <div style={{ fontSize: 9, color: '#92400e', background: '#fef3c7', padding: '1px 5px', borderRadius: 4 }}>Interview: other role</div>
                                 )}
                               </div>
                             </div>
