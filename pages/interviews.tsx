@@ -418,72 +418,77 @@ export default function Interviews() {
                               draggable
                               onDragStart={e => { e.dataTransfer.setData('candidateId', c.id) }}
                               onClick={() => setSelectedCandidate(c)}
-                              style={{ background: 'white', border: '0.5px solid #e5e7eb', borderLeft: `3px solid ${getScoreColor(score)}`, borderRadius: 8, padding: '11px 12px', cursor: 'grab' }}
+                              style={{ background: 'white', border: '0.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', cursor: 'grab', transition: 'border-color 0.15s' }}
                               onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
                               onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-
-                              {/* Name + score */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <div style={{ width: 28, height: 28, borderRadius: 7, background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: stage.color, flexShrink: 0 }}>{initials}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{c.name}</div>
+                              {/* Score bar */}
+                              <div style={{ height: 2, background: getScoreColor(score) }} />
+                              <div style={{ padding: '10px 11px 9px' }}>
+                                {/* Name + score pill */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 1 }}>{c.name}</div>
+                                    <div style={{ fontSize: 11, color: '#6b7280' }}>{c.role_applied}</div>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>
+                                      {[c.last_employer, c.location, c.years_experience > 0 ? `${c.years_experience}yr` : null].filter(Boolean).join(' · ')}
+                                    </div>
+                                  </div>
+                                  <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 3 }}>
+                                    <div style={{ background: getScoreBg(score), borderRadius: 8, padding: '3px 8px', textAlign: 'center' as const, minWidth: 46 }}>
+                                      <div style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(score), lineHeight: 1 }}>{score}%</div>
+                                      <div style={{ fontSize: 8, color: getScoreColor(score), opacity: 0.7, marginTop: 1 }}>combined</div>
+                                    </div>
+                                    {c.interview_score && (
+                                      <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '2px 8px', textAlign: 'center' as const, minWidth: 46 }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#4F46E5', lineHeight: 1 }}>{c.interview_score}%</div>
+                                        <div style={{ fontSize: 8, color: '#4F46E5', opacity: 0.7, marginTop: 1 }}>interview</div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                                <div style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: getScoreBg(score), color: getScoreColor(score), flexShrink: 0 }}>{score}%</div>
+                                {/* Keywords */}
+                                {c.interview_keywords && c.interview_keywords.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                                    {c.interview_keywords.slice(0, 3).map((kw: string) => (
+                                      <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>⚡ {kw}</span>
+                                    ))}
+                                    {c.interview_keywords.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{c.interview_keywords.length - 3}</span>}
+                                  </div>
+                                )}
+                                <div style={{ height: '0.5px', background: '#e5e7eb', margin: '0 -11px 8px' }} />
+                                {/* Actions */}
+                                {stage.id === 'interview_done' && (
+                                  <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                                    <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'second_round') }}
+                                      style={{ flex: 1, height: 28, background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                                      → 2nd Round
+                                    </button>
+                                    <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'rejected') }}
+                                      style={{ width: 28, height: 28, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                                  </div>
+                                )}
+                                {stage.id === 'second_round' && (
+                                  <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                                    <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'job_offer') }}
+                                      style={{ flex: 1, height: 28, background: '#15803d', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                                      Job Offer →
+                                    </button>
+                                    <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'rejected') }}
+                                      style={{ width: 28, height: 28, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                                  </div>
+                                )}
+                                {stage.id === 'job_offer' && (
+                                  <div style={{ fontSize: 10, color: '#15803d', fontWeight: 600, padding: '6px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 6, marginBottom: 4 }}>🎉 Job offer extended</div>
+                                )}
+                                {stage.id !== 'rejected' && stage.id !== 'job_offer' && (
+                                  <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'rejected') }}
+                                    style={{ width: '100%', height: 28, background: 'transparent', color: '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 6, fontSize: 10, cursor: 'pointer' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#dc2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#fecaca' }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb' }}>
+                                    Reject
+                                  </button>
+                                )}
                               </div>
-
-                              {/* Role + employer */}
-                              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 1 }}>{c.role_applied}</div>
-                              {c.last_employer && <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{c.last_employer}</div>}
-
-                              {/* Location */}
-                              {c.location && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>
-                                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
-                                  {c.location}
-                                </div>
-                              )}
-
-                              {/* Scores row */}
-                              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                                {c.cv_match_score && <span style={{ fontSize: 10, background: '#f3f4f6', color: '#6b7280', padding: '1px 6px', borderRadius: 4 }}>CV {c.cv_match_score}%</span>}
-                                {c.interview_score && <span style={{ fontSize: 10, background: getScoreBg(c.interview_score), color: getScoreColor(c.interview_score), padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>AI {c.interview_score}%</span>}
-                                {c.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEF2FF', color: '#4F46E5', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>{c.years_experience}yr</span>}
-                              </div>
-
-                              {/* Interview keywords */}
-                              {c.interview_keywords && c.interview_keywords.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
-                                  {c.interview_keywords.slice(0, 3).map((kw: string) => (
-                                    <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>⚡ {kw}</span>
-                                  ))}
-                                  {c.interview_keywords.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{c.interview_keywords.length - 3}</span>}
-                                </div>
-                              )}
-
-                              {/* Forward action button */}
-                              {stage.id === 'interview_done' && (
-                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'second_round') }}
-                                  style={{ width: '100%', padding: '7px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>
-                                  2nd Round →
-                                </button>
-                              )}
-                              {stage.id === 'second_round' && (
-                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'job_offer') }}
-                                  style={{ width: '100%', padding: '7px 0', background: '#15803d', color: 'white', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>
-                                  Job Offer →
-                                </button>
-                              )}
-                              {stage.id === 'job_offer' && (
-                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, padding: '6px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 7, marginBottom: 5 }}>🎉 Job offer extended</div>
-                              )}
-
-                              {/* Reject — always available */}
-                              {stage.id !== 'rejected' && stage.id !== 'job_offer' && (
-                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'rejected') }}
-                                  style={{ width: '100%', padding: '5px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                                  ✕ Reject
-                                </button>
-                              )}
                             </div>
                           )
                         })}
