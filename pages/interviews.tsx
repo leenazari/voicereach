@@ -291,8 +291,10 @@ export default function Interviews() {
          {/* SPLIT CARD: colour left 30%, white right 70% */}
          <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 68 }}>
 
-           {/* LEFT COLOUR STRIP */}
-           <div style={{ width: '30%', flexShrink: 0, background: gradient, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', minWidth: 0 }}>
+           {/* LEFT COLOUR STRIP — clickable, toggles pipeline */}
+           <div onClick={() => setExpandedPipeline(expandedPipeline === job.id ? null : job.id)}
+             style={{ width: '30%', flexShrink: 0, background: gradient, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', minWidth: 0, cursor: 'pointer' }}
+             title="Click to toggle pipeline">
              {job.logo_url ? (
                <img src={job.logo_url} alt={job.company} style={{ width: 40, height: 40, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
              ) : (
