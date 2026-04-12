@@ -94,10 +94,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (uploadError) throw uploadError
 
-    // Generate a signed URL that expires in 7 days
+    // Generate a signed URL that expires in 30 days
     const { data: signedData, error: signedError } = await supabase.storage
       .from('voice-notes')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 7)
+      .createSignedUrl(fileName, 60 * 60 * 24 * 30)
 
     if (signedError || !signedData?.signedUrl) throw new Error('Could not generate signed URL')
 
