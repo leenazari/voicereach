@@ -48,6 +48,8 @@ type PipelineCandidate = {
   match_score: number
   keyword_matches: string[]
   pipeline_status: string
+  interview_score?: number | null
+  no_cv?: boolean
 }
 
 type Notification = { id: number; message: string; type: 'success' | 'error' }
@@ -166,11 +168,16 @@ export default function JobPipeline() {
 
       const merged: PipelineCandidate[] = (candidateData || []).map((c: any) => {
         const jc = jobCandidates.find((j: any) => j.candidate_id === c.id)
+        const cvScore = jc?.match_score || 0
+        const interviewScore = c.interview_score || null
+        const displayScore = getCombinedScore(cvScore, interviewScore, c.no_cv)
         return {
           ...c,
-          match_score: jc?.match_score || 0,
+          match_score: displayScore,
           keyword_matches: jc?.keyword_matches || [],
-          pipeline_status: normaliseStatus(jc?.status || 'matched')
+          pipeline_status: normaliseStatus(jc?.status || 'matched'),
+          interview_score: interviewScore,
+          no_cv: c.no_cv || false
         }
       })
 
@@ -729,13 +736,15 @@ export default function JobPipeline() {
                               <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 3 }}>
                                 <div style={{ background: getScoreBg(candidate.match_score), borderRadius: 8, padding: '3px 8px', textAlign: 'center' as const, minWidth: 48 }}>
                                   <div style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(candidate.match_score), lineHeight: 1 }}>{candidate.match_score}%</div>
-                                  <div style={{ fontSize: 8, color: getScoreColor(candidate.match_score), opacity: 0.7, marginTop: 1 }}>match</div>
+                                  <div style={{ fontSize: 8, color: getScoreColor(candidate.match_score), opacity: 0.7, marginTop: 1 }}>{candidate.no_cv ? 'interview' : candidate.interview_score ? 'combined' : 'match'}</div>
                                 </div>
-                                {(candidate as any).interview_score && (
-                                  <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '2px 8px', textAlign: 'center' as const, minWidth: 48 }}>
-                                    <div style={{ fontSize: 15, fontWeight: 700, color: '#4F46E5', lineHeight: 1 }}>{(candidate as any).interview_score}%</div>
-                                    <div style={{ fontSize: 8, color: '#4F46E5', opacity: 0.7, marginTop: 1 }}>interview</div>
+                                {candidate.interview_score && !candidate.no_cv && (
+                                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2, alignItems: 'flex-end' }}>
+                                    <div style={{ fontSize: 9, color: '#4F46E5', background: '#EEF2FF', padding: '1px 5px', borderRadius: 4 }}>Int {candidate.interview_score}%</div>
                                   </div>
+                                )}
+                                {candidate.no_cv && (
+                                  <div style={{ fontSize: 9, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>No CV</div>
                                 )}
                               </div>
                             </div>
