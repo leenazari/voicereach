@@ -2,29 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
 import JobFormModal from '../../components/JobFormModal'
-
-const PIPELINE_STATUSES = ['matched', 'shortlisted', 'voice_sent', 'interview_booked']
-
-const STATUS_LABELS: Record<string, string> = {
-  matched: 'Matched',
-  shortlisted: 'Shortlisted',
-  voice_sent: 'Voice Sent',
-  interview_booked: 'Interview Booked'
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  matched: '#888',
-  shortlisted: '#534AB7',
-  voice_sent: '#1D9E75',
-  interview_booked: '#639922'
-}
-
-const STATUS_BG: Record<string, string> = {
-  matched: '#f0f0f0',
-  shortlisted: '#EEEDFE',
-  voice_sent: '#E1F5EE',
-  interview_booked: '#EAF3DE'
-}
+import { JOB_STAGES, INTERVIEW_STAGES, normaliseStatus, toDbStatus } from '../../lib/pipeline'
+import { getCombinedScore, getScoreColor, getScoreBg } from '../../lib/scoring'
 
 type Job = {
   id: string
@@ -100,6 +79,8 @@ export default function JobPipeline() {
   const [profileScrollPos, setProfileScrollPos] = useState(0)
   const [shortlistingAll, setShortlistingAll] = useState(false)
   const [showEditJob, setShowEditJob] = useState(false)
+  const [pipelineView, setPipelineView] = useState<'job' | 'interview'>('job')
+  const [showRejected, setShowRejected] = useState(false)
   const notifId = useRef(0)
   const initialized = useRef(false)
   const mouseDownOnOverlay = useRef(false)
@@ -184,9 +165,7 @@ export default function JobPipeline() {
           ...c,
           match_score: jc?.match_score || 0,
           keyword_matches: jc?.keyword_matches || [],
-          pipeline_status: jc?.status === 'shortlist' ? 'shortlisted' :
-            jc?.status === 'voice_sent' ? 'voice_sent' :
-            jc?.status === 'interview_booked' ? 'interview_booked' : 'matched'
+          pipeline_status: normaliseStatus(jc?.status || 'matched')
         }
       })
 
@@ -220,15 +199,23 @@ export default function JobPipeline() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
-    const dbStatus = newStatus === 'shortlisted' ? 'shortlist' :
-      newStatus === 'voice_sent' ? 'voice_sent' :
-      newStatus === 'interview_booked' ? 'interview_booked' : 'longlist'
+    // Interview-only stages go to candidates.pipeline_stage
+    const interviewOnly = ['second_round', 'job_offer']
+    if (interviewOnly.includes(newStatus)) {
+      await supabase.from('candidates').update({ pipeline_stage: newStatus }).eq('id', candidateId)
+    } else {
+      const dbStatus = toDbStatus(newStatus)
+      await supabase.from('job_candidates')
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
+        .eq('job_id', jobId as string)
+        .eq('candidate_id', candidateId)
+    }
 
-    await supabase
-      .from('job_candidates')
-      .update({ status: dbStatus, updated_at: new Date().toISOString() })
-      .eq('job_id', jobId as string)
-      .eq('candidate_id', candidateId)
+    // Rejected: mark permanently so future match refreshes skip them
+    if (newStatus === 'rejected') {
+      await supabase.from('job_candidates')
+        .upsert({ job_id: jobId as string, candidate_id: candidateId, status: 'rejected', permanently_rejected: true, updated_at: new Date().toISOString() }, { onConflict: 'job_id,candidate_id' })
+    }
 
     setCandidates(prev => prev.map(c =>
       c.id === candidateId ? { ...c, pipeline_status: newStatus } : c
@@ -238,7 +225,7 @@ export default function JobPipeline() {
   async function shortlistAllAboveThreshold() {
     const threshold = job?.match_threshold || 70
     const toShortlist = candidates.filter(c =>
-      c.pipeline_status === 'matched' && c.match_score >= threshold
+      c.pipeline_status === 'matched' && c.match_score >= threshold && c.pipeline_status !== 'rejected'
     )
     if (toShortlist.length === 0) {
       notify('No candidates above threshold to shortlist', 'error')
@@ -308,7 +295,7 @@ export default function JobPipeline() {
       const data = await res.json()
       if (data.success) {
         notify(`Voice note sent to ${candidate.name} ✓`)
-        await updatePipelineStatus(candidate.id, 'voice_sent')
+        await updatePipelineStatus(candidate.id, 'invited')
         setSelectedShortlisted(prev => { const n = new Set(prev); n.delete(candidate.id); return n })
       } else notify('Error: ' + data.error, 'error')
     } finally { setSending(null) }
@@ -453,10 +440,10 @@ export default function JobPipeline() {
     if (dragId) {
       const candidate = candidates.find(c => c.id === dragId)
       if (candidate && candidate.pipeline_status !== status) {
-        if (status === 'voice_sent' && candidate.pipeline_status === 'shortlisted') {
+        if (status === 'invited' && candidate.pipeline_status === 'shortlisted') {
           openSendModal(candidate)
-        } else if (status === 'voice_sent') {
-          notify('Move to Shortlisted first before sending', 'error')
+        } else if (status === 'invited' && candidate.pipeline_status !== 'shortlisted') {
+          notify('Move to Shortlisted first', 'error')
         } else {
           await updatePipelineStatus(dragId, status)
         }
@@ -630,123 +617,214 @@ export default function JobPipeline() {
       )}
 
       {/* PIPELINE */}
-      <div style={{ padding: 28, maxWidth: 1400, margin: '0 auto' }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 80, color: '#aaa', fontSize: 14 }}>Loading pipeline...</div>
-        ) : candidates.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 80 }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>◎</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>No candidates matched yet</div>
-            <div style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>Click Find Matches to match your candidates against this job</div>
-            <button onClick={runMatch} disabled={matching} style={{ padding: '10px 24px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              {matching ? '⟳ Finding matches...' : '◎ Find matches'}
+      <div style={{ padding: '20px 24px 40px', maxWidth: 1600, margin: '0 auto' }}>
+
+        {/* TOGGLE + CONTROLS */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3 }}>
+            <button onClick={() => setPipelineView('job')} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: pipelineView === 'job' ? 'white' : 'transparent', color: pipelineView === 'job' ? '#4F46E5' : '#6b7280', boxShadow: pipelineView === 'job' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.15s' }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ marginRight: 6, verticalAlign: 'middle' }}><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
+              Job Pipeline
+            </button>
+            <button onClick={() => setPipelineView('interview')} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: pipelineView === 'interview' ? 'white' : 'transparent', color: pipelineView === 'interview' ? '#4F46E5' : '#6b7280', boxShadow: pipelineView === 'interview' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.15s' }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ marginRight: 6, verticalAlign: 'middle' }}><path d="M7 1v4.5a1 1 0 01-1 1H2"/><circle cx="7" cy="10" r="3"/></svg>
+              Interview Pipeline
             </button>
           </div>
+
+          {pipelineView === 'job' && (
+            <>
+              {aboveThresholdCount > 0 && (
+                <button onClick={shortlistAllAboveThreshold} disabled={shortlistingAll} style={{ padding: '7px 14px', background: shortlistingAll ? '#9ca3af' : '#4F46E5', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                  {shortlistingAll ? 'Moving...' : `Shortlist all above ${threshold}% (${aboveThresholdCount})`}
+                </button>
+              )}
+              {selectedShortlisted.size > 0 && (
+                <button onClick={() => openBulkConfirm()} style={{ padding: '7px 14px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                  Send voice notes ({selectedShortlisted.size} selected)
+                </button>
+              )}
+              {byStatus('shortlisted').length > 0 && selectedShortlisted.size === 0 && (
+                <button onClick={() => openBulkConfirm()} style={{ padding: '7px 14px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                  Send to all shortlisted ({byStatus('shortlisted').length})
+                </button>
+              )}
+            </>
+          )}
+
+          <button onClick={runMatch} disabled={matching} style={{ marginLeft: 'auto', padding: '7px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+            {matching ? 'Matching...' : 'Refresh matches'}
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center' as const, padding: 80, color: '#9ca3af', fontSize: 14 }}>Loading pipeline...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
-            {PIPELINE_STATUSES.map(status => (
-              <div key={status}
-                onDragOver={e => handleDragOver(e, status)}
-                onDrop={e => handleDrop(e, status)}
-                onDragLeave={() => setDragOver(null)}
-                style={{ background: dragOver === status ? '#f0eeff' : 'white', border: dragOver === status ? '2px dashed #534AB7' : '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s', minHeight: 400 }}
-              >
-                {/* COLUMN HEADER */}
-                <div style={{ padding: '12px 14px', borderBottom: '1px solid #f0f0f0', background: 'white' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: status === 'matched' && aboveThresholdCount > 0 ? 8 : 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: STATUS_COLORS[status] }}>{STATUS_LABELS[status]}</span>
-                    <span style={{ fontSize: 11, background: STATUS_BG[status], color: STATUS_COLORS[status], padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{byStatus(status).length}</span>
-                  </div>
-
-                  {status === 'matched' && byStatus('matched').length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {aboveThresholdCount > 0 && (
-                        <button onClick={shortlistAllAboveThreshold} disabled={shortlistingAll} style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                          {shortlistingAll ? '⟳ Moving...' : `⚡ Shortlist all above ${threshold}% (${aboveThresholdCount})`}
-                        </button>
-                      )}
-                      {selectedMatched.size > 0 && (
-                        <button onClick={shortlistSelected} disabled={shortlistingAll} style={{ width: '100%', padding: '7px 10px', background: shortlistingAll ? '#aaa' : '#1D9E75', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: shortlistingAll ? 'not-allowed' : 'pointer' }}>
-                          ✓ Shortlist {selectedMatched.size} selected
-                        </button>
-                      )}
+          <>
+            {/* MAIN COLUMNS */}
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeStages.length}, minmax(0, 1fr))`, gap: 14, marginBottom: 16 }}>
+              {activeStages.map(stage => {
+                const stageCandidates = byStatus(stage.id)
+                const isDragTarget = dragOver === stage.id
+                return (
+                  <div key={stage.id}
+                    onDragOver={e => handleDragOver(e, stage.id)}
+                    onDrop={e => handleDrop(e, stage.id)}
+                    onDragLeave={() => setDragOver(null)}
+                    style={{ background: isDragTarget ? stage.bg : 'white', border: `1.5px ${isDragTarget ? 'dashed' : 'solid'} ${isDragTarget ? stage.color : '#e5e7eb'}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s', minHeight: 500 }}
+                  >
+                    {/* COLUMN HEADER */}
+                    <div style={{ padding: '12px 14px', borderBottom: `1px solid ${stage.border}`, background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: stage.color, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>{stage.label}</span>
+                      <span style={{ fontSize: 11, background: 'white', color: stage.color, padding: '2px 8px', borderRadius: 10, fontWeight: 600, boxShadow: `0 0 0 1.5px ${stage.border}` }}>{stageCandidates.length}</span>
                     </div>
-                  )}
 
-                  {status === 'shortlisted' && byStatus('shortlisted').length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                      <button onClick={selectAllShortlisted} style={{ fontSize: 11, padding: '3px 10px', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Select all</button>
-                      {selectedShortlisted.size > 0 && <button onClick={() => setSelectedShortlisted(new Set())} style={{ fontSize: 11, padding: '3px 10px', background: '#f5f5f5', color: '#888', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Clear</button>}
-                    </div>
-                  )}
-                </div>
+                    {/* COLUMN ACTIONS */}
+                    {stage.id === 'matched' && stageCandidates.length > 0 && (
+                      <div style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6 }}>
+                        <button onClick={shortlistAllAboveThreshold} disabled={shortlistingAll} style={{ flex: 1, padding: '5px 0', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                          Shortlist all above {threshold}%
+                        </button>
+                      </div>
+                    )}
+                    {stage.id === 'shortlisted' && stageCandidates.length > 0 && (
+                      <div style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6 }}>
+                        <button onClick={selectAllShortlisted} style={{ padding: '5px 10px', background: '#e0f2fe', color: '#0891b2', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Select all</button>
+                        {selectedShortlisted.size > 0 && <button onClick={() => setSelectedShortlisted(new Set())} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Clear</button>}
+                      </div>
+                    )}
 
-                {/* CARDS */}
-                <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {byStatus(status).map(c => (
-                    <div key={c.id}
-                      draggable
-                      onDragStart={e => handleDragStart(e, c.id)}
-                      onDragEnd={handleDragEnd}
-                      style={{ background: 'white', border: '1px solid #f0f0f0', borderLeft: `4px solid ${getScoreBorder(c.match_score)}`, borderRadius: 8, padding: '10px 12px', cursor: 'grab', opacity: dragId === c.id ? 0.4 : 1, transition: 'all 0.15s', userSelect: 'none', boxShadow: (status === 'matched' && selectedMatched.has(c.id)) || (status === 'shortlisted' && selectedShortlisted.has(c.id)) ? '0 0 0 2px rgba(83,74,183,0.3)' : '0 1px 3px rgba(0,0,0,0.04)' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        {status === 'matched' && (
-                          <input type="checkbox" checked={selectedMatched.has(c.id)} onChange={() => toggleSelectMatched(c.id)} onClick={e => e.stopPropagation()} style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }} />
-                        )}
-                        {status === 'shortlisted' && (
-                          <input type="checkbox" checked={selectedShortlisted.has(c.id)} onChange={() => toggleSelectShortlisted(c.id)} onClick={e => e.stopPropagation()} style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer', accentColor: '#534AB7', width: 14, height: 14 }} />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                            <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer', lineHeight: 1.3 }}>{c.name}</div>
-                            <div style={{ flexShrink: 0, marginLeft: 8, background: getScoreBg(c.match_score), borderRadius: 6, padding: '2px 8px' }}>
-                              <span style={{ fontSize: 12, fontWeight: 800, color: getScoreColor(c.match_score) }}>{c.match_score}%</span>
+                    {/* CARDS */}
+                    <div style={{ padding: 10, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                      {stageCandidates.length === 0 ? (
+                        <div style={{ fontSize: 12, color: '#d1d5db', padding: '32px 8px', textAlign: 'center' as const, fontStyle: 'italic' }}>
+                          {isDragTarget ? 'Drop here' : stage.id === 'matched' ? 'Run match to populate' : 'Empty'}
+                        </div>
+                      ) : stageCandidates.map(candidate => (
+                        <div key={candidate.id}
+                          draggable
+                          onDragStart={e => handleDragStart(e, candidate.id)}
+                          onDragEnd={handleDragEnd}
+                          style={{ background: 'white', border: '1px solid #e5e7eb', borderLeft: `4px solid ${getScoreColor(candidate.match_score)}`, borderRadius: 10, padding: '12px 14px', cursor: 'grab', opacity: dragId === candidate.id ? 0.4 : 1, transition: 'all 0.15s', userSelect: 'none' as const, boxShadow: selectedMatched.has(candidate.id) || selectedShortlisted.has(candidate.id) ? `0 0 0 2px ${stage.color}44` : '0 1px 3px rgba(0,0,0,0.04)' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            {(stage.id === 'matched' || stage.id === 'shortlisted') && (
+                              <input type="checkbox"
+                                checked={stage.id === 'matched' ? selectedMatched.has(candidate.id) : selectedShortlisted.has(candidate.id)}
+                                onChange={() => stage.id === 'matched' ? toggleSelectMatched(candidate.id) : toggleSelectShortlisted(candidate.id)}
+                                onClick={e => e.stopPropagation()}
+                                style={{ marginTop: 2, flexShrink: 0, cursor: 'pointer', accentColor: stage.color, width: 14, height: 14 }}
+                              />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              {/* Name + score */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <div onClick={() => openProfile(candidate)} style={{ fontSize: 13, fontWeight: 700, color: '#111827', cursor: 'pointer', lineHeight: 1.3 }}>{candidate.name}</div>
+                                <div style={{ flexShrink: 0, marginLeft: 8, background: getScoreBg(candidate.match_score), borderRadius: 6, padding: '2px 7px' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 800, color: getScoreColor(candidate.match_score) }}>{candidate.match_score}%</span>
+                                </div>
+                              </div>
+
+                              {/* Role */}
+                              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{candidate.role_applied}</div>
+
+                              {/* Employer + location */}
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 6 }}>
+                                {candidate.last_employer && <span style={{ fontSize: 11, color: '#9ca3af' }}>{candidate.last_employer}</span>}
+                                {candidate.location && <span style={{ fontSize: 11, color: '#9ca3af' }}>· {candidate.location}</span>}
+                                {candidate.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEF2FF', color: '#4F46E5', padding: '1px 6px', borderRadius: 10, fontWeight: 600 }}>{candidate.years_experience}yr</span>}
+                              </div>
+
+                              {/* Interview score if available */}
+                              {(candidate as any).interview_score && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                                  <span style={{ fontSize: 10, color: '#6b7280' }}>Interview:</span>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: getScoreColor((candidate as any).interview_score), background: getScoreBg((candidate as any).interview_score), padding: '1px 6px', borderRadius: 6 }}>{(candidate as any).interview_score}%</span>
+                                </div>
+                              )}
+
+                              {/* Keywords */}
+                              {candidate.keyword_matches && candidate.keyword_matches.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                                  {candidate.keyword_matches.slice(0, 4).map(kw => (
+                                    <span key={kw} style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
+                                  ))}
+                                  {candidate.keyword_matches.length > 4 && <span style={{ fontSize: 10, color: '#9ca3af' }}>+{candidate.keyword_matches.length - 4}</span>}
+                                </div>
+                              )}
+
+                              {/* Stage action button */}
+                              {stage.id === 'matched' && (
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'shortlisted')} style={{ width: '100%', padding: '6px 0', background: '#e0f2fe', color: '#0891b2', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                  + Shortlist
+                                </button>
+                              )}
+                              {stage.id === 'shortlisted' && (
+                                <button onClick={() => openSendModal(candidate)} disabled={sending === candidate.id} style={{ width: '100%', padding: '6px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                  {sending === candidate.id ? 'Sending...' : '🎙 Send voice note & interview'}
+                                </button>
+                              )}
+                              {stage.id === 'invited' && (
+                                <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500 }}>✓ Voice note & interview sent</div>
+                              )}
+                              {stage.id === 'interview_done' && (
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'second_round')} style={{ flex: 1, padding: '5px 0', background: '#f3e8ff', color: '#7c3aed', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>→ 2nd Round</button>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '5px 8px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+                                </div>
+                              )}
+                              {stage.id === 'second_round' && (
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'job_offer')} style={{ flex: 1, padding: '5px 0', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>→ Job Offer</button>
+                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '5px 8px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+                                </div>
+                              )}
+                              {stage.id === 'job_offer' && (
+                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600 }}>🎉 Job offer extended</div>
+                              )}
+
+                              {/* Reject button on all non-rejected stages */}
+                              {!['interview_done', 'second_round', 'rejected'].includes(stage.id) && stage.id !== 'job_offer' && (
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ width: '100%', marginTop: 4, padding: '4px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, fontSize: 10, cursor: 'pointer' }}>
+                                  Reject
+                                </button>
+                              )}
                             </div>
                           </div>
-                          <div style={{ fontSize: 11, color: '#999', marginBottom: 3 }}>{c.role_applied}</div>
-                          {c.last_employer && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 3 }}>@ {c.last_employer}</div>}
-                          {c.location && <div style={{ fontSize: 11, color: '#bbb', marginBottom: 4 }}>📍 {c.location}</div>}
-                          {c.years_experience > 0 && (
-                            <span style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', padding: '2px 7px', borderRadius: 10, fontWeight: 600, display: 'inline-block', marginBottom: 6 }}>{c.years_experience}yr exp</span>
-                          )}
-                          {c.keyword_matches.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
-                              {c.keyword_matches.slice(0, 3).map(kw => (
-                                <span key={kw} style={{ fontSize: 10, background: '#E1F5EE', color: '#1D9E75', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
-                              ))}
-                              {c.keyword_matches.length > 3 && <span style={{ fontSize: 10, color: '#aaa' }}>+{c.keyword_matches.length - 3}</span>}
-                            </div>
-                          )}
-                          {status === 'matched' && (
-                            <button onClick={() => updatePipelineStatus(c.id, 'shortlisted')} style={{ width: '100%', padding: '5px 0', background: '#f0eeff', color: '#534AB7', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginTop: 2 }}>
-                              + Shortlist
-                            </button>
-                          )}
-                          {status === 'shortlisted' && (
-                            <button onClick={() => openSendModal(c)} disabled={sending === c.id} style={{ width: '100%', padding: '5px 0', background: '#534AB7', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginTop: 2 }}>
-                              {sending === c.id ? '⟳ Sending...' : '🎙 Send voice note'}
-                            </button>
-                          )}
-                          {status === 'voice_sent' && (
-                            <div style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500, marginTop: 2 }}>✓ Voice note sent</div>
-                          )}
-                          {status === 'interview_booked' && (
-                            <div style={{ fontSize: 11, color: '#639922', fontWeight: 500, marginTop: 2 }}>✓ Interview booked</div>
-                          )}
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* REJECTED — collapsible */}
+            <div style={{ border: '0.5px solid #fecaca', borderRadius: 10, overflow: 'hidden' }}>
+              <button onClick={() => setShowRejected(v => !v)}
+                style={{ width: '100%', padding: '10px 16px', background: showRejected ? '#fee2e2' : 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 500, color: '#dc2626' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  {showRejected ? <path d="M2 8l4-4 4 4"/> : <path d="M2 4l4 4 4-4"/>}
+                </svg>
+                {showRejected ? 'Hide' : 'Show'} Rejected ({rejected.length})
+                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 4 }}>— permanently excluded from future match refreshes</span>
+              </button>
+              {showRejected && rejected.length > 0 && (
+                <div style={{ padding: '10px 14px', background: '#fff5f5', display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                  {rejected.map(c => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 10px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{c.name}</span>
+                      <span style={{ fontSize: 11, color: '#9ca3af' }}>{c.role_applied}</span>
+                      <button onClick={() => updatePipelineStatus(c.id, 'matched')} style={{ fontSize: 10, padding: '1px 6px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Restore</button>
                     </div>
                   ))}
-                  {byStatus(status).length === 0 && (
-                    <div style={{ fontSize: 12, color: '#ddd', padding: '24px 8px', textAlign: 'center' }}>
-                      {dragOver === status ? 'Drop here' : status === 'matched' ? 'Run match to populate' : 'Empty'}
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+              {showRejected && rejected.length === 0 && (
+                <div style={{ padding: '12px 16px', background: '#fff5f5', fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>No rejected candidates</div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
