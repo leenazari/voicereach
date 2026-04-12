@@ -323,7 +323,64 @@ function semanticMatch(candidateKeyword: string, jobSkill: string): boolean {
   return false
 }
 
-function calculateMatch(candidate: any, job: any, priority: string): { score: number, matches: string[] } {
+async function classifyRoleFamily(title: string, description: string): Promise<string> {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 20,
+        messages: [{
+          role: 'user',
+          content: `What is the professional role family for this job title: "${title}"?
+${description ? `Description snippet: ${description.slice(0, 200)}` : ''}
+
+Reply with ONLY a single short label like: warehouse, hr, finance, sales, marketing, tech, care, legal, operations, engineering, education, hospitality, construction, retail, admin, creative, property, transport, procurement, customer_service
+
+Reply with ONE word only.`
+        }]
+      })
+    })
+    const data = await res.json()
+    const label = data.content?.[0]?.text?.trim().toLowerCase().replace(/[^a-z_]/g, '') || 'unknown'
+    return label
+  } catch {
+    return 'unknown'
+  }
+}
+
+function detectCandidateFamily(candidateRole: string, keywords: string[]): string {
+  const FAMILY_MARKERS: Record<string, string[]> = {
+    hr: ['hr ', 'human resource', 'talent acquisition', 'people manager', 'recruitment', 'cipd', 'employee relation', 'hr advisor', 'hr officer', 'hr business'],
+    warehouse: ['warehouse', 'distribution manager', 'fulfilment', 'fulfillment', 'stock control', 'depot manager', 'picking manager'],
+    finance: ['accountant', 'finance manager', 'financial controller', 'cfo', 'bookkeeper', 'accounts payable', 'accounts receivable', 'credit control', 'treasurer'],
+    marketing: ['marketing manager', 'digital marketing', 'brand manager', 'content manager', 'social media manager', 'campaign manager', 'cmo', 'seo manager', 'ppc manager'],
+    tech: ['software engineer', 'developer', 'devops', 'data engineer', 'data scientist', 'cto', 'it manager', 'systems admin', 'network engineer', 'programmer'],
+    sales: ['sales manager', 'sales executive', 'account manager', 'business development', 'sales director', 'head of sales', 'field sales', 'sales representative'],
+    care: ['care manager', 'support worker', 'nurse', 'healthcare assistant', 'social worker', 'registered manager', 'care coordinator', 'care home', 'domiciliary'],
+    legal: ['solicitor', 'lawyer', 'paralegal', 'legal counsel', 'barrister', 'legal manager', 'compliance manager'],
+    operations: ['operations manager', 'ops manager', 'plant manager', 'facilities manager', 'production manager'],
+    engineering: ['mechanical engineer', 'electrical engineer', 'civil engineer', 'structural engineer', 'maintenance engineer'],
+    construction: ['site manager', 'quantity surveyor', 'contracts manager', 'construction manager'],
+    hospitality: ['hotel manager', 'restaurant manager', 'catering manager', 'chef', 'food and beverage', 'hospitality manager'],
+    retail: ['retail manager', 'store manager', 'shop manager', 'visual merchandiser', 'branch manager'],
+    procurement: ['procurement manager', 'buyer', 'purchasing manager', 'category manager', 'sourcing manager'],
+    transport: ['transport manager', 'fleet manager', 'traffic manager', 'haulage manager'],
+    customer_service: ['customer service manager', 'call centre', 'contact centre', 'customer experience', 'customer success'],
+  }
+  const text = candidateRole + ' ' + keywords.slice(0, 5).join(' ').toLowerCase()
+  for (const [family, markers] of Object.entries(FAMILY_MARKERS)) {
+    if (markers.some(m => text.includes(m))) return family
+  }
+  return 'unknown'
+}
+
+function calculateMatch(candidate: any, job: any, priority: string, jobFamily: string): { score: number, matches: string[] } {
   const weights = MATCH_WEIGHTS[priority as keyof typeof MATCH_WEIGHTS] || MATCH_WEIGHTS.skills
   const candidateKeywords = (candidate.strength_keywords || [])
   const candidateSkills = (candidate.skills || [])
@@ -332,8 +389,13 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
   const jobSector = (job.sector || '').toLowerCase()
   const jobLocation = (job.location || '').toLowerCase()
   const jobTitle = (job.title || '').toLowerCase()
+  const candidateRole = (candidate.role_applied || '').toLowerCase()
 
-  const keywordMatches: string[] = []
+  // Role family penalty — wrong family = 65% score reduction
+  const candidateFamily = detectCandidateFamily(candidateRole, allCandidateKeywords as string[])
+  const familyPenalty = (jobFamily !== 'unknown' && candidateFamily !== 'unknown' && jobFamily !== candidateFamily) ? 0.35 : 1.0
+
+  const keywordMatches: string[] = []  const keywordMatches: string[] = []
   let keywordScore = 0
   if (jobSkills.length > 0) {
     for (const jobSkill of jobSkills) {
@@ -394,10 +456,10 @@ function calculateMatch(candidate: any, job: any, priority: string): { score: nu
   }
 
   const total = Math.round(
-    (keywordScore * weights.keywords / 100) +
+    ((keywordScore * weights.keywords / 100) +
     (experienceScore * weights.experience / 100) +
     (sectorScore * weights.sector / 100) +
-    (locationScore * weights.location / 100)
+    (locationScore * weights.location / 100)) * familyPenalty
   )
 
   return { score: Math.min(100, total), matches: keywordMatches }
@@ -471,6 +533,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const threshold = job.match_threshold || 70
     const results = []
 
+    // Classify the job's role family once — used for all candidate comparisons
+    const jobFamily = await classifyRoleFamily(job.title || '', job.description || '')
+
     for (const candidate of activeCandidates || []) {
       const existingStatus = existingStatusMap[candidate.id]
       // shortlist, longlist, matched = fully re-scored, status can change
@@ -488,7 +553,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let matches: string[] = []
 
       if (!hasNoCv) {
-        const result = calculateMatch(candidate, job, priority)
+        const result = calculateMatch(candidate, job, priority, jobFamily)
         cvScore = result.score
         matches = result.matches
       }
