@@ -180,6 +180,7 @@ export default function Dashboard() {
   const [showEditJob, setShowEditJob] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [matchingJob, setMatchingJob] = useState<string | null>(null)
+  const [matchComplete, setMatchComplete] = useState<{ jobTitle: string, shortlist: number, total: number } | null>(null)
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
   const [expandedPipeline, setExpandedPipeline] = useState<Set<string>>(new Set())
@@ -563,6 +564,8 @@ export default function Dashboard() {
         // Small delay to ensure all DB writes are committed before re-reading
         await new Promise(resolve => setTimeout(resolve, 800))
         await loadMatchResults([job, ...jobs.filter(j => j.id !== job.id)])
+        setMatchComplete({ jobTitle: job.title, shortlist: data.shortlist, total: data.total })
+        setTimeout(() => setMatchComplete(null), 8000)
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
     finally { setMatchingJob(null) }
@@ -2187,32 +2190,60 @@ export default function Dashboard() {
       )}
 
       {/* PROCESSING MODAL — shown during match refresh */}
-      {matchingJob && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: '40px 48px', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 380, width: '90%' }}>
-            {/* Spinning ring */}
-            <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #EEF2FF' }} />
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#4F46E5', animation: 'spin 0.9s linear infinite' }} />
-              <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #EEF2FF, #DDD6FE)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🔍</div>
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Running matches</div>
-            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>Scoring your candidates against<br/>the job requirements</div>
-            {/* Animated dots */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#4F46E5', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-              ))}
-            </div>
-            {/* Progress steps */}
-            <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-              {['Classifying role family', 'Scoring skills & experience', 'Applying location & sector weights'].map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#4F46E5', animation: `spin ${1 + i * 0.3}s linear infinite`, flexShrink: 0 }} />
-                  {step}
+      {(matchingJob || matchComplete) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => { if (matchComplete) setMatchComplete(null) }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '40px 48px', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 380, width: '90%' }}>
+
+            {matchComplete ? (
+              // ── COMPLETE STATE ──
+              <>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #EEF2FF, #DDD6FE)', border: '3px solid #4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 30 }}>✓</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Matching complete</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{matchComplete.jobTitle}</span>
                 </div>
-              ))}
-            </div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 28 }}>
+                  <div style={{ background: '#EEF2FF', borderRadius: 12, padding: '16px 24px', flex: 1 }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#4F46E5', lineHeight: 1 }}>{matchComplete.shortlist}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Strong matches</div>
+                  </div>
+                  <div style={{ background: '#f9fafb', borderRadius: 12, padding: '16px 24px', flex: 1 }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#374151', lineHeight: 1 }}>{matchComplete.total}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Total candidates</div>
+                  </div>
+                </div>
+                <button onClick={() => setMatchComplete(null)}
+                  style={{ padding: '11px 32px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                  View pipeline
+                </button>
+                <div style={{ fontSize: 11, color: '#d1d5db', marginTop: 12 }}>Closes automatically in a few seconds</div>
+              </>
+            ) : (
+              // ── LOADING STATE ──
+              <>
+                <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #EEF2FF' }} />
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#4F46E5', animation: 'spin 0.9s linear infinite' }} />
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderBottomColor: '#a5b4fc', animation: 'spin 1.4s linear infinite reverse' }} />
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Running matches</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>Scoring your candidates against<br/>the job requirements</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#4F46E5', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                  ))}
+                </div>
+                <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {['Classifying role family', 'Scoring skills & experience', 'Applying location & sector weights'].map((step, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#4F46E5', animation: `spin ${1 + i * 0.3}s linear infinite`, flexShrink: 0 }} />
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
