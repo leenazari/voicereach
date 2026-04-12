@@ -431,6 +431,7 @@ export default function JobPipeline() {
 
   function handleDragStart(e: React.DragEvent, id: string) {
     setDragId(id)
+    e.dataTransfer.setData('candidateId', id)
     e.dataTransfer.effectAllowed = 'move'
   }
 
@@ -442,15 +443,16 @@ export default function JobPipeline() {
 
   async function handleDrop(e: React.DragEvent, status: string) {
     e.preventDefault()
-    if (dragId) {
-      const candidate = candidates.find(c => c.id === dragId)
+    const candidateId = e.dataTransfer.getData('candidateId') || dragId
+    if (candidateId) {
+      const candidate = candidates.find(c => c.id === candidateId)
       if (candidate && candidate.pipeline_status !== status) {
         if (status === 'interview_done') {
           notify('Interview Done is set automatically when a candidate completes their interview', 'error')
         } else if (status === 'invited') {
           openSendModal(candidate)
         } else {
-          await updatePipelineStatus(dragId, status)
+          await updatePipelineStatus(candidateId, status)
         }
       }
     }
