@@ -70,6 +70,7 @@ export default function Interviews() {
   const [generatingJobId, setGeneratingJobId] = useState<string | null>(null)
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
   const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
+  const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({})
   const [loadingCandidates, setLoadingCandidates] = useState<string | null>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<InterviewCandidate | null>(null)
   const [movingCandidate, setMovingCandidate] = useState<string | null>(null)
@@ -117,6 +118,23 @@ export default function Interviews() {
     setJobs(jobData || [])
     setPacks(packData || [])
     setLoading(false)
+
+    // Fetch candidate counts for all jobs
+    if (jobData && jobData.length > 0) {
+      const { data: candidateData } = await supabase
+        .from('candidates')
+        .select('job_id')
+        .eq('user_id', session.user.id)
+        .in('job_id', jobData.map((j: any) => j.id))
+        .not('interview_completed_at', 'is', null)
+      if (candidateData) {
+        const counts: Record<string, number> = {}
+        for (const c of candidateData) {
+          if (c.job_id) counts[c.job_id] = (counts[c.job_id] || 0) + 1
+        }
+        setCandidateCounts(counts)
+      }
+    }
   }
 
   async function authHeaders(): Promise<Record<string, string>> {
@@ -247,6 +265,172 @@ export default function Interviews() {
   const JOB_STATUS_COLORS: Record<string, string> = { active: '#1D9E75', draft: '#888', closed: '#E24B4A' }
   const JOB_STATUS_BG: Record<string, string> = { active: '#E1F5EE', draft: '#f0f0f0', closed: '#fff0ee' }
 
+  function renderJobCard(job: Job, pack: InterviewPack | null, isGenerating: boolean, candidateCount: number) {
+    const gradients: Record<string, string> = {
+      sales:     'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+      tech:      'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+      marketing: 'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
+      finance:   'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+    }
+    const fallbacks = [
+      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
+      'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
+      'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
+      'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
+      'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
+    ]
+    const sector = (job.sector || '').toLowerCase()
+    const sectorKey = Object.keys(gradients).find(k => sector.includes(k))
+    const gradient = sectorKey ? gradients[sectorKey] : fallbacks[(job.company || job.title).charCodeAt(0) % fallbacks.length]
+
+    return (
+      <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)' }}>
+
+        {/* GRADIENT BANNER */}
+        <div style={{ background: gradient, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', right: 40, bottom: -70, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+          {job.logo_url ? (
+            <img src={job.logo_url} alt={job.company} style={{ width: 42, height: 42, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, zIndex: 1 }} />
+          ) : (
+            <div style={{ width: 42, height: 42, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0, zIndex: 1 }}>
+              {(job.company || job.title)[0].toUpperCase()}
+            </div>
+          )}
+
+          <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
+              <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const }}>{job.status}</span>
+              {pack && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓ Interview ready</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
+              {job.company && <span>{job.company}</span>}
+              {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
+              {job.location && <span>{job.location}</span>}
+              {candidateCount > 0 && (
+                <span style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.3)', padding: '2px 9px', borderRadius: 20, color: 'white', fontSize: 11, fontWeight: 600 }}>
+                  🎙 {candidateCount} interviewed
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0, zIndex: 1 }}>
+            {pack ? (
+              <>
+                <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
+                  Copy link
+                </button>
+                <button onClick={() => { setEditingPack(pack); setShowModal(true) }}
+                  style={{ padding: '8px 13px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                  Edit pack
+                </button>
+                <button onClick={() => generateInterview(job)} disabled={isGenerating}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#f59e0b', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 7c0-2.8 2.2-5 5-5a5 5 0 014.9 4M12 7c0 2.8-2.2 5-5 5a5 5 0 01-4.9-4"/><path d="M10 2l2 2-2 2M4 12l-2-2 2-2"/></svg>
+                  {isGenerating ? 'Regenerating...' : 'Regenerate'}
+                </button>
+                <button onClick={() => deletePack(pack)}
+                  style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
+                </button>
+              </>
+            ) : (
+              <button onClick={() => generateInterview(job)} disabled={isGenerating}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
+                {isGenerating ? 'Generating...' : 'Generate interview'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* QUESTION TAGS FOOTER */}
+        {pack && (pack.questions?.questions || []).length > 0 && (
+          <div style={{ background: 'white', padding: '8px 16px', borderTop: '0.5px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+            {(pack.questions?.questions || []).map((q: any, i: number) => (
+              <span key={i} style={{ fontSize: 10, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 5 }}>Q{q.number}: {q.competency}</span>
+            ))}
+            {candidateCount === 0 && pack && (
+              <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 4, alignSelf: 'center' }}>No candidates yet — share the link to get started</span>
+            )}
+          </div>
+        )}
+
+        {/* GENERATING STATE */}
+        {isGenerating && (
+          <div style={{ padding: '10px 18px', background: '#EEF2FF', borderTop: '0.5px solid #e5e7eb', fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
+            ⟳ Running AI generator — generating 6 questions with sub-questions, fallbacks and scoring context. This takes about 20 seconds...
+          </div>
+        )}
+
+        {/* PIPELINE TOGGLE */}
+        {pack && (
+          <div onClick={() => togglePipeline(job.id)}
+            style={{ padding: '8px 16px', borderTop: '0.5px solid #e5e7eb', background: expandedPipeline === job.id ? '#f9fafb' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
+            <span>{expandedPipeline === job.id ? '▲' : '▼'}</span>
+            {expandedPipeline === job.id ? 'Hide candidate pipeline' : `View candidate pipeline${candidateCount > 0 ? ` (${candidateCount} interviewed)` : ''}`}
+            {loadingCandidates === job.id && <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>Loading...</span>}
+          </div>
+        )}
+
+        {/* KANBAN PIPELINE */}
+        {expandedPipeline === job.id && (
+          <div style={{ borderTop: '0.5px solid #e5e7eb', padding: '20px', background: '#f9fafb' }}>
+            {!jobCandidates[job.id] || jobCandidates[job.id].length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#9ca3af', fontSize: 13 }}>
+                No candidates have completed an interview for this job yet.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                {PIPELINE_STAGES.map(stage => {
+                  const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interviewed') === stage.id)
+                  return (
+                    <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '1px solid #ebebeb', overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{stage.label}</span>
+                        <span style={{ fontSize: 11, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 8, fontWeight: 700 }}>{stageCandidates.length}</span>
+                      </div>
+                      <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
+                        {stageCandidates.map(c => (
+                          <div key={c.id} onClick={() => setSelectedCandidate(c)}
+                            style={{ background: '#fafafa', border: '1px solid #ebebeb', borderRadius: 8, padding: '10px 12px', cursor: 'pointer' }}
+                            onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
+                            onMouseLeave={e => (e.currentTarget.style.borderColor = '#ebebeb')}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.name}</div>
+                              <div style={{ fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: getScoreBg(getCombinedScore(c.cv_match_score, c.interview_score)), color: getScoreColor(getCombinedScore(c.cv_match_score, c.interview_score)) }}>
+                                {getCombinedScore(c.cv_match_score, c.interview_score)}%
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>{c.role_applied}{c.last_employer ? ` · ${c.last_employer}` : ''}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                              {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
+                                <button key={s.id} onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, s.id) }}
+                                  disabled={movingCandidate === c.id}
+                                  style={{ fontSize: 10, padding: '2px 7px', border: `1px solid ${s.color}22`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600 }}>
+                                  → {s.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f9fafb' }}>
 
@@ -353,199 +537,74 @@ export default function Interviews() {
           </div>
         </div>
 
-        <div style={{ padding: 28, flex: 1 }}>
+        <div style={{ padding: 24, flex: 1 }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 80, color: '#aaa' }}>Loading...</div>
           ) : jobs.length === 0 ? (
-            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #ebebeb', padding: 60, textAlign: 'center' }}>
+            <div style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', padding: 60, textAlign: 'center' as const }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 6 }}>No jobs yet</div>
-              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>Create a job first</div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>Create a job first, then generate an interview pack for it.</div>
-              <button onClick={() => router.push('/dashboard?tab=jobs')} style={{ background: '#534AB7', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => router.push('/dashboard?tab=jobs')} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 Go to Jobs →
               </button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {jobs.map(job => {
-                const pack = getPackForJob(job.id)
-                const isGenerating = generatingJobId === job.id
+          ) : (() => {
+            const readyJobs = jobs.filter(j => getPackForJob(j.id))
+            const needsSetupJobs = jobs.filter(j => !getPackForJob(j.id))
+            const totalInterviewed = Object.values(candidateCounts).reduce((a, b) => a + b, 0)
+            const awaitingReview = Object.entries(candidateCounts)
+              .filter(([jobId]) => (jobCandidates[jobId] || []).some(c => (c.pipeline_stage || 'interviewed') === 'interviewed'))
+              .reduce((a, [, count]) => a + count, 0)
 
-                const gradients: Record<string, string> = {
-                    sales:      'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
-                    tech:       'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
-                    marketing:  'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
-                    finance:    'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
-                    default:    'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
-                  }
-                  const fallbacks = [
-                    'linear-gradient(135deg, #064e25 0%, #15803D 55%, #16a34a 100%)',
-                    'linear-gradient(135deg, #0a2d5e 0%, #1d4ed8 55%, #0891b2 100%)',
-                    'linear-gradient(135deg, #7c1a1a 0%, #dc2626 55%, #f97316 100%)',
-                    'linear-gradient(135deg, #3b1f6b 0%, #7c3aed 55%, #a855f7 100%)',
-                    'linear-gradient(135deg, #1e1b6b 0%, #4F46E5 55%, #7C3AED 100%)',
-                  ]
-                  const sector = (job.sector || '').toLowerCase()
-                  const sectorKey = Object.keys(gradients).find(k => k !== 'default' && sector.includes(k))
-                  const gradient = sectorKey ? gradients[sectorKey] : fallbacks[(job.company || job.title).charCodeAt(0) % fallbacks.length]
-
-                return (
-                  <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)' }}>
-
-                    {/* GRADIENT BANNER */}
-                    <div style={{ background: gradient, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-                      <div style={{ position: 'absolute', right: 40, bottom: -70, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-
-                      {/* LOGO */}
-                      {job.logo_url ? (
-                        <img src={job.logo_url} alt={job.company} style={{ width: 42, height: 42, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, zIndex: 1 }} />
-                      ) : (
-                        <div style={{ width: 42, height: 42, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0, zIndex: 1 }}>
-                          {(job.company || job.title)[0].toUpperCase()}
-                        </div>
-                      )}
-
-                      {/* JOB INFO */}
-                      <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px' }}>{job.title}</div>
-                          <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const }}>{job.status}</span>
-                          {pack && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>✓ Interview ready</span>}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
-                          {job.company && <span>{job.company}</span>}
-                          {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
-                          {job.location && <span>{job.location}</span>}
-                        </div>
+            return (
+              <>
+                {/* STATS BAR */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+                  {[
+                    { label: 'Interview ready', value: readyJobs.length, color: '#15803d', bg: '#dcfce7' },
+                    { label: 'Candidates interviewed', value: totalInterviewed, color: '#4F46E5', bg: '#EEF2FF' },
+                    { label: 'Needs setup', value: needsSetupJobs.length, color: '#f59e0b', bg: '#fef3c7' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: 'white', borderRadius: 10, padding: '16px 18px', border: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ fontSize: 20, fontWeight: 600, color: s.color }}>{s.value}</div>
                       </div>
-
-                      {/* ACTIONS */}
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, zIndex: 1 }}>
-                        {pack ? (
-                          <>
-                            <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#0ea5e9', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
-                              Copy link
-                            </button>
-                            <button onClick={() => { setEditingPack(pack); setShowModal(true) }}
-                              style={{ padding: '8px 13px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-                              Edit pack
-                            </button>
-                            <button onClick={() => generateInterview(job)} disabled={isGenerating}
-                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#f59e0b', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}>
-                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 7c0-2.8 2.2-5 5-5a5 5 0 014.9 4M12 7c0 2.8-2.2 5-5 5a5 5 0 01-4.9-4"/><path d="M10 2l2 2-2 2M4 12l-2-2 2-2"/></svg>
-                              {isGenerating ? 'Regenerating...' : 'Regenerate'}
-                            </button>
-                            <button onClick={() => deletePack(pack)}
-                              style={{ padding: '8px 11px', background: '#ef4444', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer' }}>
-                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
-                            </button>
-                          </>
-                        ) : (
-                          <button onClick={() => generateInterview(job)} disabled={isGenerating}
-                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}>
-                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
-                            {isGenerating ? 'Generating...' : 'Generate interview'}
-                          </button>
-                        )}
-                      </div>
+                      <div style={{ fontSize: 12, color: '#6b7280' }}>{s.label}</div>
                     </div>
+                  ))}
+                </div>
 
-                    {/* QUESTION TAGS FOOTER */}
-                    {pack && (pack.questions?.questions || []).length > 0 && (
-                      <div style={{ background: 'white', padding: '8px 16px', borderTop: '0.5px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                        {(pack.questions?.questions || []).map((q: any, i: number) => (
-                          <span key={i} style={{ fontSize: 10, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 5 }}>Q{q.number}: {q.competency}</span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* GENERATING STATE */}
-                    {isGenerating && (
-                      <div style={{ padding: '10px 18px', background: '#EEF2FF', borderTop: '0.5px solid #e5e7eb', fontSize: 12, color: '#4F46E5', fontWeight: 500 }}>
-                        ⟳ Running AI generator then validator — generating 6 questions with sub-questions, fallbacks and scoring context. This takes about 20 seconds...
-                      </div>
-                    )}
-
-                    {/* PIPELINE TOGGLE */}
-                    {pack && (
-                      <div
-                        onClick={() => togglePipeline(job.id)}
-                        style={{ padding: '8px 16px', borderTop: '0.5px solid #e5e7eb', background: expandedPipeline === job.id ? '#f9fafb' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4F46E5', fontWeight: 500 }}
-                      >
-                        <span>{expandedPipeline === job.id ? '▲' : '▼'}</span>
-                        {expandedPipeline === job.id ? 'Hide candidate pipeline' : `View candidate pipeline${jobCandidates[job.id] ? ` (${jobCandidates[job.id].length} interviewed)` : ''}`}
-                        {loadingCandidates === job.id && <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>Loading...</span>}
-                      </div>
-                    )}
-
-                    {/* KANBAN PIPELINE */}
-                    {expandedPipeline === job.id && (
-                      <div style={{ borderTop: '1px solid #ebebeb', padding: '20px', background: '#fafafa' }}>
-                        {!jobCandidates[job.id] || jobCandidates[job.id].length === 0 ? (
-                          <div style={{ textAlign: 'center', padding: '32px 0', color: '#aaa', fontSize: 13 }}>
-                            No candidates have completed an interview for this job yet.
-                          </div>
-                        ) : (
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                            {PIPELINE_STAGES.map(stage => {
-                              const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interviewed') === stage.id)
-                              return (
-                                <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-                                  {/* COLUMN HEADER */}
-                                  <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{stage.label}</span>
-                                    <span style={{ fontSize: 11, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 8, fontWeight: 700 }}>{stageCandidates.length}</span>
-                                  </div>
-                                  {/* CANDIDATE CARDS */}
-                                  <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
-                                    {stageCandidates.map(c => (
-                                      <div
-                                        key={c.id}
-                                        onClick={() => setSelectedCandidate(c)}
-                                        style={{ background: '#fafafa', border: '1px solid #ebebeb', borderRadius: 8, padding: '10px 12px', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#534AB7')}
-                                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#ebebeb')}
-                                      >
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                          <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.name}</div>
-                                          <div style={{
-                                            fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 6,
-                                            background: getScoreBg(getCombinedScore(c.cv_match_score, c.interview_score)),
-                                            color: getScoreColor(getCombinedScore(c.cv_match_score, c.interview_score))
-                                          }}>{getCombinedScore(c.cv_match_score, c.interview_score)}%</div>
-                                        </div>
-                                        <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>{c.role_applied}{c.last_employer ? ` · ${c.last_employer}` : ''}</div>
-                                        {/* MOVE BUTTONS */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                          {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
-                                            <button
-                                              key={s.id}
-                                              onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, s.id) }}
-                                              disabled={movingCandidate === c.id}
-                                              style={{ fontSize: 10, padding: '2px 7px', border: `1px solid ${s.color}22`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600 }}
-                                            >
-                                              → {s.label}
-                                            </button>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                {/* SECTION 1: READY TO SHARE */}
+                {readyJobs.length > 0 && (
+                  <div style={{ marginBottom: 28 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Ready to share</div>
+                      <div style={{ height: 1, flex: 1, background: '#e5e7eb' }} />
+                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{readyJobs.length} jobs</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {readyJobs.map(job => renderJobCard(job, getPackForJob(job.id), generatingJobId === job.id, candidateCounts[job.id] || 0))}
+                    </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                )}
+
+                {/* SECTION 2: NEEDS SETUP */}
+                {needsSetupJobs.length > 0 && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Needs interview setup</div>
+                      <div style={{ height: 1, flex: 1, background: '#e5e7eb' }} />
+                      <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 20, fontWeight: 500 }}>{needsSetupJobs.length} jobs</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {needsSetupJobs.map(job => renderJobCard(job, null, generatingJobId === job.id, 0))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
         </div>
       </div>
 
