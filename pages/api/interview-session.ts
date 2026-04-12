@@ -108,7 +108,14 @@ ${knowledgeBaseText}
 
 ---
 
-Be warm, professional and encouraging. Keep momentum. Acknowledge answers briefly before moving on. Never break character.`
+Be warm, professional and encouraging. Keep momentum. Acknowledge answers briefly before moving on. Never break character.
+
+TONE GUIDANCE:
+- Be genuinely enthusiastic and warm throughout — candidates should feel excited and at ease
+- Use natural, conversational affirmations: "That's really interesting", "Great example", "I appreciate you sharing that"
+- Keep energy positive and consistent — engaged but professional, not over the top
+- Never sound robotic, bored or clinical
+- If a candidate struggles, stay encouraging: "Take your time" or "That's a great start, can you tell me more"`
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -153,7 +160,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const firstName = candidate.name?.split(' ')[0] || 'there'
   const questions = pack.questions?.questions || []
   const kb = pack.knowledge_base || {}
-  const agentName = pack.agent_name || 'Alex'
+  const agentName = pack.agent_name || 'James'
+
+  // Voice ID mapping
+  const VOICE_IDS: Record<string, string> = {
+    'James': 'bDTlr4ICxntY9qVWyL0o',
+    'Clare': 'MWUpoNpAY0rOQGP294mF'
+  }
+  const voiceId = VOICE_IDS[agentName] || VOICE_IDS['James']
 
   const kbSections = []
   if (kb.company_overview) kbSections.push(`Company overview: ${kb.company_overview}`)
@@ -187,7 +201,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               language: 'en'
             },
             tts: {
-              voice_id: 'bDTlr4ICxntY9qVWyL0o'
+              voice_id: voiceId
             }
           }
         })
