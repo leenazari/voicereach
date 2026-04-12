@@ -1,3 +1,10 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "pages/api/generate-questions.ts": { "maxDuration": 60 },
+    "pages/api/score-interview.ts": { "maxDuration": 60 },
+    "pages/api/shortlist.ts": { "maxDuration": 60 },
+    "pages/api/bulk-upload.ts": { "maxDuration": 60 },
+    "pages/api/extract-cv.ts": { "maxDuration": 30 }
+  }
 }
