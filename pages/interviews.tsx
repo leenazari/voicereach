@@ -382,38 +382,110 @@ export default function Interviews() {
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                {PIPELINE_STAGES.map(stage => {
+                {PIPELINE_STAGES.map((stage, stageIndex) => {
                   const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interview_done') === stage.id)
                   return (
-                    <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '1px solid #ebebeb', overflow: 'hidden' }}>
-                      <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: stage.color }}>{stage.label}</span>
-                        <span style={{ fontSize: 11, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 8, fontWeight: 700 }}>{stageCandidates.length}</span>
+                    <div key={stage.id}
+                      onDragOver={e => { e.preventDefault(); e.currentTarget.style.background = stage.bg }}
+                      onDragLeave={e => { e.currentTarget.style.background = 'white' }}
+                      onDrop={async e => {
+                        e.preventDefault()
+                        e.currentTarget.style.background = 'white'
+                        const candidateId = e.dataTransfer.getData('candidateId')
+                        const candidate = jobCandidates[job.id].find(c => c.id === candidateId)
+                        if (!candidate) return
+                        const currentIdx = PIPELINE_STAGES.findIndex(s => s.id === (candidate.pipeline_stage || 'interview_done'))
+                        if (stageIndex < currentIdx) {
+                          notify('Candidates can only move forward in the interview pipeline', 'error')
+                          return
+                        }
+                        await moveCandidateStage({ ...candidate, job_id: job.id }, stage.id)
+                      }}
+                      style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden', transition: 'background 0.15s' }}>
+                      <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: `1px solid ${stage.bg}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: stage.color, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>{stage.label}</span>
+                        <span style={{ fontSize: 10, background: 'white', color: stage.color, padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>{stageCandidates.length}</span>
                       </div>
-                      <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
-                        {stageCandidates.map(c => (
-                          <div key={c.id} onClick={() => setSelectedCandidate(c)}
-                            style={{ background: '#fafafa', border: '1px solid #ebebeb', borderRadius: 8, padding: '10px 12px', cursor: 'pointer' }}
-                            onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
-                            onMouseLeave={e => (e.currentTarget.style.borderColor = '#ebebeb')}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a1a' }}>{c.name}</div>
-                              <div style={{ fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 6, background: getScoreBg(getCombinedScore(c.cv_match_score, c.interview_score)), color: getScoreColor(getCombinedScore(c.cv_match_score, c.interview_score)) }}>
-                                {getCombinedScore(c.cv_match_score, c.interview_score)}%
+                      <div style={{ padding: 8, display: 'flex', flexDirection: 'column' as const, gap: 8, minHeight: 80 }}>
+                        {stageCandidates.length === 0 ? (
+                          <div style={{ fontSize: 11, color: '#d1d5db', textAlign: 'center' as const, padding: '24px 0', fontStyle: 'italic' }}>Drop here</div>
+                        ) : stageCandidates.map(c => {
+                          const score = getCombinedScore(c.cv_match_score, c.interview_score)
+                          const initials = c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                          return (
+                            <div key={c.id}
+                              draggable
+                              onDragStart={e => { e.dataTransfer.setData('candidateId', c.id) }}
+                              onClick={() => setSelectedCandidate(c)}
+                              style={{ background: 'white', border: '0.5px solid #e5e7eb', borderLeft: `3px solid ${getScoreColor(score)}`, borderRadius: 8, padding: '11px 12px', cursor: 'grab' }}
+                              onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
+                              onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+
+                              {/* Name + score */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: 7, background: stage.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: stage.color, flexShrink: 0 }}>{initials}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{c.name}</div>
+                                </div>
+                                <div style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: getScoreBg(score), color: getScoreColor(score), flexShrink: 0 }}>{score}%</div>
                               </div>
-                            </div>
-                            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>{c.role_applied}{c.last_employer ? ` · ${c.last_employer}` : ''}</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                              {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
-                                <button key={s.id} onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, s.id) }}
-                                  disabled={movingCandidate === c.id}
-                                  style={{ fontSize: 10, padding: '2px 7px', border: `1px solid ${s.color}22`, borderRadius: 6, background: s.bg, color: s.color, cursor: 'pointer', fontWeight: 600 }}>
-                                  → {s.label}
+
+                              {/* Role + employer */}
+                              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 1 }}>{c.role_applied}</div>
+                              {c.last_employer && <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{c.last_employer}</div>}
+
+                              {/* Location */}
+                              {c.location && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>
+                                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
+                                  {c.location}
+                                </div>
+                              )}
+
+                              {/* Scores row */}
+                              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                {c.cv_match_score && <span style={{ fontSize: 10, background: '#f3f4f6', color: '#6b7280', padding: '1px 6px', borderRadius: 4 }}>CV {c.cv_match_score}%</span>}
+                                {c.interview_score && <span style={{ fontSize: 10, background: getScoreBg(c.interview_score), color: getScoreColor(c.interview_score), padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>AI {c.interview_score}%</span>}
+                                {c.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEF2FF', color: '#4F46E5', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>{c.years_experience}yr</span>}
+                              </div>
+
+                              {/* Interview keywords */}
+                              {c.interview_keywords && c.interview_keywords.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                                  {c.interview_keywords.slice(0, 3).map((kw: string) => (
+                                    <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>⚡ {kw}</span>
+                                  ))}
+                                  {c.interview_keywords.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{c.interview_keywords.length - 3}</span>}
+                                </div>
+                              )}
+
+                              {/* Forward action button */}
+                              {stage.id === 'interview_done' && (
+                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'second_round') }}
+                                  style={{ width: '100%', padding: '7px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>
+                                  2nd Round →
                                 </button>
-                              ))}
+                              )}
+                              {stage.id === 'second_round' && (
+                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'job_offer') }}
+                                  style={{ width: '100%', padding: '7px 0', background: '#15803d', color: 'white', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>
+                                  Job Offer →
+                                </button>
+                              )}
+                              {stage.id === 'job_offer' && (
+                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, padding: '6px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 7, marginBottom: 5 }}>🎉 Job offer extended</div>
+                              )}
+
+                              {/* Reject — always available */}
+                              {stage.id !== 'rejected' && stage.id !== 'job_offer' && (
+                                <button onClick={e => { e.stopPropagation(); moveCandidateStage({ ...c, job_id: job.id }, 'rejected') }}
+                                  style={{ width: '100%', padding: '5px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                                  ✕ Reject
+                                </button>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   )
