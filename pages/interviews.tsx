@@ -152,7 +152,17 @@ export default function Interviews() {
           counts[jc.job_id].add(jc.candidate_id)
         }
       }
-      const finalCounts: Record<string, number> = {}
+      // Also count by job_candidates with interview_done status
+      const { data: jcInterviewDone } = await supabase
+        .from('job_candidates')
+        .select('candidate_id, job_id')
+        .in('job_id', jobData.map((j: any) => j.id))
+        .in('status', ['interview_done', 'interviewed', 'second_round', 'job_offer'])
+
+      for (const jc of jcInterviewDone || []) {
+        if (!counts[jc.job_id]) counts[jc.job_id] = new Set()
+        counts[jc.job_id].add(jc.candidate_id)
+      }
       for (const [jobId, set] of Object.entries(counts)) finalCounts[jobId] = set.size
       setCandidateCounts(finalCounts)
     }
@@ -172,54 +182,52 @@ export default function Interviews() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // First get candidate IDs from job_candidates table (covers all pipeline candidates)
+      // Get all candidate IDs in this job's pipeline
       const { data: jcData } = await supabase
         .from('job_candidates')
-        .select('candidate_id')
+        .select('candidate_id, status')
         .eq('job_id', jobId)
 
       const jcIds = (jcData || []).map((r: any) => r.candidate_id)
+      // Candidates with interview_done status should always show even if interview_completed_at not set yet
+      const interviewDoneIds = (jcData || [])
+        .filter((r: any) => r.status === 'interview_done' || r.status === 'interviewed')
+        .map((r: any) => r.candidate_id)
 
-      // Then fetch completed interviews — either by job_id or by being in job_candidates
-      let query = supabase
+      if (jcIds.length === 0) {
+        setJobCandidates(prev => ({ ...prev, [jobId]: [] }))
+        return
+      }
+
+      // Fetch by job_id with completed interview
+      const { data: byJobId } = await supabase
         .from('candidates')
         .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
         .eq('user_id', session.user.id)
+        .eq('job_id', jobId)
         .not('interview_completed_at', 'is', null)
-        .order('interview_score', { ascending: false })
 
-      if (jcIds.length > 0) {
-        // Get candidates that are either linked by job_id OR appear in job_candidates
-        const { data: byJobId } = await supabase
-          .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-          .eq('user_id', session.user.id)
-          .eq('job_id', jobId)
-          .not('interview_completed_at', 'is', null)
+      // Fetch by job_candidates membership with completed interview
+      const { data: byJc } = await supabase
+        .from('candidates')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
+        .eq('user_id', session.user.id)
+        .in('id', jcIds)
+        .not('interview_completed_at', 'is', null)
 
-        const { data: byJc } = await supabase
-          .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-          .eq('user_id', session.user.id)
-          .in('id', jcIds)
-          .not('interview_completed_at', 'is', null)
+      // Also fetch interview_done candidates even without interview_completed_at (scoring may have failed)
+      const { data: byStatus } = interviewDoneIds.length > 0 ? await supabase
+        .from('candidates')
+        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
+        .eq('user_id', session.user.id)
+        .in('id', interviewDoneIds) : { data: [] }
 
-        // Merge and deduplicate
-        const all = [...(byJobId || []), ...(byJc || [])]
-        const seen = new Set()
-        const merged = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
-        merged.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
-        setJobCandidates(prev => ({ ...prev, [jobId]: merged }))
-      } else {
-        const { data } = await supabase
-          .from('candidates')
-          .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-          .eq('user_id', session.user.id)
-          .eq('job_id', jobId)
-          .not('interview_completed_at', 'is', null)
-          .order('interview_score', { ascending: false })
-        setJobCandidates(prev => ({ ...prev, [jobId]: data || [] }))
-      }
+      // Merge and deduplicate
+      const all = [...(byJobId || []), ...(byJc || []), ...(byStatus || [])]
+      const seen = new Set()
+      const merged = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
+      merged.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
+      setJobCandidates(prev => ({ ...prev, [jobId]: merged }))
     } finally {
       setLoadingCandidates(null)
     }
