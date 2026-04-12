@@ -180,7 +180,7 @@ export default function Dashboard() {
   const [showEditJob, setShowEditJob] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [matchingJob, setMatchingJob] = useState<string | null>(null)
-  const [matchComplete, setMatchComplete] = useState<{ jobTitle: string, shortlist: number, total: number } | null>(null)
+  const [matchComplete, setMatchComplete] = useState<{ jobTitle: string, shortlist: number, total: number, jobId: string } | null>(null)
   const [matchResults, setMatchResults] = useState<Record<string, MatchResult[]>>({})
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
   const [expandedPipeline, setExpandedPipeline] = useState<Set<string>>(new Set())
@@ -564,7 +564,7 @@ export default function Dashboard() {
         // Small delay to ensure all DB writes are committed before re-reading
         await new Promise(resolve => setTimeout(resolve, 800))
         await loadMatchResults([job, ...jobs.filter(j => j.id !== job.id)])
-        setMatchComplete({ jobTitle: job.title, shortlist: data.shortlist, total: data.total })
+        setMatchComplete({ jobTitle: job.title, shortlist: data.shortlist, total: data.total, jobId: job.id })
         setTimeout(() => setMatchComplete(null), 8000)
       } else notify('Could not match candidates', 'error')
     } catch { notify('Matching failed', 'error') }
@@ -2213,7 +2213,7 @@ export default function Dashboard() {
                     <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Total candidates</div>
                   </div>
                 </div>
-                <button onClick={() => setMatchComplete(null)}
+                <button onClick={() => { setMatchComplete(null); router.push(`/jobs/${matchComplete.jobId}`) }}
                   style={{ padding: '11px 32px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   View pipeline
                 </button>
