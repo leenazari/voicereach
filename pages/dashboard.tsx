@@ -201,6 +201,7 @@ export default function Dashboard() {
   const [selectedVoiceId, setSelectedVoiceId] = useState('P4DhdyNCB4Nl6MA0sL45')
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [candidateFilter, setCandidateFilter] = useState<'all' | 'interviewed' | 'shortlisted' | 'new'>('all')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [activityData, setActivityData] = useState<ActivityDay[]>([])
   const [activityMonth, setActivityMonth] = useState(new Date().getMonth())
@@ -1066,7 +1067,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {activeTab === 'candidates' && <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', width: 180, background: '#f9f9f9' }} />}
+            {activeTab === 'candidates' && <input type="text" placeholder="Search candidates..." value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '7px 12px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', width: 200, background: '#f9fafb', color: '#111827' }} />}
             {activeTab === 'jobs' ? (
               <button onClick={() => setShowAddJob(true)} style={{ background: '#4F46E5', color: 'white', border: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add Job</button>
             ) : activeTab === 'candidates' ? (
@@ -1167,80 +1168,149 @@ export default function Dashboard() {
           )}
 
           {/* ALL CANDIDATES */}
-          {activeTab === 'candidates' && (
-            <div style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb', borderBottom: '0.5px solid #e5e7eb' }}>
-                    {['Name', 'Role', 'Last Employer', 'Location', 'Exp', 'Status', 'Interview', 'Actions'].map(h => (
-                      <th key={h} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 500, color: '#6b7280', textAlign: 'left', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#ccc', fontSize: 13 }}>Loading...</td></tr>
-                  ) : filteredAll.length === 0 ? (
-                    <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#ccc', fontSize: 13 }}>No candidates found</td></tr>
-                  ) : filteredAll.map((c, i) => (
-                    <tr key={c.id} style={{ borderBottom: i < filteredAll.length - 1 ? '1px solid #f5f5f5' : 'none' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                      <td style={{ padding: '12px 16px' }}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    <div onClick={() => openProfile(c)} style={{ fontSize: 13, fontWeight: 600, color: '#534AB7', cursor: 'pointer' }}>{c.name}</div>
-    {(c as any).interview_completed_at && (
-      <span
-        onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
-        style={{ fontSize: 10, background: getScoreBg(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), color: getScoreColor(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), padding: '2px 7px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-        title={getScoreBreakdown((c as any).cv_match_score, (c as any).interview_score)}
-      >
-        🎙 {getCombinedScore((c as any).cv_match_score, (c as any).interview_score)}%
-      </span>
-    )}
-  </div>
-  {c.phone && <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{c.phone}</div>}
-</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>{c.role_applied}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).last_employer || '—'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#888' }}>{(c as any).location || '—'}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {c.years_experience > 0 && <span style={{ fontSize: 11, background: '#EEEDFE', color: '#534AB7', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{c.years_experience}yr</span>}
-                      </td>
-              <td style={{ padding: '12px 16px' }}>
-                        <span style={{ fontSize: 11, background: STATUS_BG[c.status] || '#f0f0f0', color: STATUS_COLORS[c.status] || '#888', padding: '3px 10px', borderRadius: 10, fontWeight: 600 }}>
-                          {STATUS_LABELS[c.status] || c.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {(c as any).interview_completed_at ? (
-                          <button
-                            onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
-                            style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700, background: getScoreBg(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)), color: getScoreColor(getCombinedScore((c as any).cv_match_score, (c as any).interview_score)) }}
-                          >
-                            🎙 {getCombinedScore((c as any).cv_match_score, (c as any).interview_score)}%
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: 11, color: '#ddd' }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                         <button onClick={() => openProfile(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #EEEDFE', borderRadius: 6, cursor: 'pointer', background: '#EEEDFE', color: '#534AB7', fontWeight: 500 }}>Profile</button>
-                          <button onClick={() => openEdit(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #e5e5e5', borderRadius: 6, cursor: 'pointer', background: 'white', color: '#555', fontWeight: 500 }}>Edit</button>
-                          {c.voice_note_url && <button onClick={() => openPlayer(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #E1F5EE', borderRadius: 6, cursor: 'pointer', background: '#E1F5EE', color: '#1D9E75', fontWeight: 500 }}>▶ Play</button>}
-                          <button onClick={() => openJobModal(c)} style={{ fontSize: 11, padding: '4px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', background: '#534AB7', color: 'white', fontWeight: 500 }}>
-                            {shortlisting === c.id ? '⟳' : '→ Send'}
-                          </button>
-                          <button onClick={() => deleteCandidate(c)} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #fdd', borderRadius: 6, cursor: 'pointer', background: '#fff8f8', color: '#E24B4A', fontWeight: 500 }}>Del</button>
-                        </div>
-                      </td>
-                    </tr>
+          {activeTab === 'candidates' && (() => {
+            const interviewed = filteredAll.filter(c => (c as any).interview_completed_at)
+            const notInterviewed = filteredAll.filter(c => !(c as any).interview_completed_at)
+            const filtered = (list: typeof candidates) => {
+              if (candidateFilter === 'interviewed') return list.filter(c => (c as any).interview_completed_at)
+              if (candidateFilter === 'shortlisted') return list.filter(c => c.status === 'shortlisted' || c.status === 'voice_sent')
+              if (candidateFilter === 'new') return list.filter(c => c.status === 'new' || c.status === 'active')
+              return list
+            }
+            const displayList = filtered(filteredAll)
+            const displayInterviewed = displayList.filter(c => (c as any).interview_completed_at)
+            const displayNotInterviewed = displayList.filter(c => !(c as any).interview_completed_at)
+
+            const avatarColors = [
+              'linear-gradient(135deg,#4F46E5,#7C3AED)',
+              'linear-gradient(135deg,#0891b2,#1d4ed8)',
+              'linear-gradient(135deg,#064e25,#15803D)',
+              'linear-gradient(135deg,#dc2626,#f97316)',
+              'linear-gradient(135deg,#7c3aed,#a855f7)',
+            ]
+
+            const sectionHeader = (label: string, count: number, color: string, bg: string, icon: React.ReactNode) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 8px' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {icon}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color, letterSpacing: '-0.1px', whiteSpace: 'nowrap' as const }}>{label}</div>
+                <div style={{ height: 1, flex: 1, background: '#e5e7eb' }} />
+                <div style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 500, background: bg, color, whiteSpace: 'nowrap' as const }}>{count} candidates</div>
+              </div>
+            )
+
+            const candidateCard = (c: typeof candidates[0], i: number) => {
+              const score = getCombinedScore((c as any).cv_match_score, (c as any).interview_score)
+              const hasInterview = !!(c as any).interview_completed_at
+              const initials = c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+              const avatarBg = avatarColors[c.name.charCodeAt(0) % avatarColors.length]
+
+              return (
+                <div key={c.id}
+                  style={{ background: 'white', border: '0.5px solid #e5e7eb', borderRadius: 10, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 14, transition: 'border-color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+                >
+                  {/* Avatar */}
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+                    {initials}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <div onClick={() => openProfile(c)} style={{ fontSize: 14, fontWeight: 600, color: '#111827', cursor: 'pointer' }}>{c.name}</div>
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 500, flexShrink: 0, background: STATUS_BG[c.status] || '#f3f4f6', color: STATUS_COLORS[c.status] || '#6b7280' }}>
+                        {STATUS_LABELS[c.status] || c.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' as const, overflow: 'hidden' }}>
+                      {c.role_applied && <span style={{ whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.role_applied}</span>}
+                      {(c as any).last_employer && <><span style={{ opacity: 0.3, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const }}>{(c as any).last_employer}</span></>}
+                      {c.years_experience > 0 && <><span style={{ opacity: 0.3, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{c.years_experience}yr</span></>}
+                      {(c as any).location && <><span style={{ opacity: 0.3, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{(c as any).location}</span></>}
+                    </div>
+                  </div>
+
+                  {/* Score tile */}
+                  {hasInterview ? (
+                    <div onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
+                      style={{ width: 52, height: 52, borderRadius: 10, background: getScoreBg(score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: getScoreColor(score), lineHeight: 1 }}>{score}%</div>
+                      <div style={{ fontSize: 9, fontWeight: 500, color: getScoreColor(score), marginTop: 2, opacity: 0.85 }}>{getScoreLabel(score)}</div>
+                    </div>
+                  ) : (
+                    <div style={{ width: 52, flexShrink: 0 }} />
+                  )}
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                    <button onClick={() => openProfile(c)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#EEF2FF', color: '#4F46E5', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="5" r="3"/><path d="M2 13c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>
+                      Profile
+                    </button>
+                    <button onClick={() => openJobModal(c)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 7h12M8 3l4 4-4 4"/></svg>
+                      {shortlisting === c.id ? '...' : 'Send'}
+                    </button>
+                    <button onClick={() => openEdit(c)} style={{ padding: '6px 10px', background: 'white', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Edit</button>
+                    {c.voice_note_url && (
+                      <button onClick={() => openPlayer(c)} style={{ padding: '6px 10px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>▶</button>
+                    )}
+                    <button onClick={() => deleteCandidate(c)} style={{ display: 'flex', alignItems: 'center', padding: '6px 8px', background: 'white', color: '#ef4444', border: '0.5px solid #fecaca', borderRadius: 7, fontSize: 11, cursor: 'pointer' }}>
+                      <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div>
+                {/* Filter bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const }}>
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'interviewed', label: 'Interviewed' },
+                    { key: 'shortlisted', label: 'Shortlisted' },
+                    { key: 'new', label: 'New' },
+                  ].map(f => (
+                    <button key={f.key} onClick={() => setCandidateFilter(f.key as any)}
+                      style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: candidateFilter === f.key ? 'none' : '1px solid #e5e7eb', background: candidateFilter === f.key ? '#4F46E5' : 'white', color: candidateFilter === f.key ? 'white' : '#6b7280' }}>
+                      {f.label}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  <div style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>{displayList.length} candidates</div>
+                </div>
+
+                {displayList.length === 0 ? (
+                  <div style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', padding: '48px 0', textAlign: 'center' as const, color: '#9ca3af', fontSize: 13 }}>
+                    No candidates match this filter
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {displayInterviewed.length > 0 && (
+                      <>
+                        {sectionHeader('Interviewed', displayInterviewed.length, '#4F46E5', '#EEF2FF',
+                          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2a4 4 0 014 4v1.5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 13.5c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+                        )}
+                        {displayInterviewed.map((c, i) => candidateCard(c, i))}
+                      </>
+                    )}
+                    {displayNotInterviewed.length > 0 && (
+                      <>
+                        {sectionHeader('No interview yet', displayNotInterviewed.length, '#6b7280', '#f3f4f6',
+                          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="6" r="3"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>
+                        )}
+                        {displayNotInterviewed.map((c, i) => candidateCard(c, i))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* JOBS TAB */}
           {activeTab === 'jobs' && (
