@@ -302,21 +302,27 @@ export default function JobPipeline() {
         notify(`Voice note sent to ${candidate.name} ✓`)
         await updatePipelineStatus(candidate.id, 'invited')
         setSelectedShortlisted(prev => { const n = new Set(prev); n.delete(candidate.id); return n })
-        await loadPipeline()
-      } else notify('Error: ' + data.error, 'error')
+      } else {
+        notify('Error: ' + data.error, 'error')
+        // Revert optimistic update on failure
+        setCandidates(prev => prev.map(c =>
+          c.id === candidate.id ? { ...c, pipeline_status: candidate.pipeline_status } : c
+        ))
+      }
     } finally { setSending(null) }
   }
 
   async function confirmSingleSend() {
     if (!sendTarget) return
+    const target = sendTarget
     setShowSendModal(false)
-    // Optimistically move card to invited immediately
-    setCandidates(prev => prev.map(c =>
-      c.id === sendTarget.id ? { ...c, pipeline_status: 'invited' } : c
-    ))
-    await sendVoiceNote(sendTarget, scriptPreview)
     setSendTarget(null)
     setScriptPreview('')
+    // Optimistically move card to invited immediately so UI updates at once
+    setCandidates(prev => prev.map(c =>
+      c.id === target.id ? { ...c, pipeline_status: 'invited' } : c
+    ))
+    await sendVoiceNote(target, scriptPreview)
   }
 
   function openBulkConfirm() {
