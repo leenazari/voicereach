@@ -129,6 +129,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .eq('id', candidateId)
 
+    // Keep job_candidates in sync — move to invited so pipeline shows correctly everywhere
+    if (jobId) {
+      await supabase
+        .from('job_candidates')
+        .upsert({
+          job_id: jobId,
+          candidate_id: candidateId,
+          status: 'invited',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'job_id,candidate_id' })
+    }
+
     if (profile) {
       await supabase
         .from('profiles')
