@@ -70,6 +70,7 @@ export default function Interviews() {
   const [editingPack, setEditingPack] = useState<InterviewPack | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [generatingJobId, setGeneratingJobId] = useState<string | null>(null)
+  const [generationComplete, setGenerationComplete] = useState<{ jobTitle: string, questionCount: number } | null>(null)
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
   const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
   const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({})
@@ -307,7 +308,22 @@ export default function Interviews() {
         }
 
         await fetchAll()
-        notify(`Interview generated for ${job.title} ✓`)
+        const questionCount = data.questions?.questions?.length || 6
+        setGenerationComplete({ jobTitle: job.title, questionCount })
+        // Auto-open the edit modal so they can review/edit immediately
+        // Wait briefly for fetchAll to populate packs state
+        setTimeout(async () => {
+          const { data: freshPack } = await supabase
+            .from('interview_packs')
+            .select('*')
+            .eq('job_id', job.id)
+            .single()
+          if (freshPack) {
+            setEditingPack(freshPack)
+            setShowModal(true)
+          }
+          setGenerationComplete(null)
+        }, 1200)
       } else notify('Could not generate interview', 'error')
     } catch { notify('Generation failed', 'error') }
     finally { setGeneratingJobId(null) }
@@ -973,32 +989,51 @@ export default function Interviews() {
       )}
 
       {/* PROCESSING MODAL — shown during interview pack generation */}
-      {generatingJobId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: '40px 48px', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 380, width: '90%' }}>
-            {/* Spinning ring */}
-            <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #F0FDF4' }} />
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#16a34a', animation: 'spin 0.9s linear infinite' }} />
-              <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎙</div>
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Generating interview pack</div>
-            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>Claude is crafting 6 structured questions<br/>tailored to this role. Takes about 20 seconds.</div>
-            {/* Animated dots */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-              ))}
-            </div>
-            {/* Progress steps */}
-            <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-              {['Analysing the role requirements', 'Writing structured questions', 'Adding sub-questions & scoring context'].map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#16a34a', animation: `spin ${1 + i * 0.3}s linear infinite`, flexShrink: 0 }} />
-                  {step}
+      {(generatingJobId || generationComplete) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => { if (generationComplete) setGenerationComplete(null) }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '40px 48px', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 400, width: '90%' }}>
+
+            {generationComplete ? (
+              // ── COMPLETE STATE — shown briefly before edit modal opens ──
+              <>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '3px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 30 }}>✓</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Interview pack ready</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 16, lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{generationComplete.questionCount} questions</span> generated for <span style={{ fontWeight: 600, color: '#111827' }}>{generationComplete.jobTitle}</span>
                 </div>
-              ))}
-            </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#16a34a', animation: 'spin 0.8s linear infinite' }} />
+                  Opening for review...
+                </div>
+              </>
+            ) : (
+              // ── LOADING STATE ──
+              <>
+                <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #F0FDF4' }} />
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#16a34a', animation: 'spin 0.9s linear infinite' }} />
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderBottomColor: '#86efac', animation: 'spin 1.4s linear infinite reverse' }} />
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8, letterSpacing: '-0.3px' }}>Generating interview pack</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>
+                  Building 6 structured questions<br/>tailored to this role. Takes about 20 seconds.
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                  ))}
+                </div>
+                <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {['Analysing the role requirements', 'Writing structured questions', 'Adding sub-questions & scoring context'].map((step, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#16a34a', animation: `spin ${1 + i * 0.3}s linear infinite`, flexShrink: 0 }} />
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
