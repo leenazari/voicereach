@@ -465,8 +465,10 @@ export default function Dashboard() {
       if (!c) continue
       const alreadySent = ['voice_sent', 'interview_booked', 'hired', 'shortlisted', 'invited', 'interview_done', 'second_round', 'job_offer'].includes(row.status)
       if (!grouped[row.job_id]) grouped[row.job_id] = []
-      const cvScore = c.cv_match_score || null
+      const cvScore = row.match_score || null
       const interviewScore = c.interview_score || null
+      const noCv = c.no_cv || false
+      const displayScore = getCombinedScore(cvScore, interviewScore, noCv)
       grouped[row.job_id].push({
         candidate_id: row.candidate_id,
         name: c.name,
@@ -476,7 +478,7 @@ export default function Dashboard() {
         last_employer: c.last_employer,
         location: c.location,
         strength_keywords: c.strength_keywords,
-        match_score: getCombinedScore(cvScore, interviewScore) || row.match_score,
+        match_score: displayScore,
         cv_score: cvScore,
         interview_score: interviewScore,
         keyword_matches: row.keyword_matches || [],
