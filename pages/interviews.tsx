@@ -74,6 +74,7 @@ export default function Interviews() {
   const [skillOrderJob, setSkillOrderJob] = useState<Job | null>(null)
   const [orderedSkills, setOrderedSkills] = useState<string[]>([])
   const [dragSkillIdx, setDragSkillIdx] = useState<number | null>(null)
+  const [newSkillInput, setNewSkillInput] = useState('')
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
   const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
   const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({})
@@ -999,19 +1000,19 @@ export default function Interviews() {
       {skillOrderJob && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setSkillOrderJob(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '32px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 460, width: '90%' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '32px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 460, width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 6, letterSpacing: '-0.3px' }}>Prioritise your skills</div>
             <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>
-              Drag to reorder. The <span style={{ fontWeight: 600, color: '#4F46E5' }}>top 3 skills</span> will drive the hardest questions and strictest scoring. Put your must-haves first.
+              Drag to reorder. The <span style={{ fontWeight: 600, color: '#4F46E5' }}>top 3 skills</span> drive the hardest questions and strictest scoring. Put your must-haves first.
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 16 }}>
               {orderedSkills.map((skill, i) => (
                 <div
-                  key={skill}
+                  key={skill + i}
                   draggable
                   onDragStart={() => setDragSkillIdx(i)}
-                  onDragOver={e => { e.preventDefault() }}
+                  onDragOver={e => e.preventDefault()}
                   onDrop={() => {
                     if (dragSkillIdx === null || dragSkillIdx === i) return
                     const updated = [...orderedSkills]
@@ -1022,40 +1023,70 @@ export default function Interviews() {
                   }}
                   onDragEnd={() => setDragSkillIdx(null)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
                     background: i < 3 ? '#EEF2FF' : '#f9fafb',
                     border: `1px solid ${i < 3 ? '#c7d2fe' : '#e5e7eb'}`,
                     borderRadius: 10, cursor: 'grab',
                     opacity: dragSkillIdx === i ? 0.4 : 1,
                     transition: 'all 0.15s'
                   }}>
-                  <span style={{ color: '#9ca3af', fontSize: 14, userSelect: 'none' as const }}>⠿</span>
+                  <span style={{ color: '#9ca3af', fontSize: 14, userSelect: 'none' as const, flexShrink: 0 }}>⠿</span>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: i < 3 ? 600 : 400, color: i < 3 ? '#4F46E5' : '#374151' }}>{skill}</span>
                   {i < 3 && (
-                    <span style={{ fontSize: 10, background: '#4F46E5', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 600 }}>
-                      Must-have
-                    </span>
+                    <span style={{ fontSize: 10, background: '#4F46E5', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Must-have</span>
                   )}
-                  {i === 3 && <span style={{ fontSize: 10, color: '#9ca3af' }}>Important ↓</span>}
+                  {i === 3 && <span style={{ fontSize: 10, color: '#9ca3af', flexShrink: 0 }}>↑ Important</span>}
+                  <button
+                    onClick={() => setOrderedSkills(prev => prev.filter((_, idx) => idx !== i))}
+                    style={{ width: 22, height: 22, borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
 
+            {/* ADD NEW SKILL */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+              <input
+                type="text"
+                value={newSkillInput}
+                onChange={e => setNewSkillInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newSkillInput.trim()) {
+                    setOrderedSkills(prev => [...prev, newSkillInput.trim()])
+                    setNewSkillInput('')
+                  }
+                }}
+                placeholder="Add a skill and press Enter..."
+                style={{ flex: 1, padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, outline: 'none' }}
+              />
+              <button
+                onClick={() => {
+                  if (newSkillInput.trim()) {
+                    setOrderedSkills(prev => [...prev, newSkillInput.trim()])
+                    setNewSkillInput('')
+                  }
+                }}
+                style={{ padding: '9px 16px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                + Add
+              </button>
+            </div>
+
             {orderedSkills.length === 0 && (
-              <div style={{ padding: '16px', background: '#fef3c7', borderRadius: 10, fontSize: 13, color: '#92400e', marginBottom: 24 }}>
-                This job has no required skills set. Add skills in the job settings first for best results.
+              <div style={{ padding: '14px', background: '#fef3c7', borderRadius: 10, fontSize: 13, color: '#92400e', marginBottom: 16 }}>
+                No skills added yet — add at least one skill for best results.
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setSkillOrderJob(null)}
+              <button onClick={() => { setSkillOrderJob(null); setNewSkillInput('') }}
                 style={{ flex: 1, padding: '11px', background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 14, color: '#374151', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={async () => {
                 const job = skillOrderJob
                 setSkillOrderJob(null)
-                // Save the new skill order back to the job
+                setNewSkillInput('')
                 await supabase.from('jobs').update({ required_skills: orderedSkills }).eq('id', job.id)
                 generateInterview({ ...job, required_skills: orderedSkills })
               }}
