@@ -183,39 +183,37 @@ export default function Interviews() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Get all candidates in this job's pipeline that have progressed past invited
-      const { data: jcData } = await supabase
+      // Use the same join pattern as dashboard — let job_candidates join to candidates
+      const { data: rows } = await supabase
         .from('job_candidates')
-        .select('candidate_id, status')
+        .select(`
+          candidate_id, status,
+          candidates (id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv)
+        `)
         .eq('job_id', jobId)
         .in('status', ['interview_done', 'interviewed', 'second_round', 'job_offer', 'rejected'])
 
-      if (!jcData || jcData.length === 0) {
-        setJobCandidates(prev => ({ ...prev, [jobId]: [] }))
-        return
+      const merged: any[] = []
+      for (const row of rows || []) {
+        const c = (row as any).candidates
+        if (!c) continue
+        merged.push({ ...c, pipeline_stage: c.pipeline_stage || 'interview_done' })
       }
 
-      const candidateIds = jcData.map((r: any) => r.candidate_id)
-
-      // Fetch candidate details — no interview_completed_at filter, use job_candidates status
-      const { data: candidateData } = await supabase
-        .from('candidates')
-        .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
-        .in('id', candidateIds)
-
-      // Also check by direct job_id link for candidates who applied via interview link
+      // Also get any candidates linked by job_id with interview completed (belt and braces)
       const { data: byJobId } = await supabase
         .from('candidates')
         .select('id, name, email, phone, role_applied, years_experience, last_employer, location, interview_score, cv_match_score, interview_completed_at, interview_recommendation, interview_answers, interview_keywords, cv_contradictions, pipeline_stage, job_id, no_cv')
+        .eq('user_id', session.user.id)
         .eq('job_id', jobId)
         .not('interview_completed_at', 'is', null)
 
       // Merge and deduplicate
-      const all = [...(candidateData || []), ...(byJobId || [])]
+      const all = [...merged, ...(byJobId || [])]
       const seen = new Set()
-      const merged = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
-      merged.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
-      setJobCandidates(prev => ({ ...prev, [jobId]: merged }))
+      const deduped = all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
+      deduped.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0))
+      setJobCandidates(prev => ({ ...prev, [jobId]: deduped }))
     } finally {
       setLoadingCandidates(null)
     }
