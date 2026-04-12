@@ -85,9 +85,10 @@ CLOSING SEQUENCE after question 6:
 1. "That's all my questions — thank you so much for your time today, ${firstName}."
 2. "The hiring team will review your interview and be in touch with you soon."
 3. "Before I let you go, do you have any questions for me?"
-4. Answer ONLY from the knowledge base below
-5. If not in knowledge base: "I don't have that information right now but I'll make sure the hiring team knows you asked."
-6. When done: "Great, thanks again ${firstName} and best of luck. Take care."
+4. Answer candidate questions naturally and conversationally using the knowledge base below — do not read it out robotically, summarise warmly
+5. If a candidate asks what the role involves, give a brief conversational summary of the job description
+6. If not in knowledge base: "I don't have that information right now but I'll make sure the hiring team knows you asked."
+7. When done: "Great, thanks again ${firstName} and best of luck. Take care."
 
 ---
 
@@ -170,6 +171,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const voiceId = VOICE_IDS[agentName] || VOICE_IDS['James']
 
   const kbSections = []
+  // Always include job details first so candidates can ask about the role
+  if (job?.title) kbSections.push(`Role: ${job.title}${job?.company ? ` at ${job.company}` : ''}`)
+  if (job?.salary) kbSections.push(`Salary: ${job.salary}`)
+  if (job?.location) kbSections.push(`Location: ${job.location}`)
+  if (job?.work_type) kbSections.push(`Work type: ${job.work_type}`)
+  if (job?.required_skills?.length) kbSections.push(`Key skills required: ${job.required_skills.join(', ')}`)
+  if (job?.description) kbSections.push(`Full role description:\n${job.description}`)
+  // Then custom knowledge base fields
   if (kb.company_overview) kbSections.push(`Company overview: ${kb.company_overview}`)
   if (kb.culture) kbSections.push(`Culture and values: ${kb.culture}`)
   if (kb.benefits) kbSections.push(`Benefits and perks: ${kb.benefits}`)
@@ -197,7 +206,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               prompt: {
                 prompt: systemPrompt
               },
-              first_message: `Hi ${firstName}, I'm ${agentName}, an AI interviewer. I'll be conducting your interview today for the ${job?.title || 'role'} position. We have ${questions.length} questions and the whole thing should take around 9 minutes. Are you ready to get started?`,
+              first_message: `Hi ${firstName}, I'm ${agentName} and I'll be conducting your interview today for the ${job?.title || 'role'} position. We have ${questions.length} questions and it should take around 9 minutes. Let's get straight into it — Question 1:`,
               language: 'en'
             },
             tts: {
