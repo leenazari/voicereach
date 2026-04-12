@@ -352,7 +352,7 @@ export default function Interviews() {
          <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 68 }}>
 
            {/* LEFT COLOUR STRIP — clickable, toggles pipeline */}
-           <div onClick={() => setExpandedPipeline(expandedPipeline === job.id ? null : job.id)}
+           <div onClick={() => togglePipeline(job.id)}
              style={{ width: '30%', flexShrink: 0, background: gradient, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', minWidth: 0, cursor: 'pointer' }}
              title="Click to toggle pipeline">
              {job.logo_url ? (
@@ -374,7 +374,7 @@ export default function Interviews() {
            </div>
 
            {/* RIGHT WHITE AREA — buttons */}
-           <div onClick={() => setExpandedPipeline(expandedPipeline === job.id ? null : job.id)}
+           <div onClick={() => togglePipeline(job.id)}
              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 14px', gap: 6, borderLeft: '0.5px solid #e5e7eb', background: 'white', cursor: 'pointer' }}
              title="Click to toggle pipeline">
              {pack ? (
