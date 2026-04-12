@@ -262,6 +262,20 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
 <body style="margin: 0; padding: 0; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; padding: 32px 16px;">
 
+    <!-- Logo header -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+        <tr>
+          <td style="background: linear-gradient(135deg, #4F46E5, #7C3AED); border-radius: 12px; width: 44px; height: 44px; text-align: center; vertical-align: middle;">
+            <img src="https://voicereach.co.uk/icon-64.png" width="44" height="44" alt="VR" style="display: block; border-radius: 12px;" />
+          </td>
+          <td style="padding-left: 10px; vertical-align: middle;">
+            <span style="font-size: 20px; font-weight: 700; color: #111827; letter-spacing: -0.5px;">VoiceReach</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
     <div style="background: linear-gradient(135deg, #0f0c29, #302b63); border-radius: 16px; padding: 28px; margin-bottom: 16px; text-align: center;">
       <div style="font-size: 13px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Interview completed</div>
       <div style="font-size: 24px; font-weight: 800; color: white; margin-bottom: 4px;">${candidate.name}</div>
@@ -303,8 +317,18 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
       ${candidate.phone ? `<div style="font-size: 13px; color: #555;">📞 ${candidate.phone}</div>` : ''}
     </div>
 
-    <div style="text-align: center; font-size: 12px; color: #bbb; margin-top: 24px;">
-      Powered by VoiceReach · voicereach.co.uk
+    <div style="text-align: center; padding: 20px 0 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 8px;">
+        <tr>
+          <td style="background: linear-gradient(135deg, #4F46E5, #7C3AED); border-radius: 8px; width: 28px; height: 28px; text-align: center; vertical-align: middle;">
+            <img src="https://voicereach.co.uk/icon-64.png" width="28" height="28" alt="VR" style="display: block; border-radius: 8px;" />
+          </td>
+          <td style="padding-left: 7px; vertical-align: middle;">
+            <span style="font-size: 14px; font-weight: 700; color: #6b7280;">VoiceReach</span>
+          </td>
+        </tr>
+      </table>
+      <div style="font-size: 11px; color: #d1d5db;">AI-powered recruitment outreach · <a href="https://voicereach.co.uk" style="color: #9ca3af; text-decoration: none;">voicereach.co.uk</a></div>
     </div>
   </div>
 </body>
