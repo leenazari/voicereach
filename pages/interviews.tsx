@@ -51,10 +51,10 @@ type InterviewCandidate = {
 }
 
 const PIPELINE_STAGES = [
-  { id: 'interviewed', label: 'Interviewed', color: '#534AB7', bg: '#EEEDFE' },
-  { id: 'second_round', label: '2nd Round', color: '#185FA5', bg: '#E6F1FB' },
-  { id: 'job_offer', label: 'Job Offer', color: '#1D9E75', bg: '#E1F5EE' },
-  { id: 'rejected', label: 'Rejected', color: '#E24B4A', bg: '#fff0ee' },
+  { id: 'interview_done', label: 'Interview Done', color: '#4F46E5', bg: '#EEF2FF' },
+  { id: 'second_round',   label: '2nd Round',      color: '#7c3aed', bg: '#f3e8ff' },
+  { id: 'job_offer',      label: 'Job Offer',      color: '#15803d', bg: '#dcfce7' },
+  { id: 'rejected',       label: 'Rejected',       color: '#dc2626', bg: '#fee2e2' },
 ]
 
 export default function Interviews() {
@@ -383,7 +383,7 @@ export default function Interviews() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                 {PIPELINE_STAGES.map(stage => {
-                  const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interviewed') === stage.id)
+                  const stageCandidates = jobCandidates[job.id].filter(c => (c.pipeline_stage || 'interview_done') === stage.id)
                   return (
                     <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '1px solid #ebebeb', overflow: 'hidden' }}>
                       <div style={{ padding: '10px 14px', background: stage.bg, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -527,7 +527,10 @@ export default function Interviews() {
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: 'white', borderBottom: '0.5px solid #e5e7eb', padding: '13px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#111827', letterSpacing: '-0.2px' }}>Interviews</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#111827', letterSpacing: '-0.2px' }}>Interviews</div>
+              <span style={{ fontSize: 11, background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>Interview pipeline</span>
+            </div>
             <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>Generate AI interview packs for your active jobs</div>
           </div>
         </div>
@@ -685,13 +688,13 @@ export default function Interviews() {
                       disabled={movingCandidate === selectedCandidate.id}
                       style={{
                         padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-                        background: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? stage.color : stage.bg,
-                        color: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? 'white' : stage.color,
-                        outline: (selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? `2px solid ${stage.color}` : 'none',
+                        background: (selectedCandidate.pipeline_stage || 'interview_done') === stage.id ? stage.color : stage.bg,
+                        color: (selectedCandidate.pipeline_stage || 'interview_done') === stage.id ? 'white' : stage.color,
+                        outline: (selectedCandidate.pipeline_stage || 'interview_done') === stage.id ? `2px solid ${stage.color}` : 'none',
                         outlineOffset: 2
                       }}
                     >
-                      {(selectedCandidate.pipeline_stage || 'interviewed') === stage.id ? '✓ ' : ''}{stage.label}
+                      {(selectedCandidate.pipeline_stage || 'interview_done') === stage.id ? '✓ ' : ''}{stage.label}
                     </button>
                   ))}
                 </div>
