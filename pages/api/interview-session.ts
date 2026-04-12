@@ -64,7 +64,15 @@ Employers: ${(candidate.all_employers || []).join(', ') || 'Not specified'}
 Skills claimed: ${(candidate.skills || []).join(', ') || 'Not specified'}
 Years experience claimed: ${candidate.years_experience || 'Not specified'}
 
-For each question, if there is a relevant CV claim, use the cv_probe approach:
+MUST-HAVE SKILLS FOR THIS ROLE (probe specifically for evidence of these — do not let vague answers pass):
+${(job?.required_skills || []).slice(0, 3).map((s: string) => `- ${s}`).join('\n') || '- Not specified'}
+
+When a candidate's answer is vague about any of the must-have skills above, use the probing approach:
+- "Can you give me a specific example of when you've used [skill] in a real situation?"
+- "What was the actual outcome when you applied [skill]?"
+- Do not move on without at least one probe if a must-have skill goes unevidenced.
+
+For other skills, use the cv_probe approach:
 - "You mentioned working at [employer] — what did a typical week look like there?"
 - "Your background shows [skill] — can you walk me through a specific time you used that?"
 - "With [X] years in [sector], what was the most complex challenge you navigated?"
