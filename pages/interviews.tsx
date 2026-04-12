@@ -222,9 +222,6 @@ export default function Interviews() {
     } finally {
       setLoadingCandidates(null)
     }
-    } finally {
-      setLoadingCandidates(null)
-    }
   }
 
   async function togglePipeline(jobId: string) {
