@@ -774,23 +774,20 @@ export default function Dashboard() {
                 {(job.company || job.title)[0].toUpperCase()}
               </div>
             )}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{job.title}</div>
-                {job.status !== 'active' && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const, flexShrink: 0 }}>{job.status}</span>}
-                {workTypeLabel && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', padding: '2px 7px', borderRadius: 20, flexShrink: 0 }}>{workTypeLabel}</span>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(255,255,255,0.75)', flexWrap: 'wrap' as const }}>
-                {job.company && <span>{job.company}</span>}
-                {job.salary && <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 9px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 11 }}>{job.salary}</span>}
-                {job.location && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 1C4 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-2-4-4-4z"/><circle cx="6" cy="5" r="1.2"/></svg>
-                  {job.location}
-                </span>}
-                {job.closes_at && <span style={{ color: 'rgba(255,220,100,0.9)' }}>Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-              </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Click to {expandedJobs.has(job.id) ? 'hide' : 'view'} pipeline</div>
-            </div>
+             <div style={{ minWidth: 0 }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                 <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{job.title}</div>
+                 <span style={{ fontSize: 10, background: job.status === 'active' ? '#16a34a' : '#ef4444', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const, flexShrink: 0 }}>{job.status}</span>
+               </div>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.75)', flexWrap: 'nowrap' as const, overflow: 'hidden' }}>
+                 {job.company && <span style={{ whiteSpace: 'nowrap' as const }}>{job.company}</span>}
+                 {job.salary && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '1px 8px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 10, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{job.salary}</span></>}
+                 {job.location && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.location}</span></>}
+                 {workTypeLabel && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{workTypeLabel}</span></>}
+                 {job.closes_at && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ color: 'rgba(255,220,100,0.9)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span></>}
+               </div>
+               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Click to {expandedJobs.has(job.id) ? 'hide' : 'view'} pipeline</div>
+             </div>
           </div>
 
           {/* RIGHT ACTIONS */}
