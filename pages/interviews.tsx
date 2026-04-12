@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { getCombinedScore, getScoreColor, getScoreBg, getScoreLabel, getScoreBreakdown } from '../lib/scoring'
@@ -499,6 +500,12 @@ export default function Interviews() {
   }
 
   return (
+    <>
+    <Head>
+      <title>Interviews · VoiceReach</title>
+      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    </Head>
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f9fafb' }}>
 
       <style>{`
@@ -861,6 +868,7 @@ export default function Interviews() {
         </div>
       )}
     </div>
+    </>
   )
 }
 
@@ -1051,5 +1059,6 @@ function InterviewEditModal({ pack, onClose, onSave, notify }: EditModalProps) {
         </div>
       </div>
     </div>
+    </>
   )
 }
