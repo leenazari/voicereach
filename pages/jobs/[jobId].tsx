@@ -575,8 +575,9 @@ export default function JobPipeline() {
                 🎙 Send to {selectedShortlisted.size > 0 ? `${selectedShortlisted.size} selected` : `all shortlisted (${shortlistedCount})`}
               </button>
             )}
-            <button onClick={runMatch} disabled={matching} style={{ padding: '8px 16px', background: matching ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: matching ? 'not-allowed' : 'pointer' }}>
-              {matching ? '⟳ Matching...' : candidates.length > 0 ? '↺ Refresh matches' : '◎ Find matches'}
+            <button onClick={runMatch} disabled={matching}
+              style={{ padding: '8px 16px', background: matching ? '#9ca3af' : candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? 'white' : '#f59e0b', color: candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? '#374151' : 'white', border: candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? '1px solid #e5e7eb' : 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: matching ? 'not-allowed' : 'pointer' }}>
+              {matching ? '⟳ Matching...' : candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? '↺ Refresh matches' : '◎ Find matches'}
             </button>
           </div>
         </div>
@@ -642,8 +643,9 @@ export default function JobPipeline() {
             </>
           )}
 
-          <button onClick={runMatch} disabled={matching} style={{ marginLeft: 'auto', padding: '7px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-            {matching ? 'Matching...' : 'Refresh matches'}
+          <button onClick={runMatch} disabled={matching}
+            style={{ marginLeft: 'auto', padding: '7px 14px', background: matching ? '#9ca3af' : candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? 'white' : '#f59e0b', color: candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? '#374151' : 'white', border: candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? '1px solid #e5e7eb' : 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: matching ? 'not-allowed' : 'pointer' }}>
+            {matching ? 'Matching...' : candidates.filter(c => c.pipeline_status !== 'rejected').length > 0 ? 'Refresh matches' : 'Find matches'}
           </button>
         </div>
 
