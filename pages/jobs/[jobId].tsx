@@ -302,6 +302,7 @@ export default function JobPipeline() {
         notify(`Voice note sent to ${candidate.name} ✓`)
         await updatePipelineStatus(candidate.id, 'invited')
         setSelectedShortlisted(prev => { const n = new Set(prev); n.delete(candidate.id); return n })
+        await loadPipeline()
       } else notify('Error: ' + data.error, 'error')
     } finally { setSending(null) }
   }
@@ -309,6 +310,10 @@ export default function JobPipeline() {
   async function confirmSingleSend() {
     if (!sendTarget) return
     setShowSendModal(false)
+    // Optimistically move card to invited immediately
+    setCandidates(prev => prev.map(c =>
+      c.id === sendTarget.id ? { ...c, pipeline_status: 'invited' } : c
+    ))
     await sendVoiceNote(sendTarget, scriptPreview)
     setSendTarget(null)
     setScriptPreview('')
