@@ -754,10 +754,6 @@ export default function Dashboard() {
     })
 
     return (
-      <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)', marginBottom: 2 }}>
-
-
-    return (
       <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid #e5e7eb', marginBottom: 2 }}>
 
         {/* SPLIT CARD: colour left 30%, white right 70% */}
