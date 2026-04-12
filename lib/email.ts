@@ -42,7 +42,8 @@ export async function sendVoiceOutreachEmail(
   candidate: Candidate,
   voiceNoteUrl: string,
   voiceNoteBuffer: Buffer,
-  audioSizeMb: number
+  audioSizeMb: number,
+  hasActivePack: boolean = false
 ): Promise<{ token: string }> {
   const token = generateInterviewToken()
   const interviewLink = buildInterviewLink(token)
@@ -50,6 +51,7 @@ export async function sendVoiceOutreachEmail(
   const firstName = candidate.name.split(' ')[0]
   const calendarIcs = buildCalendarInvite(candidate, interviewLink)
   const jobTitle = candidate.job_title || candidate.role_applied
+  const calUrl = process.env.NEXT_PUBLIC_CALCOM_URL || 'https://cal.com/lee-nazari-ohfnvf/15min'
 
   const html = `
 <!DOCTYPE html>
@@ -90,21 +92,27 @@ export async function sendVoiceOutreachEmail(
       <p style="font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">🎙 Interview</p>
       <p style="font-size: 15px; color: white; font-weight: 700; margin: 0 0 16px; line-height: 1.5;">
         Ready to interview for ${jobTitle}?<br/>
-        <span style="font-size: 13px; font-weight: 400; opacity: 0.8;">Takes around 9 minutes. Start now or schedule for later.</span>
+        <span style="font-size: 13px; font-weight: 400; opacity: 0.8;">${hasActivePack ? 'Takes around 9 minutes. Start now or schedule for later.' : 'Pick a time that suits you and we will be in touch.'}</span>
       </p>
-      <a href="${directInterviewLink || interviewLink}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
+      ${hasActivePack
+        ? `<a href="${directInterviewLink || interviewLink}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
         Start my interview →
       </a>
-      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">No download needed · Go straight in</p>
+      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">No download needed · Go straight in</p>`
+        : `<a href="${calUrl}" style="display: inline-block; background: white; color: #1D9E75; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: -0.3px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 10px;">
+        📅 Book your interview slot →
+      </a>
+      <p style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0 0;">Pick a time that works for you</p>`
+      }
     </div>
 
-    <!-- SCHEDULE OPTION -->
-    <div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px; text-align: center;">
+    <!-- SCHEDULE OPTION (only shown if active pack) -->
+    ${hasActivePack ? `<div style="background: #f9f9f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px; text-align: center;">
       <p style="font-size: 13px; color: #555; margin: 0 0 10px;">📅 <strong>Prefer to schedule?</strong> Pick a time that suits you.</p>
-      <a href="${interviewLink}" style="display: inline-block; background: white; color: #534AB7; padding: 10px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #534AB7;">
+      <a href="${calUrl}" style="display: inline-block; background: white; color: #534AB7; padding: 10px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #534AB7;">
         Schedule for later
       </a>
-    </div>
+    </div>` : ''}
   </div>
 
   <!-- FOOTER -->
