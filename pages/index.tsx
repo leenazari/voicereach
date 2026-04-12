@@ -106,6 +106,9 @@ export default function Home() {
         <title>VoiceReach — Get More Candidates to Interview</title>
         <meta name="description" content="VoiceReach automatically generates personalised AI voice notes for every candidate. More responses. More interviews booked." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
       </Head>
 
