@@ -753,7 +753,12 @@ export default function JobPipeline() {
                                 </button>
                               )}
                               {stage.id === 'invited' && (
-                                <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500, marginBottom: 6, padding: '7px 0', textAlign: 'center' as const, background: '#f3e8ff', borderRadius: 8 }}>✓ Invite sent · awaiting interview</div>
+                                <div style={{ marginBottom: 6 }}>
+                                  <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500, padding: '7px 0', textAlign: 'center' as const, background: '#f3e8ff', borderRadius: 8, marginBottom: 5 }}>✓ Invite sent · awaiting interview</div>
+                                  {candidate.voice_note_url && (
+                                    <audio controls src={candidate.voice_note_url} style={{ width: '100%', height: 32, borderRadius: 6 }} />
+                                  )}
+                                </div>
                               )}
                               {stage.id === 'interview_done' && (
                                 <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
