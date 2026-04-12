@@ -356,28 +356,69 @@ Reply with ONE word only.`
 
 function detectCandidateFamily(candidateRole: string, keywords: string[]): string {
   const FAMILY_MARKERS: Record<string, string[]> = {
-    hr: ['hr ', 'human resource', 'talent acquisition', 'people manager', 'recruitment', 'cipd', 'employee relation', 'hr advisor', 'hr officer', 'hr business'],
-    warehouse: ['warehouse', 'distribution manager', 'fulfilment', 'fulfillment', 'stock control', 'depot manager', 'picking manager'],
-    finance: ['accountant', 'finance manager', 'financial controller', 'cfo', 'bookkeeper', 'accounts payable', 'accounts receivable', 'credit control', 'treasurer'],
-    marketing: ['marketing manager', 'digital marketing', 'brand manager', 'content manager', 'social media manager', 'campaign manager', 'cmo', 'seo manager', 'ppc manager'],
+    hr: ['hr manager', 'human resource', 'talent acquisition', 'people manager', 'hr business partner', 'employee relation', 'hr advisor', 'hr officer', 'hr director', 'head of hr', 'cipd'],
+    warehouse: ['warehouse', 'distribution manager', 'fulfilment manager', 'fulfillment manager', 'stock control', 'depot manager', 'picking manager', 'logistics manager', 'logistics coordinator'],
+    finance: ['accountant', 'finance manager', 'financial controller', 'cfo', 'bookkeeper', 'accounts payable', 'accounts receivable', 'credit control', 'treasurer', 'finance director'],
+    marketing: ['marketing manager', 'digital marketing', 'brand manager', 'content manager', 'social media manager', 'campaign manager', 'cmo', 'head of marketing', 'seo manager', 'ppc manager'],
     tech: ['software engineer', 'developer', 'devops', 'data engineer', 'data scientist', 'cto', 'it manager', 'systems admin', 'network engineer', 'programmer'],
-    sales: ['sales manager', 'sales executive', 'account manager', 'business development', 'sales director', 'head of sales', 'field sales', 'sales representative'],
-    care: ['care manager', 'support worker', 'nurse', 'healthcare assistant', 'social worker', 'registered manager', 'care coordinator', 'care home', 'domiciliary'],
+    sales: ['sales manager', 'sales executive', 'account manager', 'business development manager', 'sales director', 'head of sales', 'field sales representative', 'commercial manager'],
+    care: ['care manager', 'support worker', 'registered nurse', 'healthcare assistant', 'social worker', 'registered manager', 'care coordinator', 'care home manager', 'domiciliary'],
     legal: ['solicitor', 'lawyer', 'paralegal', 'legal counsel', 'barrister', 'legal manager', 'compliance manager'],
     operations: ['operations manager', 'ops manager', 'plant manager', 'facilities manager', 'production manager'],
     engineering: ['mechanical engineer', 'electrical engineer', 'civil engineer', 'structural engineer', 'maintenance engineer'],
     construction: ['site manager', 'quantity surveyor', 'contracts manager', 'construction manager'],
-    hospitality: ['hotel manager', 'restaurant manager', 'catering manager', 'chef', 'food and beverage', 'hospitality manager'],
-    retail: ['retail manager', 'store manager', 'shop manager', 'visual merchandiser', 'branch manager'],
-    procurement: ['procurement manager', 'buyer', 'purchasing manager', 'category manager', 'sourcing manager'],
+    hospitality: ['hotel manager', 'restaurant manager', 'catering manager', 'head chef', 'food and beverage manager', 'hospitality manager'],
+    retail: ['retail manager', 'store manager', 'shop manager', 'visual merchandiser', 'branch manager retail'],
+    procurement: ['procurement manager', 'purchasing manager', 'category manager', 'sourcing manager'],
     transport: ['transport manager', 'fleet manager', 'traffic manager', 'haulage manager'],
-    customer_service: ['customer service manager', 'call centre', 'contact centre', 'customer experience', 'customer success'],
+    customer_service: ['customer service manager', 'call centre manager', 'contact centre manager', 'customer experience manager'],
   }
-  const text = candidateRole + ' ' + keywords.slice(0, 5).join(' ').toLowerCase()
+
+  // FAMILY GROUPS — families that are close enough not to penalise each other
+  // e.g. warehouse and operations/logistics are related disciplines
+  const FAMILY_GROUPS: Record<string, string[]> = {
+    warehouse: ['warehouse', 'operations', 'transport', 'procurement'],
+    operations: ['operations', 'warehouse', 'transport', 'procurement'],
+    transport: ['transport', 'warehouse', 'operations'],
+    procurement: ['procurement', 'warehouse', 'operations'],
+    sales: ['sales'],
+    hr: ['hr'],
+    finance: ['finance'],
+    marketing: ['marketing'],
+    tech: ['tech'],
+    care: ['care'],
+    legal: ['legal'],
+    engineering: ['engineering', 'construction'],
+    construction: ['construction', 'engineering'],
+    hospitality: ['hospitality', 'retail'],
+    retail: ['retail', 'hospitality'],
+    customer_service: ['customer_service', 'sales'],
+  }
+
+  const text = (candidateRole + ' ' + keywords.slice(0, 5).join(' ')).toLowerCase()
   for (const [family, markers] of Object.entries(FAMILY_MARKERS)) {
     if (markers.some(m => text.includes(m))) return family
   }
   return 'unknown'
+}
+
+function areFamiliesCompatible(jobFamily: string, candidateFamily: string): boolean {
+  // Same family always compatible
+  if (jobFamily === candidateFamily) return true
+  // Check if they're in the same group
+  const COMPATIBLE: Record<string, string[]> = {
+    warehouse: ['operations', 'transport', 'procurement'],
+    operations: ['warehouse', 'transport', 'procurement'],
+    transport: ['warehouse', 'operations'],
+    procurement: ['warehouse', 'operations'],
+    engineering: ['construction'],
+    construction: ['engineering'],
+    retail: ['hospitality', 'customer_service'],
+    hospitality: ['retail'],
+    customer_service: ['sales', 'retail'],
+    sales: ['customer_service'],
+  }
+  return (COMPATIBLE[jobFamily] || []).includes(candidateFamily)
 }
 
 function calculateMatch(candidate: any, job: any, priority: string, jobFamily: string): { score: number, matches: string[] } {
@@ -393,7 +434,7 @@ function calculateMatch(candidate: any, job: any, priority: string, jobFamily: s
 
   // Role family penalty — wrong family = 65% score reduction
   const candidateFamily = detectCandidateFamily(candidateRole, allCandidateKeywords as string[])
-  const familyPenalty = (jobFamily !== 'unknown' && candidateFamily !== 'unknown' && jobFamily !== candidateFamily) ? 0.35 : 1.0
+  const familyPenalty = (jobFamily !== 'unknown' && candidateFamily !== 'unknown' && !areFamiliesCompatible(jobFamily, candidateFamily)) ? 0.35 : 1.0
 
   const keywordMatches: string[] = []
   let keywordScore = 0
