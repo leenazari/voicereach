@@ -36,6 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const questions = pack?.questions?.questions || []
+  const allSkills = job?.required_skills || []
+  const coreSkills = allSkills.slice(0, 3)
+  const importantSkills = allSkills.slice(3, 6)
 
   const scoringPrompt = `You are an expert recruitment assessor reviewing a structured job interview transcript.
 
@@ -47,6 +50,15 @@ Your job is to:
 
 ROLE: ${job?.title || 'Not specified'}
 COMPANY: ${job?.company || 'Not specified'}
+
+SKILL WEIGHTING FOR THIS ROLE:
+Must-have skills (score harshly if candidate cannot evidence these — these are deal-breakers):
+${coreSkills.length > 0 ? coreSkills.map((s: string) => `- ${s}`).join('\n') : '- Not specified'}
+
+Important skills (expected, some gaps acceptable):
+${importantSkills.length > 0 ? importantSkills.map((s: string) => `- ${s}`).join('\n') : '- Not specified'}
+
+Scoring instruction: A candidate who cannot demonstrate the must-have skills with specific examples and outcomes should score no higher than 5/10 on any question where those skills are tested, regardless of how well they speak generally.
 
 CANDIDATE CV:
 Name: ${candidate.name}
@@ -317,6 +329,7 @@ async function sendRecruiterNotification(candidate: any, job: any, scored: any) 
     ${strengthsHtml}
     ${concernsHtml}
     ${contradictionsHtml}
+    ${nextQuestionsHtml}
     ${keywordsHtml}
 
     <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #ebebeb;">
