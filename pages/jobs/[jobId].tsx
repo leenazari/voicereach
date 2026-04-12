@@ -3,6 +3,11 @@ import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
 import JobFormModal from '../../components/JobFormModal'
 import { JOB_STAGES, INTERVIEW_STAGES, normaliseStatus, toDbStatus } from '../../lib/pipeline'
+
+const ALL_STAGES = [...JOB_STAGES, ...INTERVIEW_STAGES]
+const STATUS_LABELS: Record<string, string> = Object.fromEntries(ALL_STAGES.map(s => [s.id, s.label]))
+const STATUS_COLORS: Record<string, string> = Object.fromEntries(ALL_STAGES.map(s => [s.id, s.color]))
+const STATUS_BG: Record<string, string> = Object.fromEntries(ALL_STAGES.map(s => [s.id, s.bg]))
 import { getCombinedScore, getScoreColor, getScoreBg } from '../../lib/scoring'
 
 type Job = {
@@ -225,7 +230,7 @@ export default function JobPipeline() {
   async function shortlistAllAboveThreshold() {
     const threshold = job?.match_threshold || 70
     const toShortlist = candidates.filter(c =>
-      c.pipeline_status === 'matched' && c.match_score >= threshold && c.pipeline_status !== 'rejected'
+      c.pipeline_status === 'matched' && c.match_score >= threshold
     )
     if (toShortlist.length === 0) {
       notify('No candidates above threshold to shortlist', 'error')
@@ -497,26 +502,7 @@ export default function JobPipeline() {
     mouseDownOnOverlay.current = false
   }
 
-  function getScoreColor(score: number): string {
-    if (score >= 80) return '#1D9E75'
-    if (score >= 70) return '#534AB7'
-    if (score >= 55) return '#BA7517'
-    return '#E24B4A'
-  }
 
-  function getScoreBg(score: number): string {
-    if (score >= 80) return '#E1F5EE'
-    if (score >= 70) return '#EEEDFE'
-    if (score >= 55) return '#FFF3E0'
-    return '#fff0ee'
-  }
-
-  function getScoreBorder(score: number): string {
-    if (score >= 80) return '#1D9E75'
-    if (score >= 70) return '#534AB7'
-    if (score >= 55) return '#BA7517'
-    return '#E24B4A'
-  }
 
   const byStatus = (status: string) => candidates.filter(c => c.pipeline_status === status)
   const threshold = job?.match_threshold || 70
@@ -936,7 +922,7 @@ export default function JobPipeline() {
                 <div style={{ background: getScoreBg(profileCandidate.match_score), borderRadius: 8, padding: '4px 12px' }}>
                   <span style={{ fontSize: 14, fontWeight: 800, color: getScoreColor(profileCandidate.match_score) }}>{profileCandidate.match_score}%</span>
                 </div>
-                <span style={{ fontSize: 11, background: STATUS_BG[profileCandidate.pipeline_status] || '#f0f0f0', color: STATUS_COLORS[profileCandidate.pipeline_status] || '#888', padding: '4px 12px', borderRadius: 10, fontWeight: 600 }}>
+                <span style={{ fontSize: 11, background: STATUS_BG[profileCandidate.pipeline_status] || '#f3f4f6', color: STATUS_COLORS[profileCandidate.pipeline_status] || '#6b7280', padding: '4px 12px', borderRadius: 10, fontWeight: 600 }}>
                   {STATUS_LABELS[profileCandidate.pipeline_status] || profileCandidate.pipeline_status}
                 </span>
               </div>
@@ -1037,7 +1023,7 @@ export default function JobPipeline() {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
               <button onClick={closeProfile} style={{ padding: '9px 16px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500 }}>Close</button>
-              {profileCandidate.pipeline_status === 'matched' && (
+              {['matched', 'shortlisted'].includes(profileCandidate.pipeline_status) && (
                 <button onClick={() => { updatePipelineStatus(profileCandidate.id, 'shortlisted'); closeProfile() }} style={{ padding: '9px 16px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Shortlist</button>
               )}
               {profileCandidate.pipeline_status === 'shortlisted' && (
