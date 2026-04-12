@@ -84,6 +84,13 @@ CV VERIFICATION RULES:
 - Always use neutral, professional language — never accusatory
 - Focus on what was and was not demonstrated, not character judgements
 
+IMPORTANT — END OF INTERVIEW Q&A:
+- The interview closes with the agent asking "do you have any questions for me?"
+- Any questions the candidate asks AT THIS POINT are normal and expected — do not penalise them
+- Asking about salary, the role, the team or next steps during the closing Q&A is completely appropriate professional behaviour
+- ONLY flag it as a concern if the candidate interrupted the structured questions mid-interview to ask about salary or conditions
+- Do not include "interrupted interview flow" or similar as a concern if the candidate simply asked questions during the designated Q&A section
+
 NEXT ROUND QUESTION GENERATION:
 - Generate 4 to 6 tailored follow-up questions for a second round interview
 - Questions must be specific to this candidate and this role — not generic interview questions
@@ -113,7 +120,7 @@ Respond ONLY with valid JSON, no markdown, no backticks:
     }
   ],
   "strengths": ["string"],
-  "concerns": ["string"],
+  "concerns": ["string — genuine concerns only. Do NOT flag: asking questions during closing Q&A, salary questions at the end of interview, or nervousness"],
   "interview_keywords": ["keyword1", "keyword2"],
   "cv_contradictions": [
     {
