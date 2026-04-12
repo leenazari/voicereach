@@ -1059,7 +1059,20 @@ export default function Dashboard() {
                       const candidateId = e.dataTransfer.getData('candidateId')
                       const fromJobId = e.dataTransfer.getData('jobId')
                       if (candidateId && fromJobId === job.id) {
-                        await moveCandidateStage(candidateId, job.id, stage.id)
+                        if (stage.id === 'invited') {
+                          // Open send modal with job pre-filled
+                          const full = candidates.find(c => c.id === candidateId)
+                          if (full) {
+                            setJobModalCandidate(full)
+                            setSelectedJobId(job.id)
+                            setJobSendForm({ jobTitle: job.title, jobSalary: job.salary || '' })
+                            setScriptPreview('')
+                            setShowJobModal(true)
+                            generatePreview(full.id, job.title, job.salary || '')
+                          }
+                        } else {
+                          await moveCandidateStage(candidateId, job.id, stage.id)
+                        }
                       }
                     }}
                     style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden', transition: 'background 0.15s' }}>
@@ -1597,48 +1610,91 @@ export default function Dashboard() {
       {/* SEND VOICE NOTE MODAL */}
       {showJobModal && jobModalCandidate && (
         <div onMouseDown={overlayMouseDown} onMouseUp={e => overlayMouseUp(e, () => { setShowJobModal(false); setScriptPreview('') })} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalStyle, width: 540, animation: 'modalIn 0.2s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#f0eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎙</div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>Send voice note</div>
-                <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>to {jobModalCandidate.name}</div>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 16, width: 640, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.18)', animation: 'modalIn 0.2s ease' }}>
+
+            {/* Header */}
+            <div style={{ padding: '24px 28px 20px', borderBottom: '0.5px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2a4 4 0 014 4v5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M19 10a7 7 0 01-14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Send voice note & invite</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{jobModalCandidate.name} · {jobSendForm.jobTitle || 'No role selected'}</div>
+                </div>
               </div>
+              <button onClick={() => { setShowJobModal(false); setScriptPreview('') }}
+                style={{ width: 32, height: 32, borderRadius: 8, border: '0.5px solid #e5e7eb', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: 18, lineHeight: 1 }}>×</button>
             </div>
-            {jobs.filter(j => j.status === 'active').length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Match to a job <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
-                <select value={selectedJobId} onChange={e => handleJobSelect(e.target.value)} style={inputStyle}>
-                  <option value="">No job selected — enter manually below</option>
-                  {jobs.filter(j => j.status === 'active').map(j => (
-                    <option key={j.id} value={j.id}>{j.title}{j.company ? ` — ${j.company}` : ''}{j.salary ? ` (${j.salary})` : ''}</option>
-                  ))}
-                </select>
+
+            <div style={{ padding: '20px 28px 28px' }}>
+
+              {/* Job selector */}
+              {jobs.filter(j => j.status === 'active').length > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Role <span style={{ color: '#9ca3af', fontWeight: 400 }}>— select or enter manually below</span></label>
+                  <select value={selectedJobId} onChange={e => handleJobSelect(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white', color: '#111827', cursor: 'pointer' }}>
+                    <option value="">No job selected</option>
+                    {jobs.filter(j => j.status === 'active').map(j => (
+                      <option key={j.id} value={j.id}>{j.title}{j.company ? ` — ${j.company}` : ''}{j.salary ? ` · ${j.salary}` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Job title + salary */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Job title *</label>
+                  <input type="text" value={jobSendForm.jobTitle} onChange={e => handleJobSendFormChange('jobTitle', e.target.value)}
+                    placeholder="e.g. Senior Sales Executive"
+                    style={{ width: '100%', padding: '10px 12px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} autoFocus />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Salary <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span></label>
+                  <input type="text" value={jobSendForm.jobSalary} onChange={e => handleJobSendFormChange('jobSalary', e.target.value)}
+                    placeholder="e.g. £45,000"
+                    style={{ width: '100%', padding: '10px 12px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
+                </div>
               </div>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <div>
-                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Job title *</label>
-                <input type="text" value={jobSendForm.jobTitle} onChange={e => handleJobSendFormChange('jobTitle', e.target.value)} placeholder="e.g. Senior Sales Executive" style={inputStyle} autoFocus />
+
+              {/* Script */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                    Voice note script
+                    <span style={{ color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>— edit before sending</span>
+                  </label>
+                  {generatingPreview
+                    ? <span style={{ fontSize: 11, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                        Generating...
+                      </span>
+                    : scriptPreview && <span style={{ fontSize: 11, color: '#9ca3af' }}>{scriptPreview.split(' ').length} words · ~{Math.round(scriptPreview.split(' ').length / 2.3)}s</span>
+                  }
+                </div>
+                <textarea
+                  value={scriptPreview}
+                  onChange={e => setScriptPreview(e.target.value)}
+                  rows={9}
+                  placeholder={generatingPreview ? 'Generating script...' : 'Script will appear here once a job is selected'}
+                  style={{ width: '100%', padding: '12px 14px', border: '0.5px solid #e5e7eb', borderRadius: 10, fontSize: 13, lineHeight: 1.7, resize: 'vertical', outline: 'none', background: generatingPreview ? '#f9fafb' : 'white', color: '#111827', boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
+                />
               </div>
-              <div>
-                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 6, fontWeight: 600 }}>Salary <span style={{ color: '#bbb', fontWeight: 400 }}>(optional)</span></label>
-                <input type="text" value={jobSendForm.jobSalary} onChange={e => handleJobSendFormChange('jobSalary', e.target.value)} placeholder="e.g. £45,000" style={inputStyle} />
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => { setShowJobModal(false); setScriptPreview('') }}
+                  style={{ padding: '10px 20px', border: '0.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500, color: '#374151' }}>
+                  Cancel
+                </button>
+                <button onClick={confirmShortlist} disabled={!jobSendForm.jobTitle || generatingPreview}
+                  style={{ padding: '10px 24px', background: !jobSendForm.jobTitle || generatingPreview ? '#9ca3af' : '#4F46E5', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !jobSendForm.jobTitle || generatingPreview ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2a4 4 0 014 4v5a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M19 10a7 7 0 01-14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                  {generatingPreview ? 'Generating...' : 'Send voice note & invite'}
+                </button>
               </div>
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>Voice note script <span style={{ color: '#aaa', fontWeight: 400 }}>(edit if needed)</span></label>
-                {generatingPreview && <span style={{ fontSize: 11, color: '#aaa' }}>⟳ Generating...</span>}
-              </div>
-              <textarea value={scriptPreview} onChange={e => setScriptPreview(e.target.value)} rows={7} placeholder={generatingPreview ? 'Generating script...' : 'Script will appear here'} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontSize: 12, background: generatingPreview ? '#fafafa' : 'white' }} />
-              {scriptPreview && <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{scriptPreview.split(' ').length} words, approx {Math.round(scriptPreview.split(' ').length / 2.3)} seconds</div>}
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowJobModal(false); setScriptPreview('') }} style={{ padding: '9px 18px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', fontWeight: 500, color: '#555' }}>Cancel</button>
-              <button onClick={confirmShortlist} disabled={!jobSendForm.jobTitle || generatingPreview} style={{ padding: '9px 20px', background: !jobSendForm.jobTitle || generatingPreview ? '#aaa' : '#534AB7', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !jobSendForm.jobTitle || generatingPreview ? 'not-allowed' : 'pointer' }}>
-                🎙 Generate and send
-              </button>
             </div>
           </div>
         </div>
