@@ -756,42 +756,39 @@ export default function Dashboard() {
     return (
       <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(0,0,0,0.1)', marginBottom: 2 }}>
 
-        {/* GRADIENT BANNER */}
-        <div style={{ background: gradient, display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', right: 40, bottom: -70, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
-          {/* LEFT CLICKABLE AREA — opens pipeline */}
+    return (
+      <div key={job.id} style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid #e5e7eb', marginBottom: 2 }}>
+
+        {/* SPLIT CARD: colour left 30%, white right 70% */}
+        <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 68 }}>
+
+          {/* LEFT COLOUR STRIP — clickable, opens pipeline */}
           <div
             onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
-            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', flex: '0 0 38%', cursor: 'pointer', zIndex: 1, minWidth: 0 }}
+            style={{ width: '30%', flexShrink: 0, background: gradient, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer', minWidth: 0 }}
             title="Click to view pipeline"
           >
             {job.logo_url ? (
-              <img src={job.logo_url} alt={job.company} style={{ width: 42, height: 42, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
+              <img src={job.logo_url} alt={job.company} style={{ width: 40, height: 40, borderRadius: 9, objectFit: 'contain', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 9, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: 'white', flexShrink: 0 }}>
                 {(job.company || job.title)[0].toUpperCase()}
               </div>
             )}
-             <div style={{ minWidth: 0 }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                 <div style={{ fontSize: 15, fontWeight: 600, color: 'white', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{job.title}</div>
-                 <span style={{ fontSize: 10, background: job.status === 'active' ? '#16a34a' : '#ef4444', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const, flexShrink: 0 }}>{job.status}</span>
-               </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.75)', flexWrap: 'nowrap' as const, overflow: 'hidden' }}>
-                 {job.company && <span style={{ whiteSpace: 'nowrap' as const }}>{job.company}</span>}
-                 {job.salary && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.2)', padding: '1px 8px', borderRadius: 20, fontWeight: 600, color: 'white', fontSize: 10, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{job.salary}</span></>}
-                 {job.location && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.location}</span></>}
-                 {workTypeLabel && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{workTypeLabel}</span></>}
-                 {job.closes_at && <><span style={{ opacity: 0.4, flexShrink: 0 }}>·</span><span style={{ color: 'rgba(255,220,100,0.9)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>Closes {new Date(job.closes_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span></>}
-               </div>
-               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Click to {expandedJobs.has(job.id) ? 'hide' : 'view'} pipeline</div>
-             </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{job.title}</div>
+                <span style={{ fontSize: 9, background: job.status === 'active' ? '#16a34a' : '#ef4444', color: 'white', padding: '1px 6px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' as const, flexShrink: 0 }}>{job.status}</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {[job.company, job.salary, job.location, workTypeLabel].filter(Boolean).join(' · ')}
+              </div>
+            </div>
           </div>
 
-          {/* RIGHT ACTIONS */}
-          <div style={{ display: 'flex', gap: 6, padding: '14px 14px 14px 0', flexShrink: 0, zIndex: 1, marginLeft: 'auto' }}>
+          {/* RIGHT WHITE AREA — buttons */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 14px', gap: 6, borderLeft: '0.5px solid #e5e7eb', background: 'white' }}>
             {interviewPacks[job.id] ? (
               <button onClick={() => { const url = `${window.location.origin}/interview/apply/${job.id}`; navigator.clipboard.writeText(url); notify('Interview link copied ✓') }} style={btnStyle('#0ea5e9')}>
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="1" width="9" height="9" rx="1.5"/><path d="M1 5v7a1 1 0 001 1h7"/></svg>
