@@ -24,6 +24,8 @@ type Props = {
   expired: boolean
   notFound: boolean
   calUrl: string
+  jobId: string | null
+  interviewToken: string
 }
 
 function extractHighlights(description: string): string[] {
@@ -56,7 +58,7 @@ function extractHighlights(description: string): string[] {
   return highlights.slice(0, 6)
 }
 
-export default function InterviewPage({ candidate, job, expired, notFound, calUrl }: Props) {
+export default function InterviewPage({ candidate, job, expired, notFound, calUrl, jobId, interviewToken }: Props) {
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -92,6 +94,9 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
   }
 
   const firstName = candidate?.name.split(' ')[0] || ''
+  const applyUrl = jobId ? `/interview/apply/${jobId}` : null
+  const interviewPageUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://voicereach.co.uk'}/interview/${interviewToken}`
+  const calWithLink = `${calUrl}?notes=${encodeURIComponent('My interview link: ' + interviewPageUrl)}`
   const displayJob = job || {
     title: candidate?.job_title || 'Exciting Opportunity',
     company: '',
@@ -321,15 +326,24 @@ export default function InterviewPage({ candidate, job, expired, notFound, calUr
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', marginBottom: 28, lineHeight: 1.6 }}>
             This is your actual interview for this job. Click below and you are straight in. Spaces are filling up fast so do not wait!
           </p>
-          <button
-            onClick={() => window.open(calUrl, '_blank')}
-            style={ctaStyle}
-          >
-            Start my interview now →
-          </button>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14 }}>
+          {applyUrl ? (
+            <a href={applyUrl} style={ctaStyle}>
+              Start my interview now →
+            </a>
+          ) : (
+            <button onClick={() => window.open(calUrl, '_blank')} style={ctaStyle}>
+              Start my interview now →
+            </button>
+          )}
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14, marginBottom: 16 }}>
             Takes less than 10 minutes · Go straight in
           </div>
+          <button
+            onClick={() => window.open(calWithLink, '_blank')}
+            style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', color: 'white', padding: '12px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', backdropFilter: 'blur(10px)' }}
+          >
+            📅 Book for later
+          </button>
         </div>
 
         {/* FOOTER */}
@@ -359,7 +373,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
       .single()
 
     if (error || !candidate) {
-      return { props: { candidate: null, job: null, expired: false, notFound: true, calUrl } }
+      return { props: { candidate: null, job: null, expired: false, notFound: true, calUrl, jobId: null, interviewToken: token } }
     }
 
     let job = null
@@ -383,10 +397,12 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
         job,
         expired: false,
         notFound: false,
-        calUrl
+        calUrl,
+        jobId: candidate.job_id || null,
+        interviewToken: token
       }
     }
   } catch {
-    return { props: { candidate: null, job: null, expired: false, notFound: true, calUrl } }
+    return { props: { candidate: null, job: null, expired: false, notFound: true, calUrl, jobId: null, interviewToken: token } }
   }
 }
