@@ -698,7 +698,9 @@ export default function Dashboard() {
         notify(`Voice note sent to ${jobModalCandidate.name} ✓`)
         fetchCandidates()
         fetchActivityData(activityYear, activityMonth)
-        if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+        // Re-fetch profile to get accurate credits count from DB
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => { if (data) setProfile(data) })
         markOnboardingStep('voice_note')
       } else {
         notify('Error: ' + data.error, 'error')
