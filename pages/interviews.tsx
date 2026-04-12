@@ -163,6 +163,7 @@ export default function Interviews() {
         if (!counts[jc.job_id]) counts[jc.job_id] = new Set()
         counts[jc.job_id].add(jc.candidate_id)
       }
+      const finalCounts: Record<string, number> = {}
       for (const [jobId, set] of Object.entries(counts)) finalCounts[jobId] = set.size
       setCandidateCounts(finalCounts)
     }
