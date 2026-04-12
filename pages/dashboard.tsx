@@ -888,9 +888,10 @@ export default function Dashboard() {
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v8M4 6l3 3 3-3"/><path d="M1 10v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
               Bulk CVs
             </button>
-            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id} style={btnStyle('#f59e0b')}>
+            <button onClick={() => findMatches(job)} disabled={matchingJob === job.id}
+              style={matchResults[job.id] ? { ...btnStyle('rgba(255,255,255,0)'), border: '1px solid #e5e7eb', color: '#374151' } : btnStyle('#f59e0b')}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
-              {matchingJob === job.id ? 'Matching...' : matchResults[job.id] ? 'Refresh' : 'Find matches'}
+              {matchingJob === job.id ? 'Matching...' : matchResults[job.id] ? 'Refresh matches' : 'Find matches'}
             </button>
             <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ ...btnStyle('rgba(255,255,255,0)'), border: '1px solid #e5e7eb', color: '#374151' }}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>
@@ -915,110 +916,13 @@ export default function Dashboard() {
             {interviewPacks[job.id] && <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 5, fontWeight: 500 }}>Interview ready</span>}
             <span style={{ fontSize: 11, background: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: 5 }}>{job.match_threshold || 70}% threshold</span>
           </div>
-          {matchResults[job.id] && (
-            <button onClick={() => setExpandedJobs(prev => { const n = new Set(prev); n.has(job.id) ? n.delete(job.id) : n.add(job.id); return n })}
-              style={{ padding: '4px 10px', background: '#f3f4f6', color: '#374151', border: '0.5px solid #e5e7eb', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
-              {expandedJobs.has(job.id) ? 'Hide matches' : `${matchResults[job.id].filter(r => r.status === 'shortlist').length} matches`}
-            </button>
+          {matchResults[job.id] && matchResults[job.id].length > 0 && (
+            <span style={{ fontSize: 11, background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: 6, fontWeight: 500, flexShrink: 0 }}>
+              {matchResults[job.id].filter(r => r.status === 'shortlist').length} matched
+            </span>
           )}
         </div>
 
-        {/* MATCH RESULTS */}
-        {expandedJobs.has(job.id) && matchResults[job.id] && (
-          <div style={{ borderTop: '0.5px solid #e5e7eb' }}>
-            <div style={{ padding: '10px 16px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
-                {matchResults[job.id].filter(r => r.status === 'shortlist').length} strong matches from {matchResults[job.id].length} candidates
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'shortlist').length} strong</span>
-                <span style={{ fontSize: 11, background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.status === 'longlist').length} low</span>
-                {matchResults[job.id].filter(r => r.already_sent).length > 0 && (
-                  <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 6, fontWeight: 500 }}>{matchResults[job.id].filter(r => r.already_sent).length} sent</span>
-                )}
-              </div>
-            </div>
-            {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).length > 0 && (
-              <div style={{ padding: '10px 16px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#15803d', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Strong matches</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {matchResults[job.id].filter(r => r.status === 'shortlist' || r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: match.already_sent ? '#fffbeb' : '#f0fdf4', border: `0.5px solid ${match.already_sent ? '#fde68a' : '#bbf7d0'}`, borderRadius: 8 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-                          <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 13, fontWeight: 500, color: '#4F46E5', cursor: 'pointer' }}>{match.name}</div>
-                          {match.already_sent && <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 5, fontWeight: 500 }}>Sent</span>}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 3 }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}{match.years_experience > 0 ? ` · ${match.years_experience}yr` : ''}</div>
-                        {match.keyword_matches.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                            {match.keyword_matches.slice(0, 4).map(kw => (
-                              <span key={kw} style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>{kw}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <button onClick={async () => {
-                        setShortlisting(match.candidate_id)
-                        try {
-                          const headers = await authHeaders()
-                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                          const data = await res.json()
-                          if (data.success) {
-                            notify(`Voice note sent to ${match.name} ✓`)
-                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true, status: 'voice_sent' } : m) }))
-                            fetchCandidates()
-                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                            markOnboardingStep('voice_note')
-                          } else notify('Error: ' + data.error, 'error')
-                        } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '6px 14px', background: shortlisting === match.candidate_id ? '#9ca3af' : match.already_sent ? '#fef3c7' : '#4F46E5', color: shortlisting === match.candidate_id ? 'white' : match.already_sent ? '#92400e' : 'white', border: match.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : match.already_sent ? 'Resend' : 'Send'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).length > 0 && (
-              <div style={{ padding: '0 16px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.6px', marginBottom: 8 }}>Low match — below threshold</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {matchResults[job.id].filter(r => r.status === 'longlist' && !r.already_sent).map(match => (
-                    <div key={match.candidate_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f9fafb', border: '0.5px solid #e5e7eb', borderRadius: 8 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 7, background: getMatchBg(match.match_score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: getMatchColor(match.match_score) }}>{match.match_score}%</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div onClick={() => { const full = candidates.find(c => c.id === match.candidate_id); if (full) openProfile(full) }} style={{ fontSize: 12, fontWeight: 500, color: '#4F46E5', cursor: 'pointer', marginBottom: 1 }}>{match.name}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{match.role_applied}{match.last_employer ? ` · ${match.last_employer}` : ''}</div>
-                      </div>
-                      <button onClick={async () => {
-                        setShortlisting(match.candidate_id)
-                        try {
-                          const headers = await authHeaders()
-                          const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: match.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
-                          const data = await res.json()
-                          if (data.success) {
-                            notify(`Voice note sent to ${match.name} ✓`)
-                            setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(m => m.candidate_id === match.candidate_id ? { ...m, already_sent: true } : m) }))
-                            fetchCandidates()
-                            if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
-                          } else notify('Error: ' + data.error, 'error')
-                        } finally { setShortlisting(null) }
-                      }} disabled={shortlisting === match.candidate_id} style={{ padding: '5px 10px', background: 'white', color: '#4F46E5', border: '0.5px solid #c7d2fe', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: shortlisting === match.candidate_id ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                        {shortlisting === match.candidate_id ? '...' : 'Send anyway'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* PIPELINE TOGGLE */}
         {matchResults[job.id] && matchResults[job.id].length > 0 && (
