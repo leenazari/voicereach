@@ -459,8 +459,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Any candidate past the matched stage should not be re-evaluated
     // This protects interview data and pipeline position from being overwritten
-    const PROTECTED_STATUSES = [
-      'shortlisted', 'shortlist',
+    // Statuses that lock pipeline position — score still updates but status won't change
+    // If a candidate is moved BACK to matched (shortlist/longlist), they re-enter normal scoring
+    const LOCKED_STATUSES = [
       'voice_sent', 'invited',
       'interview_booked', 'interview_done', 'interviewed',
       'second_round', 'job_offer',
@@ -472,31 +473,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const candidate of activeCandidates || []) {
       const existingStatus = existingStatusMap[candidate.id]
-      const isProtected = existingStatus && PROTECTED_STATUSES.includes(existingStatus)
+      // shortlist, longlist, matched = fully re-scored, status can change
+      // anything in LOCKED_STATUSES = score updates but status is preserved
+      const isLocked = existingStatus && LOCKED_STATUSES.includes(existingStatus)
 
-      // Skip full re-scoring for candidates past matched stage
-      // Just include them in results with their existing status preserved
-      if (isProtected && existingStatus !== 'shortlist' && existingStatus !== 'longlist') {
-        // Still include in results for display but don't touch their record
-        results.push({
-          candidate_id: candidate.id,
-          name: candidate.name,
-          email: candidate.email,
-          role_applied: candidate.role_applied,
-          years_experience: candidate.years_experience,
-          last_employer: candidate.last_employer,
-          location: candidate.location,
-          strength_keywords: candidate.strength_keywords,
-          match_score: candidate.cv_match_score || 0,
-          cv_score: candidate.cv_match_score || null,
-          interview_score: candidate.interview_score || null,
-          keyword_matches: [],
-          status: existingStatus,
-          already_sent: true
-        })
-        continue
-      }
-      // Detect if candidate has no CV data (came in via interview link only)
+      // Always calculate the CV score — even for protected candidates
       const hasNoCv = !candidate.experience_summary &&
         !candidate.skills?.length &&
         !candidate.strength_keywords?.length &&
@@ -510,6 +491,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = calculateMatch(candidate, job, priority)
         cvScore = result.score
         matches = result.matches
+      }
+
+      // Save cv_match_score back to candidate for display
+      await supabase
+        .from('candidates')
+        .update({ cv_match_score: cvScore ?? null, no_cv: hasNoCv })
+        .eq('id', candidate.id)
+
+      if (isLocked) {
+        // Protected: update score in job_candidates but keep their pipeline status
+        await supabase
+          .from('job_candidates')
+          .update({ match_score: cvScore ?? 0, keyword_matches: matches, updated_at: new Date().toISOString() })
+          .eq('job_id', jobId)
+          .eq('candidate_id', candidate.id)
+
+        const interviewScore = candidate.interview_score || null
+        const combinedScore = getCombinedScore(cvScore, interviewScore, hasNoCv)
+        results.push({
+          candidate_id: candidate.id,
+          name: candidate.name,
+          email: candidate.email,
+          role_applied: candidate.role_applied,
+          years_experience: candidate.years_experience,
+          last_employer: candidate.last_employer,
+          location: candidate.location,
+          strength_keywords: candidate.strength_keywords,
+          match_score: combinedScore,
+          cv_score: cvScore,
+          interview_score: interviewScore,
+          keyword_matches: matches,
+          status: existingStatus,
+          already_sent: true
+        })
+        continue
       }
 
       const interviewScore = candidate.interview_score || null
@@ -526,12 +542,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: newStatus,
           updated_at: new Date().toISOString()
         }, { onConflict: 'job_id,candidate_id' })
-
-      // Save cv_match_score back to the candidate for unified scoring across all views
-      await supabase
-        .from('candidates')
-        .update({ cv_match_score: cvScore ?? null, no_cv: hasNoCv })
-        .eq('id', candidate.id)
 
       results.push({
         candidate_id: candidate.id,
