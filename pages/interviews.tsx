@@ -71,6 +71,9 @@ export default function Interviews() {
   const [showModal, setShowModal] = useState(false)
   const [generatingJobId, setGeneratingJobId] = useState<string | null>(null)
   const [generationComplete, setGenerationComplete] = useState<{ jobTitle: string, questionCount: number } | null>(null)
+  const [skillOrderJob, setSkillOrderJob] = useState<Job | null>(null)
+  const [orderedSkills, setOrderedSkills] = useState<string[]>([])
+  const [dragSkillIdx, setDragSkillIdx] = useState<number | null>(null)
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null)
   const [jobCandidates, setJobCandidates] = useState<Record<string, InterviewCandidate[]>>({})
   const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({})
@@ -412,7 +415,7 @@ export default function Interviews() {
                    style={{ padding: '8px 13px', background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
                    Edit pack
                  </button>
-                 <button onClick={e => { e.stopPropagation(); generateInterview(job) }} disabled={isGenerating}
+                 <button onClick={e => { e.stopPropagation(); setSkillOrderJob(job); setOrderedSkills([...(job.required_skills || [])]) }} disabled={isGenerating}
                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 13px', background: '#f59e0b', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1 }}>
                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 7c0-2.8 2.2-5 5-5a5 5 0 014.9 4M12 7c0 2.8-2.2 5-5 5a5 5 0 01-4.9-4"/><path d="M10 2l2 2-2 2M4 12l-2-2 2-2"/></svg>
                    {isGenerating ? 'Regenerating...' : 'Regenerate'}
@@ -423,12 +426,17 @@ export default function Interviews() {
                  </button>
                </>
              ) : (
-               <button onClick={e => { e.stopPropagation(); generateInterview(job) }} disabled={isGenerating}
+               <button onClick={e => { e.stopPropagation(); setSkillOrderJob(job); setOrderedSkills([...(job.required_skills || [])]) }} disabled={isGenerating}
                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: isGenerating ? '#9ca3af' : '#16a34a', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: isGenerating ? 'not-allowed' : 'pointer' }}>
                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
                  {isGenerating ? 'Generating...' : 'Generate interview'}
                </button>
              )}
+             <button onClick={e => { e.stopPropagation(); router.push(`/jobs/${job.id}`) }}
+               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 11px', background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#374151', cursor: 'pointer' }}
+               title="View pipeline">
+               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="3" width="3" height="8" rx="1"/><rect x="5.5" y="1" width="3" height="10" rx="1"/><rect x="10" y="4" width="3" height="7" rx="1"/></svg>
+             </button>
            </div>
          </div>
 
@@ -983,6 +991,78 @@ export default function Interviews() {
                 {selectedCandidate.phone && <div style={{ fontSize: 13, color: '#555' }}>📞 {selectedCandidate.phone}</div>}
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SKILL ORDER MODAL — shown before generating interview pack */}
+      {skillOrderJob && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,12,41,0.75)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setSkillOrderJob(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: '32px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s ease', maxWidth: 460, width: '90%' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 6, letterSpacing: '-0.3px' }}>Prioritise your skills</div>
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24, lineHeight: 1.6 }}>
+              Drag to reorder. The <span style={{ fontWeight: 600, color: '#4F46E5' }}>top 3 skills</span> will drive the hardest questions and strictest scoring. Put your must-haves first.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 24 }}>
+              {orderedSkills.map((skill, i) => (
+                <div
+                  key={skill}
+                  draggable
+                  onDragStart={() => setDragSkillIdx(i)}
+                  onDragOver={e => { e.preventDefault() }}
+                  onDrop={() => {
+                    if (dragSkillIdx === null || dragSkillIdx === i) return
+                    const updated = [...orderedSkills]
+                    const [moved] = updated.splice(dragSkillIdx, 1)
+                    updated.splice(i, 0, moved)
+                    setOrderedSkills(updated)
+                    setDragSkillIdx(null)
+                  }}
+                  onDragEnd={() => setDragSkillIdx(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                    background: i < 3 ? '#EEF2FF' : '#f9fafb',
+                    border: `1px solid ${i < 3 ? '#c7d2fe' : '#e5e7eb'}`,
+                    borderRadius: 10, cursor: 'grab',
+                    opacity: dragSkillIdx === i ? 0.4 : 1,
+                    transition: 'all 0.15s'
+                  }}>
+                  <span style={{ color: '#9ca3af', fontSize: 14, userSelect: 'none' as const }}>⠿</span>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: i < 3 ? 600 : 400, color: i < 3 ? '#4F46E5' : '#374151' }}>{skill}</span>
+                  {i < 3 && (
+                    <span style={{ fontSize: 10, background: '#4F46E5', color: 'white', padding: '2px 7px', borderRadius: 20, fontWeight: 600 }}>
+                      Must-have
+                    </span>
+                  )}
+                  {i === 3 && <span style={{ fontSize: 10, color: '#9ca3af' }}>Important ↓</span>}
+                </div>
+              ))}
+            </div>
+
+            {orderedSkills.length === 0 && (
+              <div style={{ padding: '16px', background: '#fef3c7', borderRadius: 10, fontSize: 13, color: '#92400e', marginBottom: 24 }}>
+                This job has no required skills set. Add skills in the job settings first for best results.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setSkillOrderJob(null)}
+                style={{ flex: 1, padding: '11px', background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 14, color: '#374151', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={async () => {
+                const job = skillOrderJob
+                setSkillOrderJob(null)
+                // Save the new skill order back to the job
+                await supabase.from('jobs').update({ required_skills: orderedSkills }).eq('id', job.id)
+                generateInterview({ ...job, required_skills: orderedSkills })
+              }}
+                style={{ flex: 2, padding: '11px', background: '#16a34a', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Generate interview pack →
+              </button>
             </div>
           </div>
         </div>
