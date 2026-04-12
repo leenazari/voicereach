@@ -513,7 +513,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const interviewScore = candidate.interview_score || null
-      const combinedScore = getCombinedScore(cvScore, interviewScore)
+      const combinedScore = getCombinedScore(cvScore, interviewScore, hasNoCv)
       const newStatus = combinedScore >= threshold ? 'shortlist' : 'longlist'
 
       await supabase
