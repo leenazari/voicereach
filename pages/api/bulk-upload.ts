@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (ext !== '.pdf') return res.json({ success: false, reason: 'PDF files only' })
 
     const message = await (anthropic.messages.create as any)({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       messages: [{
         role: 'user',
