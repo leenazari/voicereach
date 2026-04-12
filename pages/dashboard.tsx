@@ -1187,7 +1187,7 @@ export default function Dashboard() {
               'linear-gradient(135deg,#7c3aed,#a855f7)',
             ]
 
-            const cols = '220px 130px 130px 90px 70px 56px 180px'
+            const cols = '2fr 1.2fr 1.2fr 1fr 0.6fr 70px 200px'
 
             const colHeader = (
               <div style={{ display: 'grid', gridTemplateColumns: cols, padding: '6px 16px', fontSize: 10, fontWeight: 500, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: 2 }}>
@@ -1247,7 +1247,7 @@ export default function Dashboard() {
                       <div onClick={() => { setInterviewCandidate(c); setShowInterviewModal(true) }}
                         style={{ width: 46, height: 40, borderRadius: 8, background: getScoreBg(score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: getScoreColor(score), lineHeight: 1 }}>{score}%</div>
-                        <div style={{ fontSize: 8, fontWeight: 500, color: getScoreColor(score), marginTop: 2, opacity: 0.85 }}>{getScoreLabel(score)}</div>
+                        <div style={{ fontSize: 8, fontWeight: 500, color: getScoreColor(score), marginTop: 2, opacity: 0.85 }}>{getScoreLabel(score).split(' ')[0]}</div>
                       </div>
                     ) : null}
                   </div>
