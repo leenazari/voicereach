@@ -1059,6 +1059,5 @@ function InterviewEditModal({ pack, onClose, onSave, notify }: EditModalProps) {
         </div>
       </div>
     </div>
-    </>
   )
 }
