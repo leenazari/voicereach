@@ -951,20 +951,6 @@ export default function JobPipeline() {
           </div>
         </div>
       )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              <button onClick={startBulkSendAll} style={{ padding: '14px 20px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'flex-start', flexDirection: 'column', gap: 3 }}>
-                <span>🚀 Send all automatically</span>
-                <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.8 }}>AI generates each script and sends without review</span>
-              </button>
-              <button onClick={startBulkReviewIndividual} style={{ padding: '14px 20px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'flex-start', flexDirection: 'column', gap: 3 }}>
-                <span>✏️ Review each script individually</span>
-                <span style={{ fontSize: 12, fontWeight: 400, color: '#888' }}>Preview and edit each script before sending</span>
-              </button>
-            </div>
-            <button onClick={() => setShowBulkConfirm(false)} style={{ width: '100%', padding: '10px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', color: '#888', fontWeight: 500 }}>Cancel</button>
-          </div>
-        </div>
-      )}
 
       {/* BULK INDIVIDUAL REVIEW MODAL */}
       {bulkMode === 'individual' && bulkCurrent && (
