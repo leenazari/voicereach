@@ -804,7 +804,7 @@ export default function Dashboard() {
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
               {matchingJob === job.id ? 'Matching...' : matchResults[job.id] ? 'Refresh' : 'Find matches'}
             </button>
-            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ ...btnStyle('rgba(255,255,255,0.2)'), border: '1px solid rgba(255,255,255,0.3)' }}>
+            <button onClick={() => { setEditingJob(job); setShowEditJob(true) }} style={{ ...btnStyle('rgba(255,255,255,0)'), border: '1px solid #e5e7eb', color: '#374151' }}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>
               Edit
             </button>
