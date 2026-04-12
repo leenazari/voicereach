@@ -46,6 +46,7 @@ export async function sendVoiceOutreachEmail(
 ): Promise<{ token: string }> {
   const token = generateInterviewToken()
   const interviewLink = buildInterviewLink(token)
+  const directInterviewLink = buildDirectInterviewLink(candidate.job_id || '')
   const firstName = candidate.name.split(' ')[0]
   const calendarIcs = buildCalendarInvite(candidate, interviewLink)
   const jobTitle = candidate.job_title || candidate.role_applied
