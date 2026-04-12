@@ -508,6 +508,8 @@ export default function JobPipeline() {
   const threshold = job?.match_threshold || 70
   const aboveThresholdCount = candidates.filter(c => c.pipeline_status === 'matched' && c.match_score >= threshold).length
   const shortlistedCount = candidates.filter(c => c.pipeline_status === 'shortlisted').length
+  const rejected = candidates.filter(c => c.pipeline_status === 'rejected')
+  const activeStages = pipelineView === 'job' ? JOB_STAGES : INTERVIEW_STAGES
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }
