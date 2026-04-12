@@ -392,6 +392,10 @@ export default function Interviews() {
                       onDrop={async e => {
                         e.preventDefault()
                         e.currentTarget.style.background = 'white'
+                        if (stage.id === 'interview_done') {
+                          notify('Interview Done is set automatically when a candidate completes their interview', 'error')
+                          return
+                        }
                         const candidateId = e.dataTransfer.getData('candidateId')
                         const candidate = jobCandidates[job.id].find(c => c.id === candidateId)
                         if (!candidate) return
