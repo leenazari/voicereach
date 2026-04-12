@@ -444,15 +444,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existingMatches } = await supabase
       .from('job_candidates')
-      .select('candidate_id, status')
+      .select('candidate_id, status, permanently_rejected')
       .eq('job_id', jobId)
 
     const existingStatusMap: Record<string, string> = {}
+    const permanentlyRejected = new Set<string>()
     for (const m of existingMatches || []) {
       existingStatusMap[m.candidate_id] = m.status
+      if (m.permanently_rejected || m.status === 'rejected') permanentlyRejected.add(m.candidate_id)
     }
 
-    const SENT_STATUSES = ['voice_sent', 'interview_booked', 'hired']
+    // Filter out permanently rejected candidates before matching
+    candidates = candidates.filter((c: any) => !permanentlyRejected.has(c.id))
+
+    const SENT_STATUSES = ['voice_sent', 'invited', 'interview_booked', 'interview_done', 'hired']
     const priority = job.match_priority || 'skills'
     const threshold = job.match_threshold || 70
     const results = []
