@@ -595,7 +595,7 @@ export default function JobPipeline() {
             </button>
             {shortlistedCount > 0 && (
               <button onClick={openBulkConfirm} style={{ padding: '8px 16px', background: '#1D9E75', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                🎙 Send to {selectedShortlisted.size > 0 ? `${selectedShortlisted.size} selected` : `all shortlisted (${shortlistedCount})`}
+                🎙 {selectedShortlisted.size > 0 ? `Send invite to ${selectedShortlisted.size} selected` : `Send invite to all (${shortlistedCount})`}
               </button>
             )}
             <button onClick={runMatch} disabled={matching}
@@ -655,12 +655,12 @@ export default function JobPipeline() {
               )}
               {selectedShortlisted.size > 0 && (
                 <button onClick={() => openBulkConfirm()} style={{ padding: '7px 14px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                  Send voice notes ({selectedShortlisted.size} selected)
+                  🎙 Send invite ({selectedShortlisted.size} selected)
                 </button>
               )}
               {byStatus('shortlisted').length > 0 && selectedShortlisted.size === 0 && (
                 <button onClick={() => openBulkConfirm()} style={{ padding: '7px 14px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                  Send to all shortlisted ({byStatus('shortlisted').length})
+                  🎙 Send invite to all shortlisted ({byStatus('shortlisted').length})
                 </button>
               )}
             </>
@@ -933,10 +933,24 @@ export default function JobPipeline() {
       {showBulkConfirm && (
         <div style={overlayStyle}>
           <div style={{ background: 'white', borderRadius: 14, padding: 28, width: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', animation: 'modalIn 0.2s ease' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Send voice notes</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Send interview invites</div>
             <div style={{ fontSize: 13, color: '#888', marginBottom: 24, lineHeight: 1.6 }}>
-              You are about to send voice notes to <strong style={{ color: '#1a1a1a' }}>{bulkQueue.length} candidate{bulkQueue.length !== 1 ? 's' : ''}</strong> for <strong style={{ color: '#1a1a1a' }}>{job?.title}</strong>. How would you like to proceed?
+              You are about to send a personalised voice note & interview invite to <strong style={{ color: '#1a1a1a' }}>{bulkQueue.length} candidate{bulkQueue.length !== 1 ? 's' : ''}</strong> for <strong style={{ color: '#1a1a1a' }}>{job?.title}</strong>. They will move to the Invited column. How would you like to proceed?
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              <button onClick={startBulkSendAll} style={{ padding: '14px 20px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'flex-start', flexDirection: 'column', gap: 3 }}>
+                <span>🚀 Send all automatically</span>
+                <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.8 }}>AI generates each script and sends without review</span>
+              </button>
+              <button onClick={startBulkReviewIndividual} style={{ padding: '14px 20px', background: 'white', color: '#534AB7', border: '1px solid #534AB7', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'flex-start', flexDirection: 'column', gap: 3 }}>
+                <span>✏️ Review each script individually</span>
+                <span style={{ fontSize: 12, fontWeight: 400, color: '#888' }}>Preview and edit each script before sending</span>
+              </button>
+            </div>
+            <button onClick={() => setShowBulkConfirm(false)} style={{ width: '100%', padding: '10px', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: 'white', color: '#888', fontWeight: 500 }}>Cancel</button>
+          </div>
+        </div>
+      )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               <button onClick={startBulkSendAll} style={{ padding: '14px 20px', background: '#534AB7', color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'flex-start', flexDirection: 'column', gap: 3 }}>
                 <span>🚀 Send all automatically</span>
