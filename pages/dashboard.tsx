@@ -634,11 +634,22 @@ export default function Dashboard() {
     if (!jobModalCandidate) return
     if (!jobSendForm.jobTitle) { notify('Please enter a job title', 'error'); return }
     if (profile && profile.credits_used >= profile.credits_limit) { notify('You have used all your credits. Please upgrade your plan.', 'error'); return }
+    const candidateId = jobModalCandidate.id
+    const jobId = selectedJobId
     setShowJobModal(false)
-    setShortlisting(jobModalCandidate.id)
+    // Optimistically move card to invited in pipeline immediately
+    if (jobId) {
+      setMatchResults(prev => ({
+        ...prev,
+        [jobId]: (prev[jobId] || []).map(m =>
+          m.candidate_id === candidateId ? { ...m, status: 'invited', already_sent: true } : m
+        )
+      }))
+    }
+    setShortlisting(candidateId)
     try {
       const headers = await authHeaders()
-      const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: jobModalCandidate.id, jobId: selectedJobId || undefined, jobTitle: jobSendForm.jobTitle, jobSalary: jobSendForm.jobSalary, customScript: scriptPreview || undefined }) })
+      const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId, jobId: jobId || undefined, jobTitle: jobSendForm.jobTitle, jobSalary: jobSendForm.jobSalary, customScript: scriptPreview || undefined }) })
       const data = await res.json()
       if (data.success) {
         notify(`Voice note sent to ${jobModalCandidate.name} ✓`)
@@ -646,7 +657,18 @@ export default function Dashboard() {
         fetchActivityData(activityYear, activityMonth)
         if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
         markOnboardingStep('voice_note')
-      } else notify('Error: ' + data.error, 'error')
+      } else {
+        notify('Error: ' + data.error, 'error')
+        // Revert optimistic update on failure
+        if (jobId) {
+          setMatchResults(prev => ({
+            ...prev,
+            [jobId]: (prev[jobId] || []).map(m =>
+              m.candidate_id === candidateId ? { ...m, status: 'shortlisted', already_sent: false } : m
+            )
+          }))
+        }
+      }
     } finally { setShortlisting(null); setJobModalCandidate(null); setScriptPreview('') }
   }
 
