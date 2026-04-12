@@ -452,7 +452,7 @@ export default function Dashboard() {
     if (!rows || rows.length === 0) return
 
     // Fetch candidate details separately (avoids RLS join issues)
-    const candidateIds = [...new Set(rows.map(r => r.candidate_id))]
+    const candidateIds = Array.from(new Set(rows.map(r => r.candidate_id)))
     const { data: candidateData } = await supabase
       .from('candidates')
       .select('id, name, email, role_applied, years_experience, last_employer, location, strength_keywords, interview_score, cv_match_score, voice_note_url, no_cv')
