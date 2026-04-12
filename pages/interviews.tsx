@@ -288,7 +288,7 @@ export default function Interviews() {
             user_id: session.user.id,
             job_id: job.id,
             name: `${job.title}${job.company ? ` — ${job.company}` : ''}`,
-            agent_name: 'Alex',
+            agent_name: 'James',
             questions: data.questions,
             knowledge_base: { company_overview: '', culture: '', benefits: '', day_to_day: '', faqs: '' },
             status: 'active',
@@ -1027,8 +1027,11 @@ function InterviewEditModal({ pack, onClose, onSave, notify }: EditModalProps) {
         {/* SETTINGS ROW */}
         <div style={{ padding: '16px 28px', borderBottom: '1px solid #ebebeb', display: 'flex', gap: 16 }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Agent name</label>
-            <input type="text" value={agentName} onChange={e => setAgentName(e.target.value)} style={inputStyle} />
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Interviewer</label>
+            <select value={agentName} onChange={e => setAgentName(e.target.value)} style={inputStyle}>
+              <option value="James">James (Male)</option>
+              <option value="Clare">Clare (Female)</option>
+            </select>
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5, fontWeight: 500 }}>Status</label>
