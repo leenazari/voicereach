@@ -92,7 +92,8 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
       setMessages(prev => {
         const updated = [...prev, { role: 'agent' as const, text: message.message }]
         transcriptRef.current = buildTranscript(updated)
-        detectQuestionProgress(message.message)
+        const agentTurns = updated.filter(m => m.role === 'agent').length
+        detectQuestionProgress(message.message, agentTurns)
         return updated
       })
     } else if (message.source === 'user') {
@@ -117,16 +118,34 @@ export default function InterviewPanel({ token, candidateName, jobTitle, agentNa
     }
   }
 
- function detectQuestionProgress(text: string) {
+ function detectQuestionProgress(text: string, agentTurns: number) {
     const lower = text.toLowerCase()
-    // Match explicit question number patterns from the agent
-    const match = lower.match(/question\s+([one|two|three|four|five|six|1|2|3|4|5|6]+)/i)
-    if (match) {
-      const wordToNum: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6 }
-      const num = wordToNum[match[1].toLowerCase()]
-      if (num) setCurrentQuestion(num - 1)
+
+    // Each agent message after the first (greeting) = advancing through questions
+    // agentTurns=1 is the greeting, agentTurns=2 is Q1, agentTurns=3 is Q2, etc.
+    const questionNum = Math.max(0, agentTurns - 1)
+    if (questionNum > 0 && questionNum < questionCount) {
+      setCurrentQuestion(questionNum)
     }
-    if (lower.includes("that's all my questions") || lower.includes('hiring team will review') || lower.includes('do you have any questions for me')) {
+
+    // Explicit question number patterns as backup
+    const match = lower.match(/question\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)/i)
+    if (match) {
+      const wordToNum: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }
+      const raw = match[1].toLowerCase()
+      const num = wordToNum[raw] || parseInt(raw)
+      if (num && num >= 1 && num <= questionCount) setCurrentQuestion(num - 1)
+    }
+
+    // End of interview
+    if (
+      lower.includes("that's all my questions") ||
+      lower.includes("those are all my questions") ||
+      lower.includes('hiring team will review') ||
+      lower.includes('thank you for your time') ||
+      lower.includes('wish you the best') ||
+      lower.includes('do you have any questions for me')
+    ) {
       setCurrentQuestion(questionCount)
     }
   }
