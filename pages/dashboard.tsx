@@ -883,6 +883,10 @@ export default function Dashboard() {
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>
               Edit
             </button>
+            <button onClick={() => router.push(`/jobs/${job.id}`)} style={{ ...btnStyle('rgba(255,255,255,0)'), border: '1px solid #e5e7eb', color: '#374151' }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1" y="3" width="3" height="8" rx="1"/><rect x="5.5" y="1" width="3" height="10" rx="1"/><rect x="10" y="4" width="3" height="7" rx="1"/></svg>
+              Pipeline
+            </button>
             <button onClick={() => deleteJob(job)} style={btnStyle('#ef4444', '8px 11px')}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h10M5 4V2h4v2M5.5 7v4M8.5 7v4M3 4l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 4"/></svg>
             </button>
@@ -1019,8 +1023,10 @@ export default function Dashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
               {PIPELINE_STAGES.map(stage => {
                 const stageCandidates = matchResults[job.id].filter(m => {
-                  if (stage.id === 'shortlisted') return m.status === 'shortlist' || m.status === 'shortlisted' || (m.already_sent && m.status !== 'interviewed' && m.status !== 'job_offer' && m.status !== 'rejected')
-                  return m.status === stage.id
+                  const st = m.status
+                  if (stage.id === 'shortlisted') return st === 'shortlist' || st === 'shortlisted' || st === 'longlist' || !['interviewed', 'job_offer', 'rejected'].includes(st)
+                  return st === stage.id
+                })
                 })
                 return (
                   <div key={stage.id} style={{ background: 'white', borderRadius: 10, border: '0.5px solid #e5e7eb', overflow: 'hidden' }}>
@@ -1043,7 +1049,26 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 6 }}>{m.role_applied}{m.last_employer ? ` · ${m.last_employer}` : ''}</div>
-                          {/* Move buttons */}
+                          {/* Send voice note */}
+                          <button onClick={async e => {
+                            e.stopPropagation()
+                            setShortlisting(m.candidate_id)
+                            try {
+                              const headers = await authHeaders()
+                              const res = await fetch('/api/shortlist', { method: 'POST', headers, body: JSON.stringify({ candidateId: m.candidate_id, jobId: job.id, jobTitle: job.title, jobSalary: job.salary }) })
+                              const data = await res.json()
+                              if (data.success) {
+                                notify(`Voice note sent to ${m.name} ✓`)
+                                setMatchResults(prev => ({ ...prev, [job.id]: (prev[job.id] || []).map(r => r.candidate_id === m.candidate_id ? { ...r, already_sent: true } : r) }))
+                                fetchCandidates()
+                                if (profile) setProfile({ ...profile, credits_used: profile.credits_used + 1 })
+                              } else notify('Error: ' + data.error, 'error')
+                            } finally { setShortlisting(null) }
+                          }} disabled={shortlisting === m.candidate_id}
+                            style={{ width: '100%', marginBottom: 6, padding: '5px 0', background: m.already_sent ? '#fef3c7' : '#4F46E5', color: m.already_sent ? '#92400e' : 'white', border: m.already_sent ? '0.5px solid #fde68a' : 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: shortlisting === m.candidate_id ? 'not-allowed' : 'pointer' }}>
+                            {shortlisting === m.candidate_id ? '...' : m.already_sent ? '🎙 Resend voice note' : '🎙 Send voice note'}
+                          </button>
+                          {/* Move to stage buttons */}
                           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
                             {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
                               <button key={s.id}
