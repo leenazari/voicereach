@@ -68,6 +68,7 @@ type MatchResult = {
   keyword_matches: string[]
   status: string
   already_sent: boolean
+  voice_note_url?: string | null
 }
 
 type OnboardingSteps = { job: boolean; candidates: boolean; voice_note: boolean }
