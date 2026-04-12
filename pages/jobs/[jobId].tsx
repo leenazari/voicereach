@@ -683,9 +683,9 @@ export default function JobPipeline() {
                     )}
 
                     {/* CARDS */}
-                    <div style={{ padding: 10, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                    <div style={{ padding: 8, display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
                       {stageCandidates.length === 0 ? (
-                        <div style={{ fontSize: 12, color: '#d1d5db', padding: '32px 8px', textAlign: 'center' as const, fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 11, color: '#d1d5db', padding: '28px 8px', textAlign: 'center' as const, fontStyle: 'italic' }}>
                           {isDragTarget ? 'Drop here' : stage.id === 'matched' ? 'Run match to populate' : 'Empty'}
                         </div>
                       ) : stageCandidates.map(candidate => (
@@ -693,96 +693,110 @@ export default function JobPipeline() {
                           draggable
                           onDragStart={e => handleDragStart(e, candidate.id)}
                           onDragEnd={handleDragEnd}
-                          style={{ background: 'white', border: '1px solid #e5e7eb', borderLeft: `4px solid ${getScoreColor(candidate.match_score)}`, borderRadius: 10, padding: '12px 14px', cursor: 'grab', opacity: dragId === candidate.id ? 0.4 : 1, transition: 'all 0.15s', userSelect: 'none' as const, boxShadow: selectedMatched.has(candidate.id) || selectedShortlisted.has(candidate.id) ? `0 0 0 2px ${stage.color}44` : '0 1px 3px rgba(0,0,0,0.04)' }}
+                          style={{ background: 'white', border: '0.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', cursor: 'grab', opacity: dragId === candidate.id ? 0.4 : 1, transition: 'border-color 0.15s', userSelect: 'none' as const }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = '#4F46E5')}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
                         >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                            {(stage.id === 'matched' || stage.id === 'shortlisted') && (
-                              <input type="checkbox"
-                                checked={stage.id === 'matched' ? selectedMatched.has(candidate.id) : selectedShortlisted.has(candidate.id)}
-                                onChange={() => stage.id === 'matched' ? toggleSelectMatched(candidate.id) : toggleSelectShortlisted(candidate.id)}
-                                onClick={e => e.stopPropagation()}
-                                style={{ marginTop: 2, flexShrink: 0, cursor: 'pointer', accentColor: stage.color, width: 14, height: 14 }}
-                              />
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              {/* Name + score */}
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <div onClick={() => openProfile(candidate)} style={{ fontSize: 13, fontWeight: 700, color: '#111827', cursor: 'pointer', lineHeight: 1.3 }}>{candidate.name}</div>
-                                <div style={{ flexShrink: 0, marginLeft: 8, background: getScoreBg(candidate.match_score), borderRadius: 6, padding: '2px 7px' }}>
-                                  <span style={{ fontSize: 12, fontWeight: 800, color: getScoreColor(candidate.match_score) }}>{candidate.match_score}%</span>
+                          {/* Score bar */}
+                          <div style={{ height: 2, background: getScoreColor(candidate.match_score) }} />
+
+                          <div style={{ padding: '10px 11px 9px' }}>
+                            {/* Name row + score pill */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div onClick={() => openProfile(candidate)} style={{ fontSize: 12, fontWeight: 600, color: '#111827', cursor: 'pointer', marginBottom: 1 }}>{candidate.name}</div>
+                                <div style={{ fontSize: 11, color: '#6b7280' }}>{candidate.role_applied}</div>
+                                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>
+                                  {[candidate.last_employer, candidate.location, candidate.years_experience > 0 ? `${candidate.years_experience}yr` : null].filter(Boolean).join(' · ')}
                                 </div>
                               </div>
-
-                              {/* Role */}
-                              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{candidate.role_applied}</div>
-
-                              {/* Employer + location */}
-                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 6 }}>
-                                {candidate.last_employer && <span style={{ fontSize: 11, color: '#9ca3af' }}>{candidate.last_employer}</span>}
-                                {candidate.location && <span style={{ fontSize: 11, color: '#9ca3af' }}>· {candidate.location}</span>}
-                                {candidate.years_experience > 0 && <span style={{ fontSize: 10, background: '#EEF2FF', color: '#4F46E5', padding: '1px 6px', borderRadius: 10, fontWeight: 600 }}>{candidate.years_experience}yr</span>}
+                              {/* Score block — shaded pill */}
+                              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 3 }}>
+                                <div style={{ background: getScoreBg(candidate.match_score), borderRadius: 8, padding: '3px 8px', textAlign: 'center' as const, minWidth: 48 }}>
+                                  <div style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(candidate.match_score), lineHeight: 1 }}>{candidate.match_score}%</div>
+                                  <div style={{ fontSize: 8, color: getScoreColor(candidate.match_score), opacity: 0.7, marginTop: 1 }}>match</div>
+                                </div>
+                                {(candidate as any).interview_score && (
+                                  <div style={{ background: '#EEF2FF', borderRadius: 8, padding: '2px 8px', textAlign: 'center' as const, minWidth: 48 }}>
+                                    <div style={{ fontSize: 15, fontWeight: 700, color: '#4F46E5', lineHeight: 1 }}>{(candidate as any).interview_score}%</div>
+                                    <div style={{ fontSize: 8, color: '#4F46E5', opacity: 0.7, marginTop: 1 }}>interview</div>
+                                  </div>
+                                )}
                               </div>
-
-                              {/* Interview score if available */}
-                              {(candidate as any).interview_score && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                                  <span style={{ fontSize: 10, color: '#6b7280' }}>Interview:</span>
-                                  <span style={{ fontSize: 11, fontWeight: 700, color: getScoreColor((candidate as any).interview_score), background: getScoreBg((candidate as any).interview_score), padding: '1px 6px', borderRadius: 6 }}>{(candidate as any).interview_score}%</span>
-                                </div>
-                              )}
-
-                              {/* Keywords */}
-                              {candidate.keyword_matches && candidate.keyword_matches.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
-                                  {candidate.keyword_matches.slice(0, 4).map(kw => (
-                                    <span key={kw} style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>✓ {kw}</span>
-                                  ))}
-                                  {candidate.keyword_matches.length > 4 && <span style={{ fontSize: 10, color: '#9ca3af' }}>+{candidate.keyword_matches.length - 4}</span>}
-                                </div>
-                              )}
-
-                              {/* Stage action button */}
-                              {stage.id === 'matched' && (
-                                <button onClick={() => updatePipelineStatus(candidate.id, 'shortlisted')} style={{ width: '100%', padding: '8px 0', background: '#0891b2', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 6 }}>
-                                  Shortlist →
-                                </button>
-                              )}
-                              {stage.id === 'shortlisted' && (
-                                <button onClick={() => openSendModal(candidate)} disabled={sending === candidate.id} style={{ width: '100%', padding: '8px 0', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 6 }}>
-                                  {sending === candidate.id ? 'Sending...' : '🎙 Send invite →'}
-                                </button>
-                              )}
-                              {stage.id === 'invited' && (
-                                <div style={{ marginBottom: 6 }}>
-                                  <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 500, padding: '7px 0', textAlign: 'center' as const, background: '#f3e8ff', borderRadius: 8, marginBottom: 5 }}>✓ Invite sent · awaiting interview</div>
-                                  {candidate.voice_note_url && (
-                                    <audio controls src={candidate.voice_note_url} style={{ width: '100%', height: 32, borderRadius: 6 }} />
-                                  )}
-                                </div>
-                              )}
-                              {stage.id === 'interview_done' && (
-                                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'second_round')} style={{ flex: 1, padding: '8px 0', background: '#4F46E5', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>2nd Round →</button>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '8px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✕</button>
-                                </div>
-                              )}
-                              {stage.id === 'second_round' && (
-                                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'job_offer')} style={{ flex: 1, padding: '8px 0', background: '#15803d', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Job Offer →</button>
-                                  <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ padding: '8px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✕</button>
-                                </div>
-                              )}
-                              {stage.id === 'job_offer' && (
-                                <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, padding: '7px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 8, marginBottom: 6 }}>🎉 Job offer extended</div>
-                              )}
-
-                              {/* Reject — not on interview_done (handled inline), not on job_offer or rejected */}
-                              {!['interview_done', 'second_round', 'rejected', 'job_offer'].includes(stage.id) && (
-                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')} style={{ width: '100%', padding: '6px 0', background: 'white', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                                  ✕ Reject
-                                </button>
-                              )}
                             </div>
+
+                            {/* Keywords */}
+                            {candidate.keyword_matches && candidate.keyword_matches.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8 }}>
+                                {candidate.keyword_matches.slice(0, 3).map(kw => (
+                                  <span key={kw} style={{ fontSize: 9, background: '#16a34a', color: 'white', padding: '1px 5px', borderRadius: 3, fontWeight: 500 }}>⚡ {kw}</span>
+                                ))}
+                                {candidate.keyword_matches.length > 3 && <span style={{ fontSize: 9, color: '#9ca3af' }}>+{candidate.keyword_matches.length - 3}</span>}
+                              </div>
+                            )}
+
+                            {/* Divider */}
+                            <div style={{ height: '0.5px', background: '#e5e7eb', margin: '0 -11px 8px' }} />
+
+                            {/* PRIMARY ACTION */}
+                            {stage.id === 'matched' && (
+                              <button onClick={() => updatePipelineStatus(candidate.id, 'shortlisted')}
+                                style={{ width: '100%', height: 28, background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
+                                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
+                                Shortlist
+                              </button>
+                            )}
+                            {stage.id === 'shortlisted' && (
+                              <button onClick={() => openSendModal(candidate)} disabled={sending === candidate.id}
+                                style={{ width: '100%', height: 28, background: '#7c3aed', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
+                                <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2a3 3 0 013 3v1.5a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M5 12c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+                                {sending === candidate.id ? 'Sending...' : '+ Invite'}
+                              </button>
+                            )}
+                            {stage.id === 'invited' && (
+                              <div style={{ marginBottom: 6 }}>
+                                <div style={{ fontSize: 9, color: '#7c3aed', background: '#f3e8ff', borderRadius: 5, padding: '5px 0', textAlign: 'center' as const, marginBottom: 5 }}>
+                                  <svg width="9" height="9" viewBox="0 0 14 14" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" style={{ verticalAlign: 'middle', marginRight: 2 }}><path d="M7 2a3 3 0 013 3v1.5a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M5 12c0 1.1.9 2 2 2s2-.9 2-2"/></svg>
+                                  Invite sent · awaiting interview
+                                </div>
+                                {candidate.voice_note_url && (
+                                  <audio controls src={candidate.voice_note_url} style={{ width: '100%', height: 26, borderRadius: 5 }} />
+                                )}
+                              </div>
+                            )}
+                            {stage.id === 'interview_done' && (
+                              <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'second_round')}
+                                  style={{ flex: 1, height: 28, background: '#4F46E5', color: 'white', border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                                  → 2nd Round
+                                </button>
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')}
+                                  style={{ width: 28, height: 28, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                              </div>
+                            )}
+                            {stage.id === 'second_round' && (
+                              <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'job_offer')}
+                                  style={{ flex: 1, height: 28, background: '#15803d', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                                  Job Offer →
+                                </button>
+                                <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')}
+                                  style={{ width: 28, height: 28, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                              </div>
+                            )}
+                            {stage.id === 'job_offer' && (
+                              <div style={{ fontSize: 10, color: '#15803d', fontWeight: 600, padding: '6px 0', textAlign: 'center' as const, background: '#dcfce7', borderRadius: 6, marginBottom: 4 }}>🎉 Job offer extended</div>
+                            )}
+
+                            {/* Ghost reject */}
+                            {!['rejected', 'job_offer'].includes(stage.id) && (
+                              <button onClick={() => updatePipelineStatus(candidate.id, 'rejected')}
+                                style={{ width: '100%', height: 28, background: 'transparent', color: '#9ca3af', border: '0.5px solid #e5e7eb', borderRadius: 6, fontSize: 10, fontWeight: 400, cursor: 'pointer' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#dc2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#fecaca' }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb' }}>
+                                Reject
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
