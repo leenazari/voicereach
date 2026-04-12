@@ -480,6 +480,26 @@ export default function Dashboard() {
       grouped[jobId].sort((a, b) => b.match_score - a.match_score)
     }
     setMatchResults(grouped)
+
+    // Reorder jobs by most recent pipeline activity (latest job_candidates.updated_at)
+    const latestActivity: Record<string, string> = {}
+    for (const row of rows) {
+      if (!latestActivity[row.job_id] || row.updated_at > latestActivity[row.job_id]) {
+        latestActivity[row.job_id] = row.updated_at
+      }
+    }
+    // Jobs with pipeline activity sorted by recency, then remaining jobs by created_at
+    setJobs(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        const aActivity = latestActivity[a.id]
+        const bActivity = latestActivity[b.id]
+        if (aActivity && bActivity) return bActivity.localeCompare(aActivity)
+        if (aActivity) return -1
+        if (bActivity) return 1
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+      return sorted
+    })
   }
 
   async function fetchInterviewPacks() {
