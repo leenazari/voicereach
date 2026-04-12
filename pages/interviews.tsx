@@ -204,7 +204,6 @@ export default function Interviews() {
         .eq('user_id', session.user.id)
 
       if (candError) console.error('candidates fetch error:', candError)
-      console.log('jcRows:', jcRows.length, 'candidateData:', candidateData?.length)
 
       const merged = (candidateData || []).map((c: any) => {
         const jc = jcRows.find((r: any) => r.candidate_id === c.id)
